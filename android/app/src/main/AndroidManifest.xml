@@ -4,7 +4,6 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
-    <uses-permission android:name="android.permission.BIND_ACCESSIBILITY_SERVICE"/>
     
     <application
         android:label="VoiceBubble"
@@ -34,19 +33,10 @@
             </intent-filter>
         </activity>
         
-        <!-- Accessibility Service for floating bubble (like Grammarly) -->
+        <!-- Overlay Service for floating bubble -->
         <service
-            android:name="com.voicebubble.app.VoiceBubbleAccessibilityService"
-            android:label="@string/accessibility_service_label"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService" />
-            </intent-filter>
-            <meta-data
-                android:name="android.accessibilityservice"
-                android:resource="@xml/accessibility_service_config" />
-        </service>
+            android:name="com.voicebubble.app.OverlayService"
+            android:exported="false" />
         
         <!-- Overlay entry point -->
         <meta-data

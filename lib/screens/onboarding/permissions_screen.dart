@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io' show Platform;
-import '../../services/accessibility_service.dart';
+import '../../services/native_overlay_service.dart';
 
 class PermissionsScreen extends StatelessWidget {
   final VoidCallback onComplete;
@@ -12,18 +12,41 @@ class PermissionsScreen extends StatelessWidget {
     // Request microphone permission
     final micStatus = await Permission.microphone.request();
     
-    // Open accessibility settings on Android
+    // Request overlay permission on Android
     if (Platform.isAndroid) {
-      final isEnabled = await AccessibilityService.isEnabled();
-      if (!isEnabled) {
-        await AccessibilityService.openSettings();
+      final hasOverlayPermission = await NativeOverlayService.checkPermission();
+      if (!hasOverlayPermission) {
+        await NativeOverlayService.requestPermission();
+        
+        // Show instruction dialog
+        if (context.mounted) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Enable Overlay Permission'),
+              content: const Text(
+                'To use the floating bubble:\n\n'
+                '1. Find "VoiceBubble" in the list\n'
+                '2. Turn ON "Allow display over other apps"\n'
+                '3. Return to the app\n\n'
+                'The bubble will appear when you enable it!',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Got it!'),
+                ),
+              ],
+            ),
+          );
+        }
       }
     }
     
     if (micStatus.isGranted) {
       onComplete();
     } else {
-      // Show error dialog
+      // Show error dialog for microphone permission
       if (context.mounted) {
         showDialog(
           context: context,
@@ -228,4 +251,3 @@ class PermissionsScreen extends StatelessWidget {
     );
   }
 }
-

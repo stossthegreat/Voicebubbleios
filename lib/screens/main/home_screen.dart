@@ -4,7 +4,7 @@ import 'dart:io' show Platform;
 import '../../providers/app_state_provider.dart';
 import '../../constants/presets.dart';
 import '../../models/preset.dart';
-import '../../services/accessibility_service.dart';
+import '../../services/native_overlay_service.dart';
 import '../main/recording_screen.dart';
 import '../main/preset_selection_screen.dart';
 import '../main/vault_screen.dart';
@@ -29,19 +29,19 @@ class _HomeScreenState extends State<HomeScreen> {
   
   Future<void> _checkOverlayStatus() async {
     if (Platform.isAndroid) {
-      final isEnabled = await AccessibilityService.isEnabled();
+      final isActive = await NativeOverlayService.isActive();
       setState(() {
-        _overlayEnabled = isEnabled;
+        _overlayEnabled = isActive;
       });
     }
   }
   
   Future<void> _initializeOverlay() async {
     if (Platform.isAndroid) {
-      // Check if accessibility service is enabled
-      final isEnabled = await AccessibilityService.isEnabled();
+      // Check if overlay service is active
+      final isActive = await NativeOverlayService.isActive();
       setState(() {
-        _overlayEnabled = isEnabled;
+        _overlayEnabled = isActive;
       });
     }
   }
@@ -49,41 +49,62 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _toggleOverlay() async {
     if (!Platform.isAndroid) return;
     
-    // Open accessibility settings for the user to enable/disable
-    await AccessibilityService.openSettings();
-    
-    // Show instruction dialog
-    if (mounted) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Enable VoiceBubble'),
-          content: const Text(
-            'To use the floating bubble:\n\n'
-            '1. Find "VoiceBubble" in the list\n'
-            '2. Turn it ON\n'
-            '3. Tap "Allow" when prompted\n\n'
-            'The bubble will appear when you\'re typing!',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Got it!'),
+    if (_overlayEnabled) {
+      // Stop the overlay service
+      await NativeOverlayService.hideOverlay();
+      setState(() {
+        _overlayEnabled = false;
+      });
+    } else {
+      // Check if we have overlay permission
+      final hasPermission = await NativeOverlayService.checkPermission();
+      
+      if (!hasPermission) {
+        // Request overlay permission
+        await NativeOverlayService.requestPermission();
+        
+        // Show instruction dialog
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Enable Overlay Permission'),
+              content: const Text(
+                'To use the floating bubble:\n\n'
+                '1. Find "VoiceBubble" in the list\n'
+                '2. Turn ON "Allow display over other apps"\n'
+                '3. Return to the app and tap "Setup" again\n\n'
+                'The bubble will appear on your screen!',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Got it!'),
+                ),
+              ],
             ),
-          ],
-        ),
-      );
-    }
-    
-    // Check status after a delay
-    Future.delayed(const Duration(seconds: 2), () async {
-      final isEnabled = await AccessibilityService.isEnabled();
-      if (mounted) {
+          );
+        }
+        
+        // Check permission after a delay
+        Future.delayed(const Duration(seconds: 2), () async {
+          final stillHasPermission = await NativeOverlayService.checkPermission();
+          if (stillHasPermission && mounted) {
+            // Start the overlay service
+            final started = await NativeOverlayService.showOverlay();
+            setState(() {
+              _overlayEnabled = started;
+            });
+          }
+        });
+      } else {
+        // We have permission, start the overlay service
+        final started = await NativeOverlayService.showOverlay();
         setState(() {
-          _overlayEnabled = isEnabled;
+          _overlayEnabled = started;
         });
       }
-    });
+    }
   }
   
   @override
@@ -265,8 +286,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       Expanded(
                         child: Text(
                           _overlayEnabled
-                              ? 'Accessibility service active! Bubble appears when typing'
-                              : 'Enable VoiceBubble in Accessibility Settings',
+                              ? 'Overlay active! Tap the bubble anytime to record'
+                              : 'Enable overlay permission to show floating bubble',
                           style: const TextStyle(
                             fontSize: 13,
                             color: Colors.white,

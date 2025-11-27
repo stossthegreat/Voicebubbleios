@@ -1,5 +1,24 @@
 package com.voicebubble.app
 
+// IMPORTANT POLICY COMPLIANCE:
+// This service ONLY shows a floating bubble overlay using TYPE_APPLICATION_OVERLAY.
+// It does NOT use Accessibility APIs.
+// It does NOT read screen content from other apps.
+// It does NOT automatically insert text into other apps.
+// It does NOT simulate user input or clicks.
+// 
+// User interaction flow:
+// 1. User manually taps the floating bubble
+// 2. App opens to record voice
+// 3. User manually copies/shares the rewritten text
+//
+// This implementation complies with Google Play Store policies by:
+// - Using ONLY SYSTEM_ALERT_WINDOW permission for the overlay
+// - Using ONLY RECORD_AUDIO permission for voice recording
+// - NOT requesting or using any Accessibility permissions
+// - NOT reading or modifying content from other applications
+// - Requiring explicit user interaction for all actions
+
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -65,10 +84,10 @@ class OverlayService : Service() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
                 CHANNEL_ID,
-                "VoiceBubble Overlay",
+                "Voice Bubble",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
-                description = "Shows floating bubble for voice input"
+                description = "Keeps the floating bubble active so you can quickly record and rewrite messages"
                 setShowBadge(false)
             }
             
@@ -87,8 +106,8 @@ class OverlayService : Service() {
         )
         
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("VoiceBubble Active")
-            .setContentText("Tap to open app")
+            .setContentTitle("Voice Bubble Active")
+            .setContentText("Floating bubble ready for quick voice recording")
             .setSmallIcon(android.R.drawable.ic_btn_speak_now)
             .setContentIntent(pendingIntent)
             .setOngoing(true)
