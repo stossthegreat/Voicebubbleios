@@ -17,19 +17,59 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _overlayEnabled = false;
   
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _checkOverlayStatus();
     _initializeOverlay();
   }
   
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+  
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
+    super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed && Platform.isAndroid) {
+      // App resumed (user came back from settings)
+      debugPrint('📱 App resumed, checking overlay status...');
+      
+      final isActive = await NativeOverlayService.isActive();
+      final hasPermission = await NativeOverlayService.checkPermission();
+      
+      debugPrint('Service active: $isActive, Permission granted: $hasPermission');
+      
+      // If we have permission but service isn't running, start it
+      if (hasPermission && !isActive) {
+        debugPrint('🚀 Auto-starting service after permission grant...');
+        final started = await NativeOverlayService.showOverlay();
+        if (started && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('✓ Bubble activated! Look on the left side'),
+              backgroundColor: Color(0xFF10B981),
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+      
+      await _checkOverlayStatus();
+    }
+  }
+  
   Future<void> _checkOverlayStatus() async {
     if (Platform.isAndroid) {
+      // Check if service is running
       final isActive = await NativeOverlayService.isActive();
+      debugPrint('📊 Overlay service active: $isActive');
       setState(() {
         _overlayEnabled = isActive;
       });
@@ -40,6 +80,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (Platform.isAndroid) {
       // Check if overlay service is active
       final isActive = await NativeOverlayService.isActive();
+      debugPrint('📊 Initial overlay check - service active: $isActive');
       setState(() {
         _overlayEnabled = isActive;
       });
@@ -329,8 +370,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       Expanded(
                         child: Text(
                           _overlayEnabled
-                              ? 'Overlay active! Tap the bubble anytime to record'
-                              : 'Enable overlay permission to show floating bubble',
+                              ? 'Bubble active! Look for it on the left side of your screen'
+                              : 'Tap Setup to enable the floating bubble',
                           style: const TextStyle(
                             fontSize: 13,
                             color: Colors.white,
@@ -340,7 +381,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(width: 8),
                       ElevatedButton(
-                        onPressed: _toggleOverlay,
+                        onPressed: () async {
+                          await _toggleOverlay();
+                          // Refresh status after toggle
+                          await Future.delayed(const Duration(milliseconds: 500));
+                          await _checkOverlayStatus();
+                        },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
                           foregroundColor: _overlayEnabled
@@ -356,7 +402,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           elevation: 0,
                         ),
                         child: Text(
-                          _overlayEnabled ? 'Enabled ✓' : 'Setup',
+                          _overlayEnabled ? 'Stop' : 'Setup',
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
