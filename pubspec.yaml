@@ -56,5 +56,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   
-  assets:
-    - .env
+  # assets:
+  #   - .env
+  # Note: .env is not needed in production builds
+  # API keys should be set as environment variables
