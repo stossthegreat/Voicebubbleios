@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">VoiceBubble</string>
+    <string name="accessibility_service_label">VoiceBubble - Voice to Text</string>
     <string name="accessibility_service_description">VoiceBubble shows a floating bubble when you\'re typing to help you quickly convert speech to text. Tap the bubble to record your voice and get AI-powered text suggestions.</string>
 </resources>
 

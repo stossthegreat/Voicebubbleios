@@ -5,6 +5,7 @@
     android:accessibilityFlags="flagDefault|flagRetrieveInteractiveWindows"
     android:canRetrieveWindowContent="true"
     android:description="@string/accessibility_service_description"
+    android:settingsActivity="com.voicebubble.app.MainActivity"
     android:notificationTimeout="100"
     android:packageNames="@null" />
 

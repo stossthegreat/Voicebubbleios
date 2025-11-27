@@ -36,7 +36,8 @@
         
         <!-- Accessibility Service for floating bubble (like Grammarly) -->
         <service
-            android:name=".VoiceBubbleAccessibilityService"
+            android:name="com.voicebubble.app.VoiceBubbleAccessibilityService"
+            android:label="@string/accessibility_service_label"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
             android:exported="true">
             <intent-filter>
