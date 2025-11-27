@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../providers/app_state_provider.dart';
@@ -17,14 +18,18 @@ class RecordingScreen extends StatefulWidget {
 
 class _RecordingScreenState extends State<RecordingScreen>
     with SingleTickerProviderStateMixin {
+  // Live speech-to-text for streaming preview
+  final stt.SpeechToText _speech = stt.SpeechToText();
+  
+  // Audio recorder for high-quality Whisper transcription
   final AudioRecorder _audioRecorder = AudioRecorder();
   final AIService _aiService = AIService();
+  
   bool _isRecording = false;
-  bool _isTranscribing = false;
-  String _transcription = '';
+  bool _isProcessing = false;
+  String _liveTranscription = '';
   String? _audioPath;
   late AnimationController _pulseController;
-  DateTime? _recordingStartTime;
   
   @override
   void initState() {
@@ -33,155 +38,133 @@ class _RecordingScreenState extends State<RecordingScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat();
-    _startRecording();
+    _initSpeech();
   }
   
   @override
   void dispose() {
     _pulseController.dispose();
+    _speech.stop();
     _audioRecorder.dispose();
     super.dispose();
   }
   
+  Future<void> _initSpeech() async {
+    final available = await _speech.initialize();
+    if (available) {
+      await _startRecording();
+    }
+  }
+  
   Future<void> _startRecording() async {
     try {
-      // Check permission
-      if (!await _audioRecorder.hasPermission()) {
-        print('No microphone permission');
-        return;
+      // Start audio recording for Whisper
+      if (await _audioRecorder.hasPermission()) {
+        final directory = await getTemporaryDirectory();
+        _audioPath = '${directory.path}/recording_${DateTime.now().millisecondsSinceEpoch}.m4a';
+
+        await _audioRecorder.start(
+          const RecordConfig(
+            encoder: AudioEncoder.aacLc,
+            bitRate: 128000,
+            sampleRate: 44100,
+          ),
+          path: _audioPath!,
+        );
       }
 
-      // Get temp directory
-      final directory = await getTemporaryDirectory();
-      _audioPath = '${directory.path}/recording_${DateTime.now().millisecondsSinceEpoch}.m4a';
-
-      // Start recording with high quality settings
-      await _audioRecorder.start(
-        const RecordConfig(
-          encoder: AudioEncoder.aacLc, // High quality AAC
-          bitRate: 128000, // 128kbps
-          sampleRate: 44100, // CD quality
-        ),
-        path: _audioPath!,
+      // Start live speech-to-text for preview
+      await _speech.listen(
+        onResult: (result) {
+          setState(() {
+            _liveTranscription = result.recognizedWords;
+          });
+        },
+        listenMode: stt.ListenMode.confirmation,
+        pauseFor: const Duration(seconds: 30), // Don't auto-stop
+        partialResults: true, // Show live updates
+        cancelOnError: false,
+        listenFor: const Duration(minutes: 5), // Max 5 minutes
       );
 
       setState(() {
         _isRecording = true;
-        _recordingStartTime = DateTime.now();
       });
 
       print('Recording started: $_audioPath');
     } catch (e) {
       print('Error starting recording: $e');
-      setState(() {
-        _isRecording = false;
-      });
     }
   }
   
   Future<void> _stopRecording() async {
-    try {
-      final path = await _audioRecorder.stop();
-      
-      setState(() {
-        _isRecording = false;
-      });
-
-      if (path != null && path.isNotEmpty) {
-        print('Recording stopped: $path');
-        await _transcribeAudio(path);
-      }
-    } catch (e) {
-      print('Error stopping recording: $e');
-      setState(() {
-        _isRecording = false;
-      });
-    }
-  }
-
-  Future<void> _transcribeAudio(String path) async {
+    if (_isProcessing) return;
+    
     setState(() {
-      _isTranscribing = true;
+      _isProcessing = true;
     });
 
     try {
-      final audioFile = File(path);
-      print('Transcribing audio file: ${audioFile.path}');
-      print('File size: ${await audioFile.length()} bytes');
+      // Stop live speech
+      await _speech.stop();
       
-      // Use Whisper API via backend
-      final transcription = await _aiService.transcribeAudio(audioFile);
-      
-      setState(() {
-        _transcription = transcription;
-        _isTranscribing = false;
-      });
+      // Stop audio recording
+      final path = await _audioRecorder.stop();
 
-      // Update app state
-      context.read<AppStateProvider>().setTranscription(transcription);
-      
-      print('Transcription complete: $transcription');
+      if (path != null && path.isNotEmpty) {
+        print('Recording stopped: $path');
+        
+        // Use Whisper API for final accurate transcription
+        final audioFile = File(path);
+        final transcription = await _aiService.transcribeAudio(audioFile);
+        
+        // Update app state with Whisper result (more accurate than live preview)
+        context.read<AppStateProvider>().setTranscription(transcription);
+        
+        print('Final transcription: $transcription');
+        
+        // Navigate to preset selection
+        if (mounted) {
+          _navigateToNext();
+        }
+      }
     } catch (e) {
-      print('Transcription error: $e');
-      setState(() {
-        _isTranscribing = false;
-      });
+      print('Error stopping: $e');
       
-      // Show error to user
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Transcription failed: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
+      // Fallback to live transcription if Whisper fails
+      if (_liveTranscription.isNotEmpty) {
+        context.read<AppStateProvider>().setTranscription(_liveTranscription);
+        if (mounted) {
+          _navigateToNext();
+        }
       }
     }
   }
 
-  String _getRecordingDuration() {
-    if (_recordingStartTime == null) return '0:00';
-    final duration = DateTime.now().difference(_recordingStartTime!);
-    final minutes = duration.inMinutes;
-    final seconds = (duration.inSeconds % 60).toString().padLeft(2, '0');
-    return '$minutes:$seconds';
+  void _navigateToNext() {
+    final appState = context.read<AppStateProvider>();
+    
+    if (appState.selectedPreset != null) {
+      // Preset already selected, go to result
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const ResultScreen(),
+        ),
+      );
+    } else {
+      // No preset, go to selection
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const PresetSelectionScreen(fromRecording: true),
+        ),
+      );
+    }
   }
   
   Future<void> _handleDone() async {
-    if (_isRecording) {
-      await _stopRecording();
-      return; // Wait for transcription to complete
-    }
-    
-    final appState = context.read<AppStateProvider>();
-    
-    if (_transcription.isEmpty) {
-      // No transcription, go back
-      if (mounted) Navigator.pop(context);
-      return;
-    }
-    
-    if (appState.selectedPreset != null) {
-      // Preset already selected, process and go to result
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const ResultScreen(),
-          ),
-        );
-      }
-    } else {
-      // No preset, go to selection
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const PresetSelectionScreen(fromRecording: true),
-          ),
-        );
-      }
-    }
+    await _stopRecording();
   }
   
   @override
@@ -279,11 +262,11 @@ class _RecordingScreenState extends State<RecordingScreen>
                     
                     // Status
                     Text(
-                      _isTranscribing
-                          ? 'Transcribing...'
+                      _isProcessing
+                          ? 'Processing...'
                           : _isRecording
-                              ? 'Recording... ${_getRecordingDuration()}'
-                              : 'Processing',
+                              ? 'Listening...'
+                              : 'Ready',
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
@@ -292,11 +275,9 @@ class _RecordingScreenState extends State<RecordingScreen>
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      _isTranscribing
-                          ? 'Using Whisper AI for perfect transcription'
-                          : _isRecording
-                              ? 'Speak naturally - no time limit!'
-                              : 'Please wait...',
+                      _isProcessing
+                          ? 'Getting perfect transcription'
+                          : 'Speak naturally',
                       style: TextStyle(
                         fontSize: 16,
                         color: secondaryTextColor,
@@ -325,8 +306,8 @@ class _RecordingScreenState extends State<RecordingScreen>
                       ),
                     const SizedBox(height: 32),
                     
-                    // Transcription
-                    if (_transcription.isNotEmpty)
+                    // Live Transcription (streaming)
+                    if (_liveTranscription.isNotEmpty)
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(20),
@@ -335,7 +316,7 @@ class _RecordingScreenState extends State<RecordingScreen>
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          '"$_transcription"',
+                          '"$_liveTranscription"',
                           style: TextStyle(
                             fontSize: 16,
                             color: secondaryTextColor,
@@ -349,81 +330,51 @@ class _RecordingScreenState extends State<RecordingScreen>
               ),
             ),
             
-            // Done button
-            if (!_isTranscribing)
-              Positioned(
-                bottom: 32,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: GestureDetector(
-                    onTap: _isRecording ? _handleDone : null,
-                    child: Container(
-                      width: 128,
-                      height: 128,
-                      decoration: BoxDecoration(
-                        color: _isRecording ? Colors.white : Colors.white.withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(128),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.2),
-                            blurRadius: 30,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: Center(
-                        child: Icon(
-                          Icons.stop,
-                          size: 48,
-                          color: backgroundColor,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
-            // Transcribing indicator
-            if (_isTranscribing)
-              Positioned(
-                bottom: 32,
-                left: 0,
-                right: 0,
-                child: Center(
+            // Stop button
+            Positioned(
+              bottom: 32,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: GestureDetector(
+                  onTap: _isProcessing ? null : _handleDone,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                    width: 128,
+                    height: 128,
                     decoration: BoxDecoration(
-                      color: surfaceColor,
-                      borderRadius: BorderRadius.circular(32),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation(
-                              isDark ? const Color(0xFFE9D5FF) : const Color(0xFF9333EA),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          'Processing with Whisper AI...',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: textColor,
-                            fontWeight: FontWeight.w500,
-                          ),
+                      color: _isProcessing ? Colors.white.withOpacity(0.5) : Colors.white,
+                      borderRadius: BorderRadius.circular(128),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 30,
+                          offset: const Offset(0, 10),
                         ),
                       ],
                     ),
+                    child: Center(
+                      child: _isProcessing
+                          ? SizedBox(
+                              width: 48,
+                              height: 48,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 4,
+                                valueColor: AlwaysStoppedAnimation(backgroundColor),
+                              ),
+                            )
+                          : Text(
+                              'Done',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: backgroundColor,
+                              ),
+                            ),
+                    ),
                   ),
                 ),
               ),
+            ),
           ],
         ),
       ),
