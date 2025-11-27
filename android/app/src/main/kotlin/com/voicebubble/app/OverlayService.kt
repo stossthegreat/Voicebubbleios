@@ -97,61 +97,69 @@ class OverlayService : Service() {
     }
     
     private fun createOverlay() {
-        // Create overlay view
-        overlayView = createBubbleView()
-        
-        // Set up window parameters
-        val params = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            WindowManager.LayoutParams(
+        try {
+            // Create overlay view
+            overlayView = createBubbleView()
+            
+            // Set up window parameters
+            val layoutType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            } else {
+                @Suppress("DEPRECATION")
+                WindowManager.LayoutParams.TYPE_PHONE
+            }
+            
+            val params = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.WRAP_CONTENT,
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
+                layoutType,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH,
                 PixelFormat.TRANSLUCENT
             )
-        } else {
-            @Suppress("DEPRECATION")
-            WindowManager.LayoutParams(
-                WindowManager.LayoutParams.WRAP_CONTENT,
-                WindowManager.LayoutParams.WRAP_CONTENT,
-                WindowManager.LayoutParams.TYPE_PHONE,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE,
-                PixelFormat.TRANSLUCENT
-            )
+            
+            params.gravity = Gravity.TOP or Gravity.END
+            params.x = 16
+            params.y = 200
+            
+            // Add view to window manager
+            windowManager?.addView(overlayView, params)
+            isOverlayVisible = true
+            
+            // Set up touch listener for dragging
+            setupDragListener(params)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            // If overlay creation fails, stop the service
+            stopSelf()
         }
-        
-        params.gravity = Gravity.TOP or Gravity.END
-        params.x = 16
-        params.y = 100
-        
-        // Add view to window manager
-        windowManager?.addView(overlayView, params)
-        isOverlayVisible = true
-        
-        // Set up touch listener for dragging
-        setupDragListener(params)
     }
     
     private fun createBubbleView(): View {
-        val inflater = getSystemService(Context.LAYOUT_INFLATER_SERVICE) as LayoutInflater
-        
         // Create a simple bubble view programmatically
-        val bubbleView = ImageView(this).apply {
-            setImageResource(android.R.drawable.ic_btn_speak_now)
-            setPadding(20, 20, 20, 20)
-            setBackgroundResource(android.R.drawable.btn_default)
-            
-            setOnClickListener {
-                // Open main app when bubble is clicked
-                val intent = Intent(context, MainActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
-                    putExtra("open_recording", true)
+        return ImageView(this).apply {
+            try {
+                setImageResource(android.R.drawable.ic_btn_speak_now)
+                setPadding(32, 32, 32, 32)
+                setBackgroundResource(android.R.drawable.btn_default)
+                
+                setOnClickListener {
+                    try {
+                        // Open main app when bubble is clicked
+                        val intent = Intent(this@OverlayService, MainActivity::class.java).apply {
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                            putExtra("open_recording", true)
+                        }
+                        startActivity(intent)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
                 }
-                startActivity(intent)
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
-        
-        return bubbleView
     }
     
     private fun setupDragListener(params: WindowManager.LayoutParams) {
@@ -159,6 +167,7 @@ class OverlayService : Service() {
         var initialY = 0
         var initialTouchX = 0f
         var initialTouchY = 0f
+        var isMoved = false
         
         overlayView?.setOnTouchListener { view, event ->
             when (event.action) {
@@ -167,13 +176,31 @@ class OverlayService : Service() {
                     initialY = params.y
                     initialTouchX = event.rawX
                     initialTouchY = event.rawY
+                    isMoved = false
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
-                    params.x = initialX + (initialTouchX - event.rawX).toInt()
-                    params.y = initialY + (event.rawY - initialTouchY).toInt()
-                    windowManager?.updateViewLayout(overlayView, params)
+                    val deltaX = Math.abs(event.rawX - initialTouchX)
+                    val deltaY = Math.abs(event.rawY - initialTouchY)
+                    
+                    if (deltaX > 10 || deltaY > 10) {
+                        isMoved = true
+                        params.x = initialX + (initialTouchX - event.rawX).toInt()
+                        params.y = initialY + (event.rawY - initialTouchY).toInt()
+                        try {
+                            windowManager?.updateViewLayout(overlayView, params)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
                     true
+                }
+                MotionEvent.ACTION_UP -> {
+                    if (!isMoved) {
+                        // It was a click, not a drag
+                        view.performClick()
+                    }
+                    false
                 }
                 else -> false
             }
@@ -184,10 +211,14 @@ class OverlayService : Service() {
         super.onDestroy()
         
         // Remove overlay view
-        if (overlayView != null) {
-            windowManager?.removeView(overlayView)
-            overlayView = null
-            isOverlayVisible = false
+        try {
+            if (overlayView != null && isOverlayVisible) {
+                windowManager?.removeView(overlayView)
+                overlayView = null
+                isOverlayVisible = false
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
     
