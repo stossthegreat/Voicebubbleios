@@ -42,14 +42,15 @@ class OverlayService {
         overlayContent: 'Tap to record',
         flag: OverlayFlag.defaultFlag,
         visibility: NotificationVisibility.visibilityPublic,
-        positionGravity: PositionGravity.auto,
-        width: 100,
-        height: 100,
+        positionGravity: PositionGravity.right,
+        width: WindowSize.matchParent,
+        height: WindowSize.matchParent,
       );
       
       _isOverlayActive = true;
+      debugPrint('✅ Overlay shown successfully');
     } catch (e) {
-      debugPrint('Error showing overlay: $e');
+      debugPrint('❌ Error showing overlay: $e');
     }
   }
   

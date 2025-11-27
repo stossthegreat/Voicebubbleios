@@ -102,55 +102,70 @@ class _OverlayWidgetState extends State<OverlayWidget> {
   @override
   Widget build(BuildContext context) {
     if (!_isExpanded) {
-      // Collapsed bubble
-      return GestureDetector(
-        onTap: _toggleExpanded,
-        child: Container(
-          width: 64,
-          height: 64,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: const LinearGradient(
-              colors: [Color(0xFF9333EA), Color(0xFFEC4899)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF9333EA).withOpacity(0.5),
-                blurRadius: 20,
-                offset: const Offset(0, 5),
+      // Collapsed bubble - positioned at the edge
+      return Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Stack(
+          children: [
+            Positioned(
+              right: 16,
+              top: MediaQuery.of(context).size.height / 2 - 32,
+              child: GestureDetector(
+                onTap: _toggleExpanded,
+                child: Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF9333EA), Color(0xFFEC4899)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF9333EA).withOpacity(0.5),
+                        blurRadius: 20,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.mic,
+                    color: Colors.white,
+                    size: 32,
+                  ),
+                ),
               ),
-            ],
-          ),
-          child: const Icon(
-            Icons.mic,
-            color: Colors.white,
-            size: 32,
-          ),
+            ),
+          ],
         ),
       );
     }
     
     // Expanded overlay UI
-    return Container(
-      width: 320,
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 30,
-            offset: const Offset(0, 10),
+    return Scaffold(
+      backgroundColor: Colors.black.withOpacity(0.3),
+      body: Center(
+        child: Container(
+          width: 340,
+          constraints: const BoxConstraints(maxHeight: 500),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E293B),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.5),
+                blurRadius: 30,
+                offset: const Offset(0, 10),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+          child: Material(
+            color: Colors.transparent,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
             // Header
             Container(
               padding: const EdgeInsets.all(16),
@@ -329,8 +344,9 @@ class _OverlayWidgetState extends State<OverlayWidget> {
                   ],
                 ],
               ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
