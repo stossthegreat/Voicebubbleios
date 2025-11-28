@@ -27,9 +27,12 @@ class _RecordingScreenState extends State<RecordingScreen>
   
   bool _isRecording = false;
   bool _isProcessing = false;
-  String _liveTranscription = '';
   String? _audioPath;
   late AnimationController _pulseController;
+  
+  // Sound wave animation
+  List<double> _waveHeights = [0.3, 0.5, 0.7, 0.5, 0.3];
+  double _currentSoundLevel = 0.0;
   
   @override
   void initState() {
@@ -47,6 +50,18 @@ class _RecordingScreenState extends State<RecordingScreen>
     _speech.stop();
     _audioRecorder.dispose();
     super.dispose();
+  }
+  
+  void _updateWaveHeights(double soundLevel) {
+    // Normalize sound level (typically -2 to 10, we want 0.1 to 1.0)
+    final normalizedLevel = (soundLevel.clamp(-2, 8) + 2) / 10;
+    
+    // Update each wave bar with some variation
+    for (int i = 0; i < _waveHeights.length; i++) {
+      // Add some randomness and variation to each bar
+      final variation = (i - 2).abs() / 5; // Center bars are taller
+      _waveHeights[i] = (normalizedLevel * 0.7 + 0.3) * (1 - variation * 0.3);
+    }
   }
   
   Future<void> _initSpeech() async {
@@ -73,18 +88,20 @@ class _RecordingScreenState extends State<RecordingScreen>
         );
       }
 
-      // Start live speech-to-text for real-time streaming
+      // Start live speech-to-text for recording (no display needed)
       await _speech.listen(
         onResult: (result) {
-          setState(() {
-            _liveTranscription = result.recognizedWords;
-          });
+          // We don't need to show the transcription anymore
         },
         listenMode: stt.ListenMode.dictation, // Continuous dictation mode
         pauseFor: const Duration(seconds: 30), // Don't auto-stop
-        partialResults: true, // CRITICAL: Show words as you speak!
+        partialResults: true,
         onSoundLevelChange: (level) {
-          // Optional: Could use this for visual feedback
+          // Update sound waves based on audio level
+          setState(() {
+            _currentSoundLevel = level;
+            _updateWaveHeights(level);
+          });
         },
         cancelOnError: false,
         listenFor: const Duration(minutes: 5), // Max 5 minutes
@@ -121,51 +138,29 @@ class _RecordingScreenState extends State<RecordingScreen>
         final audioFile = File(path);
         final transcription = await _aiService.transcribeAudio(audioFile);
         
-        // Update app state with Whisper result (more accurate than live preview)
+        // Update app state with Whisper result
         context.read<AppStateProvider>().setTranscription(transcription);
         
         print('Final transcription: $transcription');
         
-        // Navigate to preset selection
+        // Navigate directly to preset selection (skip showing transcription)
         if (mounted) {
-          _navigateToNext();
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const PresetSelectionScreen(fromRecording: true),
+            ),
+          );
         }
       }
     } catch (e) {
       print('Error stopping: $e');
-      
-      // Fallback to live transcription if Whisper fails
-      if (_liveTranscription.isNotEmpty) {
-        context.read<AppStateProvider>().setTranscription(_liveTranscription);
-        if (mounted) {
-          _navigateToNext();
-        }
-      }
+      setState(() {
+        _isProcessing = false;
+      });
     }
   }
 
-  void _navigateToNext() {
-    final appState = context.read<AppStateProvider>();
-    
-    if (appState.selectedPreset != null) {
-      // Preset already selected, go to result
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const ResultScreen(),
-        ),
-      );
-    } else {
-      // No preset, go to selection
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const PresetSelectionScreen(fromRecording: true),
-        ),
-      );
-    }
-  }
-  
   Future<void> _handleDone() async {
     await _stopRecording();
   }
@@ -286,67 +281,43 @@ class _RecordingScreenState extends State<RecordingScreen>
                         color: secondaryTextColor,
                       ),
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 48),
                     
-                    // Selected Preset
-                    if (selectedPreset != null)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
-                        ),
-                        decoration: BoxDecoration(
-                          color: surfaceColor,
-                          borderRadius: BorderRadius.circular(24),
-                        ),
-                        child: Text(
-                          'Using: ${selectedPreset.name}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: isDark ? const Color(0xFFE9D5FF) : const Color(0xFF9333EA),
-                          ),
+                    // Sound Wave Visualization
+                    if (_isRecording)
+                      SizedBox(
+                        height: 120,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: List.generate(_waveHeights.length, (index) {
+                            return AnimatedContainer(
+                              duration: const Duration(milliseconds: 100),
+                              width: 8,
+                              height: 120 * _waveHeights[index].clamp(0.2, 1.0),
+                              margin: const EdgeInsets.symmetric(horizontal: 4),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                gradient: LinearGradient(
+                                  colors: [
+                                    const Color(0xFF9333EA),
+                                    const Color(0xFFEC4899),
+                                  ],
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF9333EA).withOpacity(0.5),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }),
                         ),
                       ),
-                    const SizedBox(height: 32),
-                    
-                    // Live Transcription (streaming) - Always show
-                    Container(
-                      width: double.infinity,
-                      constraints: const BoxConstraints(minHeight: 100),
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: surfaceColor,
-                        borderRadius: BorderRadius.circular(12),
-                        border: _isRecording && _liveTranscription.isEmpty
-                            ? Border.all(
-                                color: const Color(0xFFEF4444).withOpacity(0.3),
-                                width: 2,
-                              )
-                            : null,
-                      ),
-                      child: _liveTranscription.isEmpty
-                          ? Text(
-                              _isRecording 
-                                  ? 'Start speaking...'
-                                  : 'Waiting...',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: secondaryTextColor.withOpacity(0.5),
-                                fontStyle: FontStyle.italic,
-                              ),
-                              textAlign: TextAlign.center,
-                            )
-                          : Text(
-                              '"$_liveTranscription"',
-                              style: TextStyle(
-                                fontSize: 18,
-                                color: textColor,
-                                fontWeight: FontWeight.w500,
-                                height: 1.5,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                    ),
                   ],
                 ),
               ),
