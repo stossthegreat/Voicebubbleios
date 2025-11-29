@@ -53,7 +53,7 @@ export async function transcribeAudio(audioBuffer, filename = "audio.wav") {
 
     const form = new FormData();
     form.append("file", audioBuffer, filename);
-    form.append("model", "gpt-4o-mini-transcribe");
+    form.append("model", "whisper-1"); // Correct Whisper model name
 
     const response = await axios.post(
       `${OPENAI_API_URL}/audio/transcriptions`,
