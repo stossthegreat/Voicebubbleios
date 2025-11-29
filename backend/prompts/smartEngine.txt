@@ -1,0 +1,64 @@
+import fs from "fs";
+import path from "path";
+
+const promptsDir = path.join(process.cwd(), "prompts");
+
+// Safe load Smart Engine (can be empty)
+let SMART_ENGINE = "";
+try {
+  SMART_ENGINE = fs.readFileSync(
+    path.join(promptsDir, "smartEngine.txt"),
+    "utf8"
+  );
+} catch {
+  SMART_ENGINE = "";
+}
+
+// Dummy empty presets holder for now
+export const PRESET_CONFIGS = {};
+
+// Fallback to empty config
+export function getPresetConfig(presetId) {
+  return PRESET_CONFIGS[presetId] || {
+    systemPrompt: "",
+    constraints: "",
+    examples: [],
+    temperature: 0.7,
+    maxTokens: 500
+  };
+}
+
+export function buildMessages(presetId, userText) {
+  const config = getPresetConfig(presetId);
+
+  const messages = [
+    {
+      role: "system",
+      content:
+        (SMART_ENGINE || "") +
+        "\n\n" +
+        (config.systemPrompt || "") +
+        "\n\n" +
+        (config.constraints || "")
+    }
+  ];
+
+  if (config.examples && config.examples.length > 0) {
+    config.examples.forEach((ex) => {
+      messages.push({ role: "user", content: ex.input });
+      messages.push({ role: "assistant", content: ex.output });
+    });
+  }
+
+  messages.push({ role: "user", content: userText });
+
+  return messages;
+}
+
+export function getPresetParameters(presetId) {
+  const config = getPresetConfig(presetId);
+  return {
+    temperature: config.temperature || 0.7,
+    max_tokens: config.maxTokens || 500
+  };
+}
