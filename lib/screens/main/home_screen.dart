@@ -371,7 +371,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       Expanded(
                         child: Text(
                           _overlayEnabled
-                              ? 'Bubble active! Look for it on the left side of your screen'
+                              ? 'Look for the bubble on the LEFT side • Close and reopen app to refresh status'
                               : 'Tap Setup to enable the floating bubble',
                           style: const TextStyle(
                             fontSize: 13,
