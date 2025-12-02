@@ -195,10 +195,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF5F5F7);
-    final surfaceColor = isDark ? const Color(0xFF1E293B) : Colors.white;
-    final textColor = isDark ? Colors.white : const Color(0xFF1F2937);
-    final secondaryTextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF6B7280);
+    final backgroundColor = const Color(0xFF000000); // Always black
+    final surfaceColor = const Color(0xFF1A1A1A); // Dark gray for cards
+    final textColor = Colors.white; // Always white text
+    final secondaryTextColor = const Color(0xFF94A3B8); // Light gray
     
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -421,99 +421,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Language Selector
-                    Consumer<AppStateProvider>(
-                      builder: (context, appState, _) {
-                        return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                          decoration: BoxDecoration(
-                            color: surfaceColor,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: const Color(0xFF9333EA).withOpacity(0.2),
-                              width: 1.5,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: DropdownButton<Language>(
-                            value: appState.selectedLanguage,
-                            icon: Icon(
-                              Icons.arrow_drop_down,
-                              color: isDark ? const Color(0xFFA855F7) : const Color(0xFF9333EA),
-                            ),
-                            underline: const SizedBox(),
-                            dropdownColor: surfaceColor,
-                            borderRadius: BorderRadius.circular(12),
-                            isExpanded: false,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                              color: textColor,
-                            ),
-                            items: AppLanguages.all.map((Language language) {
-                              return DropdownMenuItem<Language>(
-                                value: language,
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      language.flag,
-                                      size: 20,
-                                      color: isDark ? const Color(0xFFA855F7) : const Color(0xFF9333EA),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Text(language.nativeName),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      '(${language.name})',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: secondaryTextColor,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
-                            onChanged: (Language? newLanguage) {
-                              if (newLanguage != null) {
-                                appState.setSelectedLanguage(newLanguage);
-                              }
-                            },
-                            selectedItemBuilder: (BuildContext context) {
-                              return AppLanguages.all.map((Language language) {
-                                return Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      language.flag,
-                                      size: 20,
-                                      color: isDark ? const Color(0xFFA855F7) : const Color(0xFF9333EA),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Text(
-                                      language.nativeName,
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w500,
-                                        color: textColor,
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              }).toList();
-                            },
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 100),
                     
                     // Record Button
                     GestureDetector(
@@ -527,35 +435,36 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         );
                       },
                       child: Container(
-                        width: 128,
-                        height: 128,
+                        width: 160,
+                        height: 160,
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(128),
+                          shape: BoxShape.circle,
                           gradient: const LinearGradient(
-                            colors: [Color(0xFF9333EA), Color(0xFFEC4899)],
+                            colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF9333EA).withOpacity(0.5),
-                              blurRadius: 30,
-                              offset: const Offset(0, 10),
+                              color: const Color(0xFF3B82F6).withOpacity(0.5),
+                              blurRadius: 40,
+                              offset: const Offset(0, 20),
                             ),
                           ],
                         ),
                         child: const Icon(
                           Icons.mic,
-                          size: 64,
+                          size: 72,
                           color: Colors.white,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 32),
                     Text(
-                      'Tap to record',
+                      'Tap to speak',
                       style: TextStyle(
-                        fontSize: 18,
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
                         color: textColor,
                       ),
                     ),
