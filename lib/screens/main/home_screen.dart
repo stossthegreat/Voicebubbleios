@@ -421,7 +421,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const SizedBox(height: 80),
+                    const SizedBox(height: 32),
                     
                     // Card 1: Speak to rewrite (ABOVE the mic)
                     Padding(
@@ -433,9 +433,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       ),
                     ),
                     
-                    const SizedBox(height: 48),
+                    const SizedBox(height: 28),
                     
-                    // Record Button
+                    // Record Button (smaller)
                     GestureDetector(
                       onTap: () {
                         context.read<AppStateProvider>().reset();
@@ -447,8 +447,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         );
                       },
                       child: Container(
-                        width: 160,
-                        height: 160,
+                        width: 140,
+                        height: 140,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           gradient: const LinearGradient(
@@ -459,36 +459,36 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           boxShadow: [
                             BoxShadow(
                               color: const Color(0xFF3B82F6).withOpacity(0.5),
-                              blurRadius: 40,
-                              offset: const Offset(0, 20),
+                              blurRadius: 30,
+                              offset: const Offset(0, 15),
                             ),
                           ],
                         ),
                         child: const Icon(
                           Icons.mic,
-                          size: 72,
+                          size: 64,
                           color: Colors.white,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 20),
                     Text(
                       'Tap to speak',
                       style: TextStyle(
-                        fontSize: 28,
+                        fontSize: 24,
                         fontWeight: FontWeight.bold,
                         color: textColor,
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
                     Text(
                       'Voice to AI-powered text',
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: 13,
                         color: secondaryTextColor,
                       ),
                     ),
-                    const SizedBox(height: 48),
+                    const SizedBox(height: 28),
                     
                     // Card 2: Language support (BELOW the mic)
                     Padding(
@@ -499,7 +499,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         gradientColors: const [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
                       ),
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),
@@ -628,7 +628,7 @@ class _AnimatedFeatureCardState extends State<_AnimatedFeatureCard>
       animation: _pulseAnimation,
       builder: (context, child) {
         return Container(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
@@ -655,8 +655,8 @@ class _AnimatedFeatureCardState extends State<_AnimatedFeatureCard>
             children: [
               // Animated icon container with glow
               Container(
-                width: 48,
-                height: 48,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: widget.gradientColors,
@@ -675,18 +675,18 @@ class _AnimatedFeatureCardState extends State<_AnimatedFeatureCard>
                 child: Icon(
                   widget.icon,
                   color: Colors.white,
-                  size: 24,
+                  size: 22,
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 14),
               Expanded(
                 child: Text(
                   widget.text,
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 15,
                     fontWeight: FontWeight.w600,
                     color: textColor,
-                    height: 1.4,
+                    height: 1.3,
                   ),
                 ),
               ),
