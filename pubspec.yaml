@@ -53,11 +53,21 @@ dev_dependencies:
   flutter_lints: ^5.0.0
   hive_generator: ^2.0.1
   build_runner: ^2.4.7
+  flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
   
-  # assets:
-  #   - .env
+  assets:
+    - assets/app_logo.png
+  
   # Note: .env is not needed in production builds
   # API keys should be set as environment variables
+
+# App Launcher Icon Configuration
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: "assets/app_logo.png"
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: "assets/app_logo.png"
