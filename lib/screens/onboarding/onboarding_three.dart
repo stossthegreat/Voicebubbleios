@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 
-class OnboardingThree extends StatefulWidget {
+class OnboardingFour extends StatefulWidget {
   final VoidCallback onNext;
   
-  const OnboardingThree({super.key, required this.onNext});
+  const OnboardingFour({super.key, required this.onNext});
 
   @override
-  State<OnboardingThree> createState() => _OnboardingThreeState();
+  State<OnboardingFour> createState() => _OnboardingFourState();
 }
 
-class _OnboardingThreeState extends State<OnboardingThree> with SingleTickerProviderStateMixin {
+class _OnboardingFourState extends State<OnboardingFour> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<double> _slideAnimation;
@@ -46,12 +46,12 @@ class _OnboardingThreeState extends State<OnboardingThree> with SingleTickerProv
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
             colors: [
-              Color(0xFF1565C0),
-              Color(0xFF0D47A1),
-              Color(0xFF01579B), // Very dark blue
+              Color(0xFF000000), // Pure black
+              Color(0xFF0A0A0A),
+              Color(0xFF1A1A1A),
             ],
           ),
         ),
@@ -70,9 +70,10 @@ class _OnboardingThreeState extends State<OnboardingThree> with SingleTickerProv
                       ),
                     );
                   },
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(32, 80, 32, 24),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(32, 40, 32, 24),
                     child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         // Lock Icon
                         Container(
@@ -89,10 +90,21 @@ class _OnboardingThreeState extends State<OnboardingThree> with SingleTickerProv
                               ),
                             ],
                           ),
-                          child: const Icon(
-                            Icons.verified_user_rounded,
-                            size: 50,
-                            color: Color(0xFF1E88E5),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                            ),
+                            padding: const EdgeInsets.all(10),
+                            child: const Icon(
+                              Icons.verified_user_rounded,
+                              size: 50,
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 60),
@@ -140,11 +152,11 @@ class _OnboardingThreeState extends State<OnboardingThree> with SingleTickerProv
                         Container(
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.1),
+                            color: const Color(0xFF1A1A1A),
                             borderRadius: BorderRadius.circular(16),
                             border: Border.all(
-                              color: Colors.white.withOpacity(0.2),
-                              width: 1,
+                              color: const Color(0xFF3B82F6).withOpacity(0.2),
+                              width: 1.5,
                             ),
                           ),
                           child: Row(
@@ -181,13 +193,14 @@ class _OnboardingThreeState extends State<OnboardingThree> with SingleTickerProv
                   child: ElevatedButton(
                     onPressed: widget.onNext,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: const Color(0xFF0D47A1),
+                      backgroundColor: const Color(0xFF3B82F6), // Blue button
+                      foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 20),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
                       elevation: 0,
+                      shadowColor: const Color(0xFF3B82F6).withOpacity(0.5),
                     ),
                     child: const Text(
                       'Grant Permissions',
@@ -230,12 +243,19 @@ class _OnboardingThreeState extends State<OnboardingThree> with SingleTickerProv
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.15),
+          color: const Color(0xFF1A1A1A), // Dark gray
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: Colors.white.withOpacity(0.3),
+            color: const Color(0xFF3B82F6).withOpacity(0.3), // Blue border
             width: 2,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF3B82F6).withOpacity(0.1),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
         ),
         child: Row(
           children: [
@@ -263,13 +283,17 @@ class _OnboardingThreeState extends State<OnboardingThree> with SingleTickerProv
               width: 56,
               height: 56,
               decoration: BoxDecoration(
-                color: Colors.white,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(
                 icon,
                 size: 28,
-                color: const Color(0xFF1E88E5),
+                color: Colors.white,
               ),
             ),
             const SizedBox(width: 16),

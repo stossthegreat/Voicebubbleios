@@ -61,12 +61,12 @@ class _OnboardingTwoState extends State<OnboardingTwo> with TickerProviderStateM
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
             colors: [
-              Color(0xFF0D47A1), // Darker blue
-              Color(0xFF1565C0),
-              Color(0xFF1E88E5), // Logo blue
+              Color(0xFF000000), // Pure black
+              Color(0xFF0A0A0A),
+              Color(0xFF1A1A1A),
             ],
           ),
         ),
@@ -85,16 +85,17 @@ class _OnboardingTwoState extends State<OnboardingTwo> with TickerProviderStateM
                       ),
                     );
                   },
-                  child: SingleChildScrollView(
+                  child: Padding(
                     padding: const EdgeInsets.fromLTRB(32, 60, 32, 24),
                     child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 40),
                         // Title
                         const Text(
                           'Access Anywhere',
                           style: TextStyle(
-                            fontSize: 42,
+                            fontSize: 44,
                             fontWeight: FontWeight.w900,
                             color: Colors.white,
                             height: 1.2,
@@ -102,42 +103,41 @@ class _OnboardingTwoState extends State<OnboardingTwo> with TickerProviderStateM
                           ),
                           textAlign: TextAlign.center,
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 20),
                         Text(
                           'Floating bubble for rapid voice access',
                           style: TextStyle(
                             fontSize: 18,
-                            color: Colors.white.withOpacity(0.9),
+                            color: Colors.white.withOpacity(0.8),
                             height: 1.5,
                           ),
                           textAlign: TextAlign.center,
                         ),
-                        const SizedBox(height: 60),
+                        const SizedBox(height: 80),
                         // Floating Bubble Animation
                         _buildFloatingBubbleDemo(),
-                        const SizedBox(height: 50),
-                        // Feature Cards
-                        _buildFeatureCard(
-                          icon: Icons.bolt_rounded,
-                          title: 'Works Over Any App',
-                          subtitle: 'WhatsApp, Gmail, Instagram, anywhere you type',
-                          delay: 0,
+                        const SizedBox(height: 80),
+                        // Tagline
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1A1A1A),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: const Color(0xFF3B82F6).withOpacity(0.3),
+                              width: 2,
+                            ),
+                          ),
+                          child: Text(
+                            'Works over WhatsApp, Gmail, Instagram,\nand any app where you type',
+                            style: TextStyle(
+                              fontSize: 15,
+                              color: Colors.white.withOpacity(0.9),
+                              height: 1.5,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
                         ),
-                        const SizedBox(height: 16),
-                        _buildFeatureCard(
-                          icon: Icons.language_rounded,
-                          title: '30+ Languages',
-                          subtitle: 'English, Spanish, French, German, Japanese, and more',
-                          delay: 200,
-                        ),
-                        const SizedBox(height: 16),
-                        _buildFeatureCard(
-                          icon: Icons.speed_rounded,
-                          title: 'Lightning Fast',
-                          subtitle: 'Tap bubble → speak → done in seconds',
-                          delay: 400,
-                        ),
-                        const SizedBox(height: 40),
                       ],
                     ),
                   ),
@@ -151,13 +151,14 @@ class _OnboardingTwoState extends State<OnboardingTwo> with TickerProviderStateM
                   child: ElevatedButton(
                     onPressed: widget.onNext,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: const Color(0xFF0D47A1),
+                      backgroundColor: const Color(0xFF3B82F6), // Blue button
+                      foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 20),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
                       elevation: 0,
+                      shadowColor: const Color(0xFF3B82F6).withOpacity(0.5),
                     ),
                     child: const Text(
                       'Continue',
@@ -206,29 +207,29 @@ class _OnboardingTwoState extends State<OnboardingTwo> with TickerProviderStateM
               ),
               // Main bubble
               Container(
-                width: 100,
-                height: 100,
+                width: 120,
+                height: 120,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      Color(0xFF42A5F5),
-                      Color(0xFF1E88E5),
+                      Color(0xFF3B82F6), // Blue
+                      Color(0xFF2563EB),
                     ],
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF1E88E5).withOpacity(0.5),
-                      blurRadius: 30,
-                      offset: const Offset(0, 15),
+                      color: const Color(0xFF3B82F6).withOpacity(0.6),
+                      blurRadius: 40,
+                      offset: const Offset(0, 20),
                     ),
                   ],
                 ),
                 child: const Icon(
-                  Icons.mic_rounded,
-                  size: 50,
+                  Icons.mic,
+                  size: 60,
                   color: Colors.white,
                 ),
               ),
@@ -279,78 +280,4 @@ class _OnboardingTwoState extends State<OnboardingTwo> with TickerProviderStateM
     });
   }
 
-  Widget _buildFeatureCard({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required int delay,
-  }) {
-    return TweenAnimationBuilder<double>(
-      duration: Duration(milliseconds: 800 + delay),
-      tween: Tween(begin: 0.0, end: 1.0),
-      curve: Curves.easeOutCubic,
-      builder: (context, value, child) {
-        return Opacity(
-          opacity: value,
-          child: Transform.translate(
-            offset: Offset(0, 30 * (1 - value)),
-            child: child,
-          ),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: Colors.white.withOpacity(0.3),
-            width: 2,
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(
-                icon,
-                size: 28,
-                color: const Color(0xFF1E88E5),
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.white.withOpacity(0.8),
-                      height: 1.3,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }

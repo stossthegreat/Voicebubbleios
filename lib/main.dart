@@ -9,7 +9,7 @@ import 'services/flutter_overlay_service.dart';
 import 'theme/app_theme.dart';
 import 'screens/onboarding/onboarding_one.dart';
 import 'screens/onboarding/onboarding_two.dart';
-import 'screens/onboarding/onboarding_three.dart';
+import 'screens/onboarding/onboarding_three_new.dart';
 import 'screens/auth/sign_in_screen.dart';
 import 'screens/onboarding/permissions_screen.dart';
 import 'screens/paywall/paywall_screen.dart';
@@ -139,7 +139,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   bool _isSignedIn = false;
   
   void _nextStep() {
-    if (_currentStep < 5) {
+    if (_currentStep < 6) {
       setState(() {
         _currentStep++;
       });
@@ -151,14 +151,14 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   void _skipSignIn() {
     setState(() {
       _isSignedIn = false;
-      _currentStep = 4; // Skip to permissions
+      _currentStep = 5; // Skip to permissions
     });
   }
   
   void _handleSignIn() {
     setState(() {
       _isSignedIn = true;
-      _currentStep = 4; // Go to permissions
+      _currentStep = 5; // Go to permissions
     });
   }
   
@@ -174,7 +174,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       case 1:
         return OnboardingTwo(onNext: _nextStep);
       case 2:
-        return OnboardingThree(onNext: _nextStep);
+        return OnboardingThreeNew(onNext: _nextStep); // Features + pricing
       case 3:
         return SignInScreen(
           onSignIn: _handleSignIn,

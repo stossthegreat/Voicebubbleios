@@ -65,12 +65,12 @@ class PermissionsScreen extends StatelessWidget {
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
             colors: [
-              Color(0xFF0D47A1), // Logo blue theme
-              Color(0xFF1565C0),
-              Color(0xFF1E88E5),
+              Color(0xFF000000), // Pure black
+              Color(0xFF0A0A0A),
+              Color(0xFF1A1A1A),
             ],
           ),
         ),
@@ -159,13 +159,14 @@ class PermissionsScreen extends StatelessWidget {
                     child: ElevatedButton(
                       onPressed: () => _requestPermissions(context),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFF0D47A1),
+                        backgroundColor: const Color(0xFF3B82F6), // Blue button
+                        foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 20),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
                         elevation: 0,
+                        shadowColor: const Color(0xFF3B82F6).withOpacity(0.5),
                       ),
                       child: const Text(
                         'Grant Permissions',
@@ -209,12 +210,19 @@ class PermissionsScreen extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
+        color: const Color(0xFF1A1A1A), // Dark gray
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: Colors.white.withOpacity(0.3),
+          color: const Color(0xFF3B82F6).withOpacity(0.3), // Blue border
           width: 2,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF3B82F6).withOpacity(0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -222,13 +230,17 @@ class PermissionsScreen extends StatelessWidget {
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: Colors.white,
+              gradient: const LinearGradient(
+                colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(
               icon,
               size: 28,
-              color: const Color(0xFF1E88E5),
+              color: Colors.white,
             ),
           ),
           const SizedBox(width: 16),
