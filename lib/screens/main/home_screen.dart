@@ -154,9 +154,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           if (started && mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('✓ Bubble is now active on the left side!'),
+                content: Text('✓ Bubble activated! Close and reopen app to refresh status.'),
                 backgroundColor: Color(0xFF10B981),
-                duration: Duration(seconds: 3),
+                duration: Duration(seconds: 4),
               ),
             );
           }
@@ -174,9 +174,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         if (started && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('✓ Bubble is now active on the left side!'),
+              content: Text('✓ Bubble activated! Close and reopen app to refresh status.'),
               backgroundColor: Color(0xFF10B981),
-              duration: Duration(seconds: 3),
+              duration: Duration(seconds: 4),
             ),
           );
         } else if (mounted) {
@@ -203,10 +203,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return Scaffold(
       backgroundColor: backgroundColor,
       body: SafeArea(
-        child: Column(
-          children: [
-            // Header
-            Padding(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            children: [
+              // Header
+              Padding(
               padding: const EdgeInsets.all(24.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -371,7 +373,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       Expanded(
                         child: Text(
                           _overlayEnabled
-                              ? 'Look for the bubble on the LEFT side • Close and reopen app to refresh status'
+                              ? 'Bubble active! Close and reopen app to refresh status'
                               : 'Tap Setup to enable the floating bubble',
                           style: const TextStyle(
                             fontSize: 13,
@@ -416,12 +418,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
             
             // Main Record Button
-            Expanded(
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const SizedBox(height: 80),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 40),
+              child: Column(
+                children: [
+                  const SizedBox(height: 20),
                     
                     // Record Button
                     GestureDetector(
