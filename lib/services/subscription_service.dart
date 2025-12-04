@@ -1,0 +1,280 @@
+import 'dart:async';
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:in_app_purchase_android/in_app_purchase_android.dart';
+import 'package:in_app_purchase_storekit/in_app_purchase_storekit.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+class SubscriptionService {
+  static final SubscriptionService _instance = SubscriptionService._internal();
+  factory SubscriptionService() => _instance;
+  SubscriptionService._internal();
+
+  final InAppPurchase _iap = InAppPurchase.instance;
+  late StreamSubscription<List<PurchaseDetails>> _subscription;
+  
+  // Product IDs - CHANGE THESE to match your App Store Connect & Google Play Console
+  static const String monthlyProductId = 'voicebubble_monthly';
+  static const String yearlyProductId = 'voicebubble_yearly';
+  
+  final Set<String> _productIds = {monthlyProductId, yearlyProductId};
+  
+  List<ProductDetails> _products = [];
+  bool _isAvailable = false;
+  bool _purchasePending = false;
+  String? _queryProductError;
+
+  // Getters
+  bool get isAvailable => _isAvailable;
+  bool get purchasePending => _purchasePending;
+  List<ProductDetails> get products => _products;
+  ProductDetails? get monthlyProduct => _products.where((p) => p.id == monthlyProductId).firstOrNull;
+  ProductDetails? get yearlyProduct => _products.where((p) => p.id == yearlyProductId).firstOrNull;
+
+  /// Initialize the IAP system
+  Future<void> initialize() async {
+    debugPrint('🛒 Initializing In-App Purchase system...');
+    
+    // Check if IAP is available
+    _isAvailable = await _iap.isAvailable();
+    
+    if (!_isAvailable) {
+      debugPrint('❌ IAP not available on this device');
+      return;
+    }
+    
+    debugPrint('✅ IAP is available');
+    
+    // Set up platform-specific configurations
+    if (Platform.isAndroid) {
+      // Enable pending purchases on Android
+      final InAppPurchaseAndroidPlatformAddition androidAddition = _iap
+          .getPlatformAddition<InAppPurchaseAndroidPlatformAddition>();
+      await androidAddition.enablePendingPurchases();
+    }
+    
+    // Listen for purchase updates
+    _subscription = _iap.purchaseStream.listen(
+      _onPurchaseUpdate,
+      onDone: () => debugPrint('🔚 Purchase stream done'),
+      onError: (error) => debugPrint('❌ Purchase stream error: $error'),
+    );
+    
+    // Load products
+    await loadProducts();
+  }
+
+  /// Load available products from stores
+  Future<void> loadProducts() async {
+    debugPrint('📦 Loading products: $_productIds');
+    
+    final ProductDetailsResponse response = await _iap.queryProductDetails(_productIds);
+    
+    if (response.notFoundIDs.isNotEmpty) {
+      debugPrint('⚠️ Products not found: ${response.notFoundIDs}');
+      _queryProductError = 'Products not found: ${response.notFoundIDs}';
+    }
+    
+    if (response.error != null) {
+      debugPrint('❌ Error loading products: ${response.error}');
+      _queryProductError = response.error!.message;
+      return;
+    }
+    
+    _products = response.productDetails;
+    debugPrint('✅ Loaded ${_products.length} products:');
+    for (var product in _products) {
+      debugPrint('  - ${product.id}: ${product.title} (${product.price})');
+    }
+  }
+
+  /// Purchase a subscription
+  Future<bool> purchaseSubscription(String productId) async {
+    debugPrint('💳 Purchasing subscription: $productId');
+    
+    final ProductDetails? productDetails = _products.where((p) => p.id == productId).firstOrNull;
+    
+    if (productDetails == null) {
+      debugPrint('❌ Product not found: $productId');
+      return false;
+    }
+    
+    _purchasePending = true;
+    
+    final PurchaseParam purchaseParam = PurchaseParam(
+      productDetails: productDetails,
+    );
+    
+    try {
+      final bool success = await _iap.buyNonConsumable(purchaseParam: purchaseParam);
+      debugPrint('Purchase initiated: $success');
+      return success;
+    } catch (e) {
+      debugPrint('❌ Error initiating purchase: $e');
+      _purchasePending = false;
+      return false;
+    }
+  }
+
+  /// Restore previous purchases
+  Future<void> restorePurchases() async {
+    debugPrint('🔄 Restoring purchases...');
+    
+    try {
+      await _iap.restorePurchases();
+      debugPrint('✅ Restore purchases completed');
+    } catch (e) {
+      debugPrint('❌ Error restoring purchases: $e');
+      rethrow;
+    }
+  }
+
+  /// Handle purchase updates from the store
+  void _onPurchaseUpdate(List<PurchaseDetails> purchaseDetailsList) async {
+    debugPrint('📬 Purchase update received: ${purchaseDetailsList.length} items');
+    
+    for (final PurchaseDetails purchaseDetails in purchaseDetailsList) {
+      debugPrint('Purchase status: ${purchaseDetails.status} for ${purchaseDetails.productID}');
+      
+      if (purchaseDetails.status == PurchaseStatus.pending) {
+        debugPrint('⏳ Purchase pending...');
+        _purchasePending = true;
+      } else {
+        if (purchaseDetails.status == PurchaseStatus.error) {
+          debugPrint('❌ Purchase error: ${purchaseDetails.error}');
+          _purchasePending = false;
+        } else if (purchaseDetails.status == PurchaseStatus.purchased ||
+                   purchaseDetails.status == PurchaseStatus.restored) {
+          debugPrint('✅ Purchase successful/restored!');
+          
+          // Verify and deliver purchase
+          final bool valid = await _verifyPurchase(purchaseDetails);
+          
+          if (valid) {
+            await _deliverProduct(purchaseDetails);
+          } else {
+            debugPrint('❌ Purchase verification failed');
+          }
+          
+          _purchasePending = false;
+        }
+        
+        // Complete the purchase
+        if (purchaseDetails.pendingCompletePurchase) {
+          await _iap.completePurchase(purchaseDetails);
+          debugPrint('✅ Purchase marked as complete');
+        }
+      }
+    }
+  }
+
+  /// Verify purchase with backend (you should implement server-side validation)
+  Future<bool> _verifyPurchase(PurchaseDetails purchaseDetails) async {
+    debugPrint('🔐 Verifying purchase: ${purchaseDetails.productID}');
+    
+    // TODO: Send receipt to your backend for validation
+    // For now, we'll do basic validation
+    
+    if (Platform.isIOS) {
+      // iOS receipt validation
+      final AppleParameters? appleParams = purchaseDetails.verificationData.serverVerificationData as AppleParameters?;
+      if (appleParams != null) {
+        debugPrint('📱 iOS receipt: ${appleParams.source}');
+        // TODO: Send to backend for validation with Apple
+      }
+    } else if (Platform.isAndroid) {
+      // Android receipt validation
+      final GooglePlayPurchaseDetails googleDetails = purchaseDetails as GooglePlayPurchaseDetails;
+      debugPrint('🤖 Android purchase token: ${googleDetails.billingClientPurchase.purchaseToken}');
+      // TODO: Send to backend for validation with Google
+    }
+    
+    // For now, return true (but you MUST implement backend validation for production!)
+    return true;
+  }
+
+  /// Deliver the product to the user (update Firestore)
+  Future<void> _deliverProduct(PurchaseDetails purchaseDetails) async {
+    debugPrint('📦 Delivering product: ${purchaseDetails.productID}');
+    
+    final User? user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      debugPrint('❌ No user logged in, cannot deliver product');
+      return;
+    }
+    
+    try {
+      final FirebaseFirestore firestore = FirebaseFirestore.instance;
+      
+      // Determine subscription type
+      String subscriptionType = 'monthly';
+      DateTime expiryDate;
+      
+      if (purchaseDetails.productID == yearlyProductId) {
+        subscriptionType = 'yearly';
+        expiryDate = DateTime.now().add(const Duration(days: 365));
+      } else {
+        expiryDate = DateTime.now().add(const Duration(days: 30));
+      }
+      
+      // Update user's subscription in Firestore
+      await firestore.collection('users').doc(user.uid).set({
+        'subscription': {
+          'type': subscriptionType,
+          'status': 'active',
+          'productId': purchaseDetails.productID,
+          'purchaseId': purchaseDetails.purchaseID,
+          'expiryDate': expiryDate.toIso8601String(),
+          'lastUpdated': FieldValue.serverTimestamp(),
+        },
+        'isPremium': true,
+      }, SetOptions(merge: true));
+      
+      debugPrint('✅ User subscription updated in Firestore');
+    } catch (e) {
+      debugPrint('❌ Error updating Firestore: $e');
+    }
+  }
+
+  /// Check if user has active subscription
+  Future<bool> hasActiveSubscription() async {
+    final User? user = FirebaseAuth.instance.currentUser;
+    if (user == null) return false;
+    
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      
+      if (!doc.exists) return false;
+      
+      final data = doc.data();
+      if (data == null || data['subscription'] == null) return false;
+      
+      final subscription = data['subscription'] as Map<String, dynamic>;
+      final status = subscription['status'] as String?;
+      final expiryDateStr = subscription['expiryDate'] as String?;
+      
+      if (status != 'active' || expiryDateStr == null) return false;
+      
+      final expiryDate = DateTime.parse(expiryDateStr);
+      final isActive = DateTime.now().isBefore(expiryDate);
+      
+      debugPrint('🔍 Subscription active: $isActive (expires: $expiryDate)');
+      return isActive;
+    } catch (e) {
+      debugPrint('❌ Error checking subscription: $e');
+      return false;
+    }
+  }
+
+  /// Dispose subscriptions
+  void dispose() {
+    _subscription.cancel();
+    debugPrint('🛑 SubscriptionService disposed');
+  }
+}
+

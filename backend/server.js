@@ -18,6 +18,7 @@ import { checkOpenAIHealth } from './utils/openai.js';
 
 import transcribeRouter from './routes/transcribe.js';
 import rewriteRouter from './routes/rewrite.js';
+import subscriptionRouter from './routes/subscription.js';
 
 // Load env
 dotenv.config();
@@ -161,6 +162,7 @@ app.get('/stats', async (req, res) => {
 // API routes
 app.use('/api/transcribe', transcribeRouter);
 app.use('/api/rewrite', rewriteRouter);
+app.use('/api/subscription', subscriptionRouter);
 
 // Root
 app.get('/', (req, res) => {

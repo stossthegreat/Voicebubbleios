@@ -3,6 +3,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../models/archived_item.dart';
 import '../models/preset.dart';
 import '../constants/languages.dart';
+import '../services/subscription_service.dart';
 
 class AppStateProvider extends ChangeNotifier {
   String _transcription = '';
@@ -12,6 +13,9 @@ class AppStateProvider extends ChangeNotifier {
   bool _isRecording = false;
   bool _isProcessing = false;
   List<ArchivedItem> _archivedItems = [];
+  bool _isPremium = false;
+  DateTime? _subscriptionExpiry;
+  String? _subscriptionType; // 'monthly' or 'yearly'
   
   // Getters
   String get transcription => _transcription;
@@ -21,10 +25,40 @@ class AppStateProvider extends ChangeNotifier {
   bool get isRecording => _isRecording;
   bool get isProcessing => _isProcessing;
   List<ArchivedItem> get archivedItems => _archivedItems;
+  bool get isPremium => _isPremium;
+  DateTime? get subscriptionExpiry => _subscriptionExpiry;
+  String? get subscriptionType => _subscriptionType;
   
   // Initialize and load archived items from Hive
   Future<void> initialize() async {
     await _loadArchivedItems();
+    await checkSubscriptionStatus();
+  }
+  
+  /// Check and update subscription status from Firebase
+  Future<void> checkSubscriptionStatus() async {
+    try {
+      final subscriptionService = SubscriptionService();
+      final hasActive = await subscriptionService.hasActiveSubscription();
+      _isPremium = hasActive;
+      
+      debugPrint('📊 Subscription status checked: isPremium = $_isPremium');
+      notifyListeners();
+    } catch (e) {
+      debugPrint('❌ Error checking subscription status: $e');
+    }
+  }
+  
+  void setSubscriptionStatus({
+    required bool isPremium,
+    DateTime? expiry,
+    String? type,
+  }) {
+    _isPremium = isPremium;
+    _subscriptionExpiry = expiry;
+    _subscriptionType = type;
+    debugPrint('💎 Subscription updated: isPremium=$isPremium, type=$type, expiry=$expiry');
+    notifyListeners();
   }
   
   Future<void> _loadArchivedItems() async {

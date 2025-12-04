@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
+import 'package:in_app_purchase/in_app_purchase.dart';
+import '../services/subscription_service.dart';
 
 class PaywallScreen extends StatefulWidget {
   final VoidCallback onSubscribe;
@@ -23,6 +25,11 @@ class _PaywallScreenState extends State<PaywallScreen> with TickerProviderStateM
   late Animation<double> _fadeAnimation;
   late Animation<double> _slideAnimation;
   String _selectedPlan = 'yearly'; // 'monthly' or 'yearly'
+  
+  final SubscriptionService _subscriptionService = SubscriptionService();
+  bool _isLoading = true;
+  bool _isPurchasing = false;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -47,6 +54,107 @@ class _PaywallScreenState extends State<PaywallScreen> with TickerProviderStateM
     );
     
     _controller.forward();
+    _initializeIAP();
+  }
+  
+  Future<void> _initializeIAP() async {
+    try {
+      await _subscriptionService.initialize();
+      setState(() {
+        _isLoading = false;
+      });
+    } catch (e) {
+      debugPrint('❌ Error initializing IAP: $e');
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Unable to load subscriptions. Please try again.';
+      });
+    }
+  }
+  
+  Future<void> _handlePurchase() async {
+    if (_isPurchasing) return;
+    
+    setState(() {
+      _isPurchasing = true;
+      _errorMessage = null;
+    });
+    
+    try {
+      final productId = _selectedPlan == 'yearly' 
+          ? SubscriptionService.yearlyProductId 
+          : SubscriptionService.monthlyProductId;
+      
+      debugPrint('🛒 Attempting to purchase: $productId');
+      final success = await _subscriptionService.purchaseSubscription(productId);
+      
+      if (success) {
+        debugPrint('✅ Purchase initiated successfully');
+        // Wait a moment for purchase to process
+        await Future.delayed(const Duration(seconds: 2));
+        if (mounted) {
+          widget.onSubscribe();
+        }
+      } else {
+        debugPrint('❌ Purchase failed to initiate');
+        setState(() {
+          _errorMessage = 'Purchase failed. Please try again.';
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ Purchase error: $e');
+      setState(() {
+        _errorMessage = 'An error occurred. Please try again.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isPurchasing = false;
+        });
+      }
+    }
+  }
+  
+  Future<void> _handleRestore() async {
+    if (_isPurchasing) return;
+    
+    setState(() {
+      _isPurchasing = true;
+      _errorMessage = null;
+    });
+    
+    try {
+      debugPrint('🔄 Restoring purchases...');
+      await _subscriptionService.restorePurchases();
+      
+      // Check if user has active subscription after restore
+      await Future.delayed(const Duration(seconds: 1));
+      final hasSubscription = await _subscriptionService.hasActiveSubscription();
+      
+      if (hasSubscription) {
+        debugPrint('✅ Subscription restored!');
+        if (mounted) {
+          widget.onRestore();
+          widget.onClose();
+        }
+      } else {
+        debugPrint('⚠️ No purchases found to restore');
+        setState(() {
+          _errorMessage = 'No purchases found to restore.';
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ Restore error: $e');
+      setState(() {
+        _errorMessage = 'Failed to restore purchases. Please try again.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isPurchasing = false;
+        });
+      }
+    }
   }
 
   @override
@@ -167,11 +275,40 @@ class _PaywallScreenState extends State<PaywallScreen> with TickerProviderStateM
                     padding: const EdgeInsets.fromLTRB(32, 0, 32, 16),
                     child: Column(
                       children: [
+                        // Error Message
+                        if (_errorMessage != null)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.red.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.red.withOpacity(0.5)),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.error_outline, color: Colors.white, size: 20),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      _errorMessage!,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        
                         // Continue with Free Trial (Skip Paywall)
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: () {
+                            onPressed: _isPurchasing ? null : () {
                               debugPrint('🚀 FREE TRIAL BUTTON PRESSED - Skipping paywall');
                               widget.onClose();
                             },
@@ -195,11 +332,12 @@ class _PaywallScreenState extends State<PaywallScreen> with TickerProviderStateM
                           ),
                         ),
                         const SizedBox(height: 12),
-                        // Subscribe Now (actual payment)
+                        
+                        // Subscribe Now (actual payment via IAP)
                         SizedBox(
                           width: double.infinity,
                           child: OutlinedButton(
-                            onPressed: widget.onSubscribe,
+                            onPressed: (_isLoading || _isPurchasing) ? null : _handlePurchase,
                             style: OutlinedButton.styleFrom(
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 18),
@@ -211,19 +349,30 @@ class _PaywallScreenState extends State<PaywallScreen> with TickerProviderStateM
                                 width: 2,
                               ),
                             ),
-                            child: const Text(
-                              'Subscribe Now',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
+                            child: _isPurchasing 
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                )
+                              : Text(
+                                  _isLoading ? 'Loading...' : 'Subscribe Now',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
                           ),
                         ),
                         const SizedBox(height: 12),
+                        
+                        // Restore Purchases
                         TextButton(
-                          onPressed: widget.onRestore,
+                          onPressed: (_isLoading || _isPurchasing) ? null : _handleRestore,
                           child: Text(
                             'Restore Purchase',
                             style: TextStyle(
@@ -234,8 +383,10 @@ class _PaywallScreenState extends State<PaywallScreen> with TickerProviderStateM
                           ),
                         ),
                         const SizedBox(height: 8),
+                        
+                        // Pricing Info (dynamically loaded from store)
                         Text(
-                          'Free for 1 day, then ${_selectedPlan == 'yearly' ? '\$49.99/year' : '\$5.99/month'}. Cancel anytime.',
+                          _buildPricingText(),
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.white.withOpacity(0.6),
@@ -511,6 +662,23 @@ class _PaywallScreenState extends State<PaywallScreen> with TickerProviderStateM
         ),
       ),
     );
+  }
+  
+  String _buildPricingText() {
+    if (_isLoading) {
+      return 'Loading pricing...';
+    }
+    
+    final product = _selectedPlan == 'yearly' 
+        ? _subscriptionService.yearlyProduct 
+        : _subscriptionService.monthlyProduct;
+    
+    if (product == null) {
+      return 'Free for 1 day, then subscribe. Cancel anytime.';
+    }
+    
+    final interval = _selectedPlan == 'yearly' ? 'year' : 'month';
+    return 'Free for 1 day, then ${product.price}/$interval. Cancel anytime.';
   }
 }
 

@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'providers/app_state_provider.dart';
 import 'providers/theme_provider.dart';
+import 'services/subscription_service.dart';
 import 'screens/main/home_screen.dart';
 import 'screens/onboarding/onboarding_one.dart';
 import 'screens/onboarding/onboarding_two.dart';
@@ -19,6 +20,10 @@ void main() async {
   // Initialize Firebase - REQUIRED for App Store
   await Firebase.initializeApp();
   debugPrint('✅ Firebase initialized successfully');
+  
+  // Initialize In-App Purchase system
+  await SubscriptionService().initialize();
+  debugPrint('✅ Subscription service initialized');
   
   runApp(const MyApp());
 }
