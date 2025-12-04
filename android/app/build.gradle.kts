@@ -28,7 +28,7 @@ android {
         applicationId = "com.voicebubble.app"
         minSdk = 24
         targetSdk = 36
-        versionCode = 2
+        versionCode = 3
         versionName = "1.0.0"
     }
 
