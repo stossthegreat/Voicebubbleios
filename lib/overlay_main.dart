@@ -43,7 +43,7 @@ class _OverlayWidgetState extends State<OverlayWidget> with SingleTickerProvider
     {'id': 'email_professional', 'name': 'Professional', 'icon': Icons.mail},
     {'id': 'email_casual', 'name': 'Casual', 'icon': Icons.chat_bubble},
     {'id': 'quick_reply', 'name': 'Quick Reply', 'icon': Icons.flash_on},
-    {'id': 'social_viral_caption', 'name': 'Viral Caption', 'icon': Icons.local_fire_department},
+    {'id': 'social_viral_caption', 'name': 'Viral Content', 'icon': Icons.local_fire_department},
     {'id': 'rewrite_enhance', 'name': 'Enhance', 'icon': Icons.edit_note},
   ];
   

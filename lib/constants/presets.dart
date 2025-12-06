@@ -52,8 +52,8 @@ class AppPresets {
         Preset(
           id: 'social_viral_caption',
           icon: Icons.local_fire_department,
-          name: 'Social – Viral Caption',
-          description: 'Create engaging social media captions',
+          name: 'Social – Viral Content',
+          description: 'Create engaging social media content',
           category: 'All Presets',
         ),
         Preset(
@@ -121,8 +121,8 @@ class AppPresets {
     Preset(
       id: 'social_viral_caption',
       icon: Icons.local_fire_department,
-      name: 'Social – Viral Caption',
-      description: 'Create engaging social media captions',
+      name: 'Social – Viral Content',
+      description: 'Create engaging social media content',
       category: 'All Presets',
     ),
   ];
