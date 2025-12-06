@@ -16,8 +16,8 @@ class SubscriptionService {
   late StreamSubscription<List<PurchaseDetails>> _subscription;
   
   // Product IDs - CHANGE THESE to match your App Store Connect & Google Play Console
-  static const String monthlyProductId = 'voicebubble_monthly';
-  static const String yearlyProductId = 'voicebubble_yearly';
+  static const String monthlyProductId = 'voicebubble_pro_monthly';
+  static const String yearlyProductId = 'voicebubble_pro_yearly';
   
   final Set<String> _productIds = {monthlyProductId, yearlyProductId};
   
