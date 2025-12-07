@@ -1,6 +1,6 @@
 // backend/prompt_engine/builder.js
 
-import { GLOBAL_CORE_PROMPT, buildLanguageInstruction } from "./global.js";
+import { GLOBAL_ENGINE } from "./global.js";
 import { PRESET_DEFINITIONS } from "./presets.js";
 
 /**
@@ -17,23 +17,30 @@ export function getPresetConfig(presetId) {
 
 /**
  * Build the system message content combining:
- * - global core rules
- * - language behaviour
+ * - global engine
  * - active preset behaviour
+ * - language instruction (if specified)
  */
 function buildSystemContent(presetId, language = "auto") {
   const preset = getPresetConfig(presetId);
-  return [
-    GLOBAL_CORE_PROMPT,
+  
+  const parts = [
+    GLOBAL_ENGINE,
     "",
-    `ACTIVE PRESET: "${presetId}" (${preset.label})`,
-    "",
-    buildLanguageInstruction(language),
-    "PRESET BEHAVIOUR:",
-    (preset.behaviour || "").trim()
-  ]
-    .filter(Boolean)
-    .join("\n\n");
+    `ACTIVE PRESET: "${presetId}" (${preset.label})`
+  ];
+  
+  // Add language instruction if specified
+  if (language && language !== "auto") {
+    parts.push("", `LANGUAGE REQUIREMENT: You MUST respond in "${language}" language.`);
+  }
+  
+  // Add preset-specific behaviour
+  if (preset.behaviour) {
+    parts.push("", "PRESET BEHAVIOUR:", preset.behaviour.trim());
+  }
+  
+  return parts.filter(Boolean).join("\n\n");
 }
 
 /**
