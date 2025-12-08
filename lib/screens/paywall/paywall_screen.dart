@@ -5,7 +5,7 @@ class PaywallScreen extends StatefulWidget {
   final VoidCallback onSubscribe;
   final VoidCallback onRestore;
   final VoidCallback onClose;
-
+  
   const PaywallScreen({
     super.key,
     required this.onSubscribe,
@@ -35,7 +35,9 @@ class _PaywallScreenState extends State<PaywallScreen> {
       await _subscriptionService.initialize();
     } catch (_) {}
     if (!mounted) return;
-    setState(() => _isLoading = false);
+    setState(() {
+      _isLoading = false;
+    });
   }
 
   Future<void> _handlePurchase() async {
@@ -46,26 +48,25 @@ class _PaywallScreenState extends State<PaywallScreen> {
       _errorMessage = null;
     });
 
-    const productId = SubscriptionService.monthlyProductId;
+    final productId = SubscriptionService.monthlyProductId;
 
     try {
       final success = await _subscriptionService.purchaseSubscription(productId);
 
-      // If user cancelled purchase popup
       if (!success) {
         if (!mounted) return;
         setState(() {
-          _isPurchasing = false;
-          _errorMessage = null;   // no error message
+          _isPurchasing = false;  // FIX processing stuck
+          _errorMessage = 'Purchase failed or cancelled. Please try again.';
         });
         return;
       }
 
       await _waitForSubscriptionConfirmation();
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       setState(() {
-        _isPurchasing = false;
+        _isPurchasing = false;  // FIX processing stuck
         _errorMessage = 'An error occurred. Please try again.';
       });
     }
@@ -85,9 +86,9 @@ class _PaywallScreenState extends State<PaywallScreen> {
 
     if (!mounted) return;
     setState(() {
-      _isPurchasing = false;
+      _isPurchasing = false;  // FIX processing stuck
       _errorMessage =
-          'Taking longer than expected. If charged, tap "Restore Purchase".';
+          'Purchase taking longer than expected. If charged, tap "Restore Purchase".';
     });
   }
 
@@ -114,21 +115,22 @@ class _PaywallScreenState extends State<PaywallScreen> {
           _errorMessage = 'No purchases found to restore.';
         });
       }
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       setState(() {
         _isPurchasing = false;
-        _errorMessage = 'Failed to restore. Please try again.';
+        _errorMessage = 'Failed to restore purchases. Please try again.';
       });
     }
   }
 
-  void _cancelProcessingAndClose() {
-    setState(() {
-      _isPurchasing = false;
-      _errorMessage = null;
-    });
-    widget.onClose();
+  String _pricingLine() {
+    if (_isLoading) return 'Loading pricing...';
+
+    final product = _subscriptionService.monthlyProduct;
+    if (product == null) return 'Free for 1 day, then subscribe. Cancel anytime.';
+
+    return 'Free for 1 day, then ${product.price} per month. Cancel anytime.';
   }
 
   @override
@@ -140,8 +142,9 @@ class _PaywallScreenState extends State<PaywallScreen> {
           children: [
             Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 child: Container(
+                  width: double.infinity,
                   padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(22),
@@ -158,7 +161,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                       BoxShadow(
                         color: Colors.black.withOpacity(0.4),
                         blurRadius: 24,
-                        offset: Offset(0, 12),
+                        offset: const Offset(0, 12),
                       ),
                     ],
                   ),
@@ -172,11 +175,12 @@ class _PaywallScreenState extends State<PaywallScreen> {
                           fontSize: 32,
                           fontWeight: FontWeight.w900,
                           color: Colors.white,
+                          letterSpacing: -0.5,
                         ),
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Unlimited access with no restrictions.',
+                        'Get unlimited access to all VoiceBubble power.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 14,
@@ -185,9 +189,32 @@ class _PaywallScreenState extends State<PaywallScreen> {
                       ),
                       const SizedBox(height: 22),
 
-                      _buildMonthlyPlan(),
+                      /// Single Monthly Card (Yearly removed)
+                      _buildMonthlyCard(),
+                      const SizedBox(height: 18),
 
+                      _buildFeatureRow(
+                        icon: Icons.timer_rounded,
+                        text: '90 minutes speech-to-text included',
+                      ),
+                      _buildFeatureRow(
+                        icon: Icons.auto_awesome_rounded,
+                        text: 'Premium AI models for better rewrites',
+                      ),
+                      _buildFeatureRow(
+                        icon: Icons.palette_rounded,
+                        text: 'Unlimited custom presets',
+                      ),
+                      _buildFeatureRow(
+                        icon: Icons.cloud_sync_rounded,
+                        text: 'Cloud sync between devices',
+                      ),
+                      _buildFeatureRow(
+                        icon: Icons.workspace_premium_rounded,
+                        text: 'Priority support',
+                      ),
                       const SizedBox(height: 16),
+
                       Text(
                         _pricingLine(),
                         textAlign: TextAlign.center,
@@ -199,7 +226,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                       const SizedBox(height: 14),
 
                       if (_errorMessage != null)
-                        _buildError(),
+                        _buildErrorBox(),
 
                       _buildPrimaryButton(
                         label: _isPurchasing ? 'Processing...' : 'Subscribe',
@@ -236,7 +263,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
               top: 10,
               right: 10,
               child: IconButton(
-                onPressed: _cancelProcessingAndClose,
+                onPressed: widget.onClose,
                 icon: const Icon(
                   Icons.close_rounded,
                   color: Colors.white,
@@ -250,21 +277,26 @@ class _PaywallScreenState extends State<PaywallScreen> {
     );
   }
 
-  Widget _buildMonthlyPlan() {
+  Widget _buildMonthlyCard() {
     final monthly = _subscriptionService.monthlyProduct;
-    final monthlyPrice = monthly?.price ?? '\$4.99';
+    final price = monthly?.price ?? '\$4.99';
 
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 14),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: Colors.white,
+          width: 2,
+        ),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             'Monthly',
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w700,
               color: Color(0xFF0D47A1),
@@ -272,9 +304,9 @@ class _PaywallScreenState extends State<PaywallScreen> {
           ),
           const SizedBox(height: 2),
           Text(
-            monthlyPrice,
-            style: TextStyle(
-              fontSize: 22,
+            price,
+            style: const TextStyle(
+              fontSize: 20,
               fontWeight: FontWeight.w900,
               color: Color(0xFF0D47A1),
             ),
@@ -284,7 +316,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
     );
   }
 
-  Widget _buildError() {
+  Widget _buildErrorBox() {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
@@ -313,11 +345,45 @@ class _PaywallScreenState extends State<PaywallScreen> {
     );
   }
 
-  String _pricingLine() {
-    if (_isLoading) return 'Loading pricing...';
-    final monthly = _subscriptionService.monthlyProduct;
-    if (monthly == null) return 'Free for 1 day, then subscribe. Cancel anytime.';
-    return 'Free for 1 day, then ${monthly.price} per month. Cancel anytime.';
+  Widget _buildFeatureRow({
+    required IconData icon,
+    required String text,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          Container(
+            width: 26,
+            height: 26,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              size: 18,
+              color: const Color(0xFF1E88E5),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                fontSize: 13,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          const Icon(
+            Icons.check_circle_rounded,
+            size: 20,
+            color: Colors.greenAccent,
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildPrimaryButton({
