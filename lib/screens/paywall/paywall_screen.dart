@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:in_app_purchase/in_app_purchase.dart';
 import '../../services/subscription_service.dart';
 
 class PaywallScreen extends StatefulWidget {
@@ -18,295 +17,312 @@ class PaywallScreen extends StatefulWidget {
   State<PaywallScreen> createState() => _PaywallScreenState();
 }
 
-class _PaywallScreenState extends State<PaywallScreen> with SingleTickerProviderStateMixin {
+class _PaywallScreenState extends State<PaywallScreen> {
   final SubscriptionService _subscriptionService = SubscriptionService();
-  
+
   bool _isLoading = true;
   bool _isPurchasing = false;
-  String _selectedPlan = 'yearly';
+  String _selectedPlan = 'yearly'; // 'monthly' or 'yearly'
   String? _errorMessage;
-  
+
   @override
   void initState() {
     super.initState();
-    _initIAP();
+    _initializeIAP();
   }
 
-  Future<void> _initIAP() async {
+  Future<void> _initializeIAP() async {
     try {
       await _subscriptionService.initialize();
-    } catch (_) {}
-    if (mounted) setState(() => _isLoading = false);
-  }
-
-  Future<void> _attemptBuy() async {
-    if (_isPurchasing) return;
-    setState(() => _isPurchasing = true);
-
-    final productId = _selectedPlan == 'yearly'
-        ? SubscriptionService.yearlyProductId
-        : SubscriptionService.monthlyProductId;
-
-    final success = await _subscriptionService.purchaseSubscription(productId);
-
-    if (!success) {
-      setState(() {
-        _isPurchasing = false;
-        _errorMessage = 'Purchase failed or cancelled.';
-      });
-    } else {
-      // Purchase will complete or fail in the subscription callback
-      setState(() {});
+    } catch (_) {
+      // you already log inside SubscriptionService
     }
+    if (!mounted) return;
+    setState(() {
+      _isLoading = false;
+    });
   }
 
-  Future<void> _restore() async {
+  Future<void> _handlePurchase() async {
     if (_isPurchasing) return;
+
     setState(() {
       _isPurchasing = true;
       _errorMessage = null;
     });
 
-    await _subscriptionService.restorePurchases();
-    final active = await _subscriptionService.hasActiveSubscription();
+    final productId = _selectedPlan == 'yearly'
+        ? SubscriptionService.yearlyProductId
+        : SubscriptionService.monthlyProductId;
 
-    if (active && mounted) {
-      widget.onRestore();
-      widget.onClose();
-    } else {
+    try {
+      final success = await _subscriptionService.purchaseSubscription(productId);
+
+      if (!success) {
+        if (!mounted) return;
+        setState(() {
+          _isPurchasing = false;
+          _errorMessage = 'Purchase failed or cancelled. Please try again.';
+        });
+        return;
+      }
+
+      // Wait for subscription to actually be active in Firestore
+      await _waitForSubscriptionConfirmation();
+    } catch (e) {
+      if (!mounted) return;
       setState(() {
-        _errorMessage = 'No active purchases found.';
         _isPurchasing = false;
+        _errorMessage = 'An error occurred. Please try again.';
       });
     }
   }
 
-  ProductDetails? get _monthly => _subscriptionService.monthlyProduct;
-  ProductDetails? get _yearly => _subscriptionService.yearlyProduct;
+  Future<void> _waitForSubscriptionConfirmation() async {
+    // Poll a few times for backend to mark subscription active
+    for (int i = 0; i < 10; i++) {
+      final hasSubscription = await _subscriptionService.hasActiveSubscription();
+      if (hasSubscription) {
+        if (!mounted) return;
+        widget.onSubscribe(); // app can now treat user as premium
+        widget.onClose();     // close paywall
+        return;
+      }
+      await Future.delayed(const Duration(seconds: 1));
+    }
 
-  String getPricingText() {
-    if (_isLoading) return 'Loading...';
+    if (!mounted) return;
+    setState(() {
+      _isPurchasing = false;
+      _errorMessage =
+          'Purchase is taking longer than expected. If you were charged, tap "Restore Purchase".';
+    });
+  }
 
-    final product = _selectedPlan == 'yearly' ? _yearly : _monthly;
-    if (product == null) return 'Free 1 day, then subscribe. Cancel anytime.';
+  Future<void> _handleRestore() async {
+    if (_isPurchasing) return;
 
-    final sub = product.subscriptionPeriod ?? '';
-    final per = sub.contains('Y') ? 'per year' : sub.contains('M') ? 'per month' : '';
+    setState(() {
+      _isPurchasing = true;
+      _errorMessage = null;
+    });
 
-    return 'Free for 1 day, then ${product.price} $per. Cancel anytime.';
+    try {
+      await _subscriptionService.restorePurchases();
+      final hasSubscription = await _subscriptionService.hasActiveSubscription();
+
+      if (hasSubscription) {
+        if (!mounted) return;
+        widget.onRestore();
+        widget.onClose();
+      } else {
+        if (!mounted) return;
+        setState(() {
+          _isPurchasing = false;
+          _errorMessage = 'No purchases found to restore.';
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isPurchasing = false;
+        _errorMessage = 'Failed to restore purchases. Please try again.';
+      });
+    }
+  }
+
+  String _pricingLine() {
+    if (_isLoading) {
+      return 'Loading pricing...';
+    }
+
+    final monthly = _subscriptionService.monthlyProduct;
+    final yearly = _subscriptionService.yearlyProduct;
+
+    final isYearly = _selectedPlan == 'yearly';
+    final product = isYearly ? yearly : monthly;
+
+    if (product == null) {
+      return 'Free for 1 day, then subscribe. Cancel anytime.';
+    }
+
+    final periodLabel = isYearly ? 'per year' : 'per month';
+    return 'Free for 1 day, then ${product.price} $periodLabel. Cancel anytime.';
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black.withOpacity(.75),
+      // Dark overlay behind the sheet
+      backgroundColor: Colors.black.withOpacity(0.75),
       body: SafeArea(
-        child: LayoutBuilder(
-          builder: (_, constraints) {
-            return Stack(
-              children: [
-                Center(
-                  child: Container(
-                    width: double.infinity,
-                    margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                    padding: const EdgeInsets.fromLTRB(22, 22, 22, 18),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(22),
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Color(0xFF0D47A1),
-                          Color(0xFF1565C0),
-                          Color(0xFF1E88E5),
-                        ],
-                      ),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-
-                        // Title
-                        const Text(
-                          "Unlock Premium",
-                          style: TextStyle(
-                            fontSize: 36,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          "Get unlimited Voicebubble power",
-                          style: TextStyle(
-                            fontSize: 15,
-                            color: Colors.white.withOpacity(.9),
-                          ),
-                        ),
-                        const SizedBox(height: 26),
-
-                        // PLAN SELECTOR AT THE TOP
-                        _buildPlans(),
-                        const SizedBox(height: 26),
-
-                        // FEATURES (TIGHT)
-                        _feature(Icons.timer_rounded, "90 Minutes Speech-to-Text"),
-                        _feature(Icons.auto_awesome_rounded, "Premium AI Models (GPT-4)"),
-                        _feature(Icons.palette_rounded, "Unlimited Custom Presets"),
-                        _feature(Icons.cloud_sync_rounded, "Cloud Sync"),
-                        _feature(Icons.workspace_premium_rounded, "Priority Support"),
-                        const SizedBox(height: 22),
-
-                        // PRICE DESCRIPTION
-                        Text(
-                          getPricingText(),
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.white.withOpacity(.75),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-
-                        // PURCHASE BUTTON
-                        _actionBtn(
-                          label: _isPurchasing ? "Processing..." : "Subscribe",
-                          onTap: _isPurchasing ? null : _attemptBuy,
-                          filled: true,
-                        ),
-                        const SizedBox(height: 8),
-
-                        // FREE TRIAL CLOSE
-                        _actionBtn(
-                          label: "Continue Free for 1 Day",
-                          onTap: widget.onClose,
-                        ),
-                        const SizedBox(height: 8),
-
-                        // RESTORE
-                        TextButton(
-                          onPressed: _isPurchasing ? null : _restore,
-                          child: Text(
-                            "Restore Purchase",
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(.8),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-
-                        if (_errorMessage != null) ...[
-                          const SizedBox(height: 8),
-                          Text(
-                            _errorMessage!,
-                            style: const TextStyle(color: Colors.redAccent),
-                          ),
-                        ],
+        child: Stack(
+          children: [
+            // Center sheet
+            Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(22),
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(0xFF0D47A1),
+                        Color(0xFF1565C0),
+                        Color(0xFF1E88E5),
                       ],
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.4),
+                        blurRadius: 24,
+                        offset: const Offset(0, 12),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Title
+                      const Text(
+                        'Unlock Premium',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Get unlimited access to all VoiceBubble power.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.white.withOpacity(0.9),
+                        ),
+                      ),
+                      const SizedBox(height: 22),
+
+                      // Plan selector on top
+                      _buildPlanSelector(),
+                      const SizedBox(height: 18),
+
+                      // Features (short + tight)
+                      _buildFeatureRow(
+                        icon: Icons.timer_rounded,
+                        text: '90 minutes speech-to-text included',
+                      ),
+                      _buildFeatureRow(
+                        icon: Icons.auto_awesome_rounded,
+                        text: 'Premium AI models for better rewrites',
+                      ),
+                      _buildFeatureRow(
+                        icon: Icons.palette_rounded,
+                        text: 'Unlimited custom presets',
+                      ),
+                      _buildFeatureRow(
+                        icon: Icons.cloud_sync_rounded,
+                        text: 'Cloud sync between devices',
+                      ),
+                      _buildFeatureRow(
+                        icon: Icons.workspace_premium_rounded,
+                        text: 'Priority support',
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Pricing line
+                      Text(
+                        _pricingLine(),
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.white.withOpacity(0.8),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Error message
+                      if (_errorMessage != null) ...[
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: Colors.red.withOpacity(0.6),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.error_outline, size: 18, color: Colors.white),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _errorMessage!,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                      ],
+
+                      // Subscribe button
+                      _buildPrimaryButton(
+                        label: _isPurchasing ? 'Processing...' : 'Subscribe',
+                        onTap: _isLoading || _isPurchasing ? null : _handlePurchase,
+                        filled: true,
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Continue free / skip
+                      _buildPrimaryButton(
+                        label: 'Continue Free for 1 Day',
+                        onTap: _isPurchasing ? null : widget.onClose,
+                        filled: false,
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Restore
+                      TextButton(
+                        onPressed: _isLoading || _isPurchasing ? null : _handleRestore,
+                        child: Text(
+                          'Restore Purchase',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white.withOpacity(0.9),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+              ),
+            ),
 
-                // CLOSE BUTTON
-                Positioned(
-                  right: 14,
-                  top: 12,
-                  child: GestureDetector(
-                    onTap: widget.onClose,
-                    child: const Icon(Icons.close_rounded, color: Colors.white, size: 32),
-                  ),
+            // Close icon
+            Positioned(
+              top: 10,
+              right: 10,
+              child: IconButton(
+                onPressed: widget.onClose,
+                icon: const Icon(
+                  Icons.close_rounded,
+                  color: Colors.white,
+                  size: 28,
                 ),
-              ],
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _feature(IconData icon, String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
-      child: Row(
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            padding: const EdgeInsets.all(6),
-            child: Icon(icon, size: 20, color: const Color(0xFF0D47A1)),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-              ),
-            ),
-          ),
-          const Icon(Icons.check_circle_rounded, color: Colors.greenAccent, size: 22),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPlans() {
-    final m = _monthly?.price ?? "\$4.99";
-    final y = _yearly?.price ?? "\$49.99";
-
-    return Row(
-      children: [
-        Expanded(child: _plan("Monthly", m, "monthly")),
-        const SizedBox(width: 10),
-        Expanded(child: _plan("Yearly", y, "yearly", save: "Save 30%")),
-      ],
-    );
-  }
-
-  Widget _plan(String title, String price, String val, {String? save}) {
-    final selected = _selectedPlan == val;
-
-    return GestureDetector(
-      onTap: () => setState(() => _selectedPlan = val),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: selected ? Colors.white : Colors.white.withOpacity(.15),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: selected ? Colors.white : Colors.white.withOpacity(.3),
-            width: selected ? 2 : 1,
-          ),
-        ),
-        child: Column(
-          children: [
-            if (save != null)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: Colors.greenAccent,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(save, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900)),
-              ),
-            if (save != null) const SizedBox(height: 6),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                color: selected ? const Color(0xFF0D47A1) : Colors.white,
-              ),
-            ),
-            Text(
-              price,
-              style: TextStyle(
-                fontSize: 21,
-                fontWeight: FontWeight.w900,
-                color: selected ? const Color(0xFF0D47A1) : Colors.white,
               ),
             ),
           ],
@@ -315,24 +331,170 @@ class _PaywallScreenState extends State<PaywallScreen> with SingleTickerProvider
     );
   }
 
-  Widget _actionBtn({required String label, required VoidCallback? onTap, bool filled = false}) {
+  Widget _buildPlanSelector() {
+    final monthly = _subscriptionService.monthlyProduct;
+    final yearly = _subscriptionService.yearlyProduct;
+
+    final monthlyPrice = monthly?.price ?? '\$4.99';
+    final yearlyPrice = yearly?.price ?? '\$49.99';
+
+    return Row(
+      children: [
+        Expanded(
+          child: _buildPlanCard(
+            title: 'Monthly',
+            price: monthlyPrice,
+            value: 'monthly',
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _buildPlanCard(
+            title: 'Yearly',
+            price: yearlyPrice,
+            value: 'yearly',
+            savings: 'Save 30%',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPlanCard({
+    required String title,
+    required String price,
+    required String value,
+    String? savings,
+  }) {
+    final bool isSelected = _selectedPlan == value;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedPlan = value;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white : Colors.white.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected ? Colors.white : Colors.white.withOpacity(0.4),
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (savings != null) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.greenAccent,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  savings,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF0D47A1),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 6),
+            ],
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: isSelected ? const Color(0xFF0D47A1) : Colors.white,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              price,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+                color: isSelected ? const Color(0xFF0D47A1) : Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeatureRow({
+    required IconData icon,
+    required String text,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          Container(
+            width: 26,
+            height: 26,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              icon,
+              size: 18,
+              color: const Color(0xFF1E88E5),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                fontSize: 13,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          const Icon(
+            Icons.check_circle_rounded,
+            size: 20,
+            color: Colors.greenAccent,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPrimaryButton({
+    required String label,
+    required VoidCallback? onTap,
+    required bool filled,
+  }) {
     return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
           color: filled ? Colors.white : Colors.transparent,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white, width: filled ? 0 : 2),
+          border: Border.all(
+            color: Colors.white,
+            width: filled ? 0 : 2,
+          ),
         ),
         child: Center(
           child: Text(
             label,
             style: TextStyle(
-              color: filled ? const Color(0xFF0D47A1) : Colors.white,
-              fontSize: 16,
+              fontSize: 15,
               fontWeight: FontWeight.w700,
+              color: filled ? const Color(0xFF0D47A1) : Colors.white,
             ),
           ),
         ),
