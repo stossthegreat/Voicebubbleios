@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../providers/app_state_provider.dart';
 import '../../services/ai_service.dart';
 import '../../services/refinement_service.dart';
@@ -10,7 +11,6 @@ import '../../models/outcome_type.dart';
 import '../../widgets/editable_result_box.dart';
 import '../../widgets/outcome_chip.dart';
 import '../../widgets/refinement_buttons.dart';
-import '../../widgets/share_button.dart';
 import '../../widgets/add_to_project_dialog.dart';
 import 'preset_selection_screen.dart';
 import 'recording_screen.dart';
@@ -462,7 +462,7 @@ class _ResultScreenState extends State<ResultScreen> {
 
                           // Outcomes Section
                           Text(
-                            'Outcomes (tap to toggle)',
+                            'Select outcomes',
                             style: TextStyle(
                               fontSize: 14,
                               color: secondaryTextColor,
@@ -479,7 +479,11 @@ class _ResultScreenState extends State<ResultScreen> {
                                   child: OutcomeChip(
                                     outcomeType: outcome,
                                     isSelected: _selectedOutcomes.contains(outcome),
-                                    onTap: () => _toggleOutcome(outcome),
+                                    onTap: () {
+                                      _toggleOutcome(outcome);
+                                      // Auto-save when outcome is toggled
+                                      _saveRecording();
+                                    },
                                   ),
                                 );
                               }).toList(),
@@ -543,11 +547,7 @@ class _ResultScreenState extends State<ResultScreen> {
                             ),
                           ),
 
-                          const SizedBox(height: 12),
-
-                          // Action Buttons
-                          ShareButton(textToShare: _rewrittenText),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 24),
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
@@ -577,39 +577,79 @@ class _ResultScreenState extends State<ResultScreen> {
                             ),
                           ),
                           const SizedBox(height: 12),
-                          SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton(
-                              onPressed: () {
-                                Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const PresetSelectionScreen(
-                                      fromRecording: true,
+
+                          // Share and Different Style buttons side by side
+                          Row(
+                            children: [
+                              // Share Button
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    Share.share(_rewrittenText);
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: primaryColor,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
                                     ),
                                   ),
-                                );
-                              },
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: textColor,
-                                padding: const EdgeInsets.symmetric(vertical: 20),
-                                side: BorderSide(
-                                  color: surfaceColor,
-                                  width: 2,
-                                ),
-                                backgroundColor: surfaceColor,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                              ),
-                              child: const Text(
-                                'Try Different Style',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
+                                  child: const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.share, size: 18),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'Share',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ),
+                              const SizedBox(width: 12),
+                              // Different Style Button
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    Navigator.pushReplacement(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => const PresetSelectionScreen(
+                                          fromRecording: true,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: primaryColor,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(vertical: 16),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.auto_awesome, size: 18),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'Different Style',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                         const SizedBox(height: 32),
