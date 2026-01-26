@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../providers/app_state_provider.dart';
 import '../../constants/presets.dart';
 import '../../models/preset.dart';
+import '../../services/preset_favorites_service.dart';
 import 'recording_screen.dart';
 import 'result_screen.dart';
 
@@ -24,10 +25,13 @@ class _PresetSelectionScreenState extends State<PresetSelectionScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   final List<Animation<double>> _cardAnimations = [];
+  final PresetFavoritesService _favoritesService = PresetFavoritesService();
+  Set<String> _favoritePresetIds = {};
 
   @override
   void initState() {
     super.initState();
+    _loadFavorites();
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 1200),
       vsync: this,
@@ -46,6 +50,18 @@ class _PresetSelectionScreenState extends State<PresetSelectionScreen>
     }
 
     _animationController.forward();
+  }
+
+  Future<void> _loadFavorites() async {
+    final favorites = await _favoritesService.getFavorites();
+    setState(() {
+      _favoritePresetIds = favorites.toSet();
+    });
+  }
+
+  Future<void> _toggleFavorite(String presetId) async {
+    await _favoritesService.toggleFavorite(presetId);
+    await _loadFavorites();
   }
 
   @override
@@ -207,13 +223,17 @@ class _PresetSelectionScreenState extends State<PresetSelectionScreen>
     Color secondaryTextColor,
     Color primaryColor,
   ) {
+    final isFavorite = _favoritePresetIds.contains(preset.id);
+    
     return _AnimatedPresetCard(
       preset: preset,
       surfaceColor: surfaceColor,
       textColor: textColor,
       secondaryTextColor: secondaryTextColor,
       primaryColor: primaryColor,
+      isFavorite: isFavorite,
       onTap: () => _handlePresetSelection(context, preset),
+      onToggleFavorite: () => _toggleFavorite(preset.id),
     );
   }
 }
@@ -447,6 +467,21 @@ class _AnimatedPresetCardState extends State<_AnimatedPresetCard>
                         ),
                       ),
                       const SizedBox(width: 8),
+                      // Star icon
+                      GestureDetector(
+                        onTap: widget.onToggleFavorite,
+                        behavior: HitTestBehavior.opaque,
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Icon(
+                            widget.isFavorite ? Icons.star : Icons.star_border,
+                            size: 24,
+                            color: widget.isFavorite 
+                                ? const Color(0xFFFBBF24) // Golden yellow
+                                : widget.secondaryTextColor.withOpacity(0.5),
+                          ),
+                        ),
+                      ),
                       Icon(
                         Icons.arrow_forward_ios,
                         size: 16,
