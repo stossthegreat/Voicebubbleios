@@ -345,6 +345,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
             ),
             
+            const SizedBox(height: 40), // Add spacing to push content down
+            
             // Main Record Button
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 20),
