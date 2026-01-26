@@ -84,6 +84,9 @@ class _ResultScreenState extends State<ResultScreen> {
       _autoAssignOutcome(preset.id);
 
       appState.setRewrittenText(rewrittenText);
+      
+      // 🔥 ACTUALLY SAVE THE RECORDING TO DATABASE!
+      await _saveRecording();
     } catch (e) {
       setState(() {
         _error = e.toString();
