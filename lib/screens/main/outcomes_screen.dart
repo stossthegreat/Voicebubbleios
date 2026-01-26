@@ -51,9 +51,9 @@ class _OutcomesScreenState extends State<OutcomesScreen> {
         child: Column(
           children: [
             // Header - hide on scroll
-            if (_showHeader)
+            if (_showHeader) ...[
               Padding(
-                padding: const EdgeInsets.all(24.0),
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
                 child: Row(
                   children: [
                     Icon(
@@ -70,21 +70,20 @@ class _OutcomesScreenState extends State<OutcomesScreen> {
                         color: const Color(0xFF3B82F6),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Your AI-generated content, organized',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: secondaryTextColor,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
                   ],
                 ),
               ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+                child: Text(
+                  'Your AI-generated content, organized',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: secondaryTextColor,
+                  ),
+                ),
+              ),
+            ],
 
             // Outcome Groups
             Expanded(
