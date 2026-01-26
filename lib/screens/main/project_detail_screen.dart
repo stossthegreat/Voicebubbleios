@@ -9,6 +9,7 @@ import '../../services/project_service.dart';
 import '../../services/continue_service.dart';
 import '../../widgets/outcome_chip.dart';
 import 'recording_screen.dart';
+import 'recording_detail_screen.dart';
 
 class ProjectDetailScreen extends StatefulWidget {
   final String projectId;
@@ -268,127 +269,138 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
   ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: surfaceColor,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: gradientColors[0].withOpacity(0.2),
-            width: 1,
+      child: GestureDetector(
+        onTap: () {
+          // Navigate to detail screen
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => RecordingDetailScreen(recordingId: item.id),
+            ),
+          );
+        },
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: surfaceColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: gradientColors[0].withOpacity(0.2),
+              width: 1,
+            ),
           ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Outcome chips
-            if (item.outcomes.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: item.outcomeTypes.map((outcome) {
-                    return OutcomeChip(
-                      outcomeType: outcome,
-                      isSelected: true,
-                      onTap: () {},
-                    );
-                  }).toList(),
-                ),
-              ),
-
-            // Preset name
-            Text(
-              item.presetUsed,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: gradientColors[0],
-              ),
-            ),
-            const SizedBox(height: 8),
-
-            // Content
-            Text(
-              item.finalText,
-              style: TextStyle(
-                fontSize: 14,
-                color: textColor,
-              ),
-              maxLines: 4,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 12),
-
-            // Actions row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  item.formattedDate,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: secondaryTextColor,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Outcome chips
+              if (item.outcomes.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: item.outcomeTypes.map((outcome) {
+                      return OutcomeChip(
+                        outcomeType: outcome,
+                        isSelected: true,
+                        onTap: () {},
+                      );
+                    }).toList(),
                   ),
                 ),
-                Row(
-                  children: [
-                    // Remove from project
-                    InkWell(
-                      onTap: () => _removeItemFromProject(item.id),
-                      borderRadius: BorderRadius.circular(8),
-                      child: Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Icon(
-                          Icons.remove_circle_outline,
-                          size: 18,
-                          color: secondaryTextColor,
-                        ),
-                      ),
-                    ),
-                    // Copy
-                    InkWell(
-                      onTap: () {
-                        Clipboard.setData(ClipboardData(text: item.finalText));
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Copied to clipboard'),
-                            backgroundColor: Color(0xFF10B981),
-                            duration: Duration(seconds: 1),
-                          ),
-                        );
-                      },
-                      borderRadius: BorderRadius.circular(8),
-                      child: Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Icon(
-                          Icons.copy,
-                          size: 18,
-                          color: secondaryTextColor,
-                        ),
-                      ),
-                    ),
-                    // Share
-                    InkWell(
-                      onTap: () {
-                        Share.share(item.finalText);
-                      },
-                      borderRadius: BorderRadius.circular(8),
-                      child: Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Icon(
-                          Icons.share,
-                          size: 18,
-                          color: secondaryTextColor,
-                        ),
-                      ),
-                    ),
-                  ],
+
+              // Preset name
+              Text(
+                item.presetUsed,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: gradientColors[0],
                 ),
-              ],
-            ),
-          ],
+              ),
+              const SizedBox(height: 8),
+
+              // Content
+              Text(
+                item.finalText,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: textColor,
+                ),
+                maxLines: 4,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 12),
+
+              // Actions row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    item.formattedDate,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: secondaryTextColor,
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      // Remove from project
+                      InkWell(
+                        onTap: () => _removeItemFromProject(item.id),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Icon(
+                            Icons.remove_circle_outline,
+                            size: 18,
+                            color: secondaryTextColor,
+                          ),
+                        ),
+                      ),
+                      // Copy
+                      InkWell(
+                        onTap: () {
+                          Clipboard.setData(ClipboardData(text: item.finalText));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Copied to clipboard'),
+                              backgroundColor: Color(0xFF10B981),
+                              duration: Duration(seconds: 1),
+                            ),
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Icon(
+                            Icons.copy,
+                            size: 18,
+                            color: secondaryTextColor,
+                          ),
+                        ),
+                      ),
+                      // Share
+                      InkWell(
+                        onTap: () {
+                          Share.share(item.finalText);
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Icon(
+                            Icons.share,
+                            size: 18,
+                            color: secondaryTextColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

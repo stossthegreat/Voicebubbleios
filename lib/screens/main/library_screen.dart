@@ -24,6 +24,29 @@ class _LibraryScreenState extends State<LibraryScreen> {
   bool _showProjects = false; // false = All, true = Projects
   String _searchQuery = '';
   String? _selectedPresetId;
+  final ScrollController _scrollController = ScrollController();
+  bool _showHeader = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.offset > 50 && _showHeader) {
+      setState(() => _showHeader = false);
+    } else if (_scrollController.offset <= 50 && !_showHeader) {
+      setState(() => _showHeader = true);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,41 +61,41 @@ class _LibraryScreenState extends State<LibraryScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.library_books,
-                        color: textColor,
-                        size: 28,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Library',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: textColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'All your recordings and projects',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: secondaryTextColor,
+            // Header - hide on scroll
+            if (_showHeader)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.library_books,
+                      color: textColor,
+                      size: 28,
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 12),
+                    Text(
+                      'Library',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'All your recordings and projects',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: secondaryTextColor,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
 
             // Segmented Control (All / Projects)
             Padding(
@@ -269,6 +292,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
         }
 
         return ListView.builder(
+          controller: _scrollController,
           padding: const EdgeInsets.symmetric(horizontal: 24),
           itemCount: filteredRecordings.length,
           itemBuilder: (context, index) {
@@ -483,6 +507,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
               )
             else
               ListView.builder(
+                controller: _scrollController,
                 padding: const EdgeInsets.fromLTRB(24, 0, 24, 80),
                 itemCount: projects.length,
                 itemBuilder: (context, index) {
@@ -567,6 +592,63 @@ class _LibraryScreenState extends State<LibraryScreen> {
           ),
         ],
       ),
+    );
+  }
+  
+  void _showFilterSheet(BuildContext context, Color surfaceColor, Color textColor, Color secondaryTextColor) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1A1A1A),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Filter by Preset',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: textColor,
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: Icon(Icons.close, color: secondaryTextColor),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: PresetFilterChips(
+                    selectedPresetId: _selectedPresetId,
+                    onPresetSelected: (presetId) {
+                      setState(() {
+                        _selectedPresetId = presetId;
+                      });
+                      Navigator.pop(context);
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

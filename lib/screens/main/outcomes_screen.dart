@@ -4,7 +4,6 @@ import '../../providers/app_state_provider.dart';
 import '../../models/outcome_type.dart';
 import '../../models/recording_item.dart';
 import '../../widgets/outcome_card.dart';
-import '../../widgets/preset_filter_chips.dart';
 import 'outcome_detail_screen.dart';
 
 class OutcomesScreen extends StatefulWidget {
@@ -15,7 +14,29 @@ class OutcomesScreen extends StatefulWidget {
 }
 
 class _OutcomesScreenState extends State<OutcomesScreen> {
-  String? _selectedPresetId;
+  final ScrollController _scrollController = ScrollController();
+  bool _showHeader = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.offset > 50 && _showHeader) {
+      setState(() => _showHeader = false);
+    } else if (_scrollController.offset <= 50 && !_showHeader) {
+      setState(() => _showHeader = true);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,58 +50,41 @@ class _OutcomesScreenState extends State<OutcomesScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.dashboard,
-                        color: textColor,
-                        size: 28,
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Outcomes',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: textColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Your AI-generated content, organized',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: secondaryTextColor,
+            // Header - hide on scroll
+            if (_showHeader)
+              Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.dashboard,
+                      color: textColor,
+                      size: 28,
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 12),
+                    Text(
+                      'Outcomes',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Your AI-generated content, organized',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: secondaryTextColor,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Preset Filter Chips
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: PresetFilterChips(
-                selectedPresetId: _selectedPresetId,
-                onPresetSelected: (presetId) {
-                  setState(() {
-                    _selectedPresetId = presetId;
-                  });
-                },
-              ),
-            ),
-
-            const SizedBox(height: 24),
 
             // Outcome Groups
             Expanded(
@@ -119,23 +123,13 @@ class _OutcomesScreenState extends State<OutcomesScreen> {
                     );
                   }
 
-                  // Filter recordings based on preset only
-                  var filteredRecordings = recordings;
-                  
-                  // Apply preset filter
-                  if (_selectedPresetId != null) {
-                    filteredRecordings = filteredRecordings.where((r) {
-                      return r.presetId == _selectedPresetId;
-                    }).toList();
-                  }
-
                   // Group recordings by outcome
                   final outcomeGroups = <OutcomeType, List<RecordingItem>>{};
                   for (final outcome in OutcomeType.values) {
                     outcomeGroups[outcome] = [];
                   }
 
-                  for (final recording in filteredRecordings) {
+                  for (final recording in recordings) {
                     for (final outcomeStr in recording.outcomes) {
                       final outcome = OutcomeTypeExtension.fromString(outcomeStr);
                       outcomeGroups[outcome]!.add(recording);
@@ -143,6 +137,7 @@ class _OutcomesScreenState extends State<OutcomesScreen> {
                   }
 
                   return ListView(
+                    controller: _scrollController,
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     children: [
                       // Messages

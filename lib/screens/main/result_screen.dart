@@ -49,6 +49,8 @@ class _ResultScreenState extends State<ResultScreen> {
   @override
   void initState() {
     super.initState();
+    // Initialize _savedItemId from continueFromItemId if present
+    _savedItemId = widget.continueFromItemId;
     _generateRewrite();
   }
 
@@ -122,10 +124,21 @@ class _ResultScreenState extends State<ResultScreen> {
       appState.setRewrittenText(rewrittenText);
       
       // Save or update the recording
-      if (_savedItemId != null) {
-        // Update existing item
+      if (_savedItemId != null || (continueContext != null && continueContext.singleItemId != null)) {
+        // If we have a savedItemId or we're continuing a single item, update it
+        if (_savedItemId == null && continueContext!.singleItemId != null) {
+          _savedItemId = continueContext.singleItemId;
+        }
         await _updateExistingItem();
         // Clear continue context after updating
+        appState.clearContinueContext();
+      } else if (continueContext != null && continueContext.projectId != null) {
+        // If we're continuing a project, create new item and add to project
+        await _saveRecording();
+        if (_savedItemId != null) {
+          await appState.addItemToProject(continueContext.projectId!, _savedItemId!);
+        }
+        // Clear continue context after saving
         appState.clearContinueContext();
       } else {
         // Create new item
