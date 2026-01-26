@@ -56,9 +56,6 @@ class _TagFilterChipsState extends State<TagFilterChips> {
               onTap: () => widget.onTagSelected(tag.id),
             ),
           )).toList(),
-          
-          // Create new tag button
-          _buildCreateButton(),
         ],
       ),
     );
