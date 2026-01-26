@@ -8,6 +8,7 @@ import '../../widgets/outcome_chip.dart';
 import '../../widgets/project_card.dart';
 import '../../widgets/create_project_dialog.dart';
 import 'project_detail_screen.dart';
+import 'recording_detail_screen.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -262,110 +263,136 @@ class _LibraryScreenState extends State<LibraryScreen> {
   ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: surfaceColor,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Outcome chips
-            if (item.outcomes.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: item.outcomeTypes.map((outcome) {
-                    return OutcomeChip(
-                      outcomeType: outcome,
-                      isSelected: true,
-                      onTap: () {}, // Read-only in library view
-                    );
-                  }).toList(),
-                ),
-              ),
-
-            // Preset name
-            Text(
-              item.presetUsed,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF3B82F6),
+      child: GestureDetector(
+        onTap: () {
+          // Navigate to detail screen
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => RecordingDetailScreen(
+                recordingId: item.id,
               ),
             ),
-            const SizedBox(height: 8),
-
-            // Content
-            Text(
-              item.finalText,
-              style: TextStyle(
-                fontSize: 14,
-                color: textColor,
-              ),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 12),
-
-            // Actions row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  item.formattedDate,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: secondaryTextColor,
+          );
+        },
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: surfaceColor,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Outcome chips
+              if (item.outcomes.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: item.outcomeTypes.map((outcome) {
+                      return OutcomeChip(
+                        outcomeType: outcome,
+                        isSelected: true,
+                        onTap: () {}, // Read-only in library view
+                      );
+                    }).toList(),
                   ),
                 ),
-                Row(
-                  children: [
-                    // Copy button
-                    InkWell(
-                      onTap: () {
-                        Clipboard.setData(ClipboardData(text: item.finalText));
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Copied to clipboard'),
-                            backgroundColor: Color(0xFF10B981),
-                            duration: Duration(seconds: 1),
-                          ),
-                        );
-                      },
-                      borderRadius: BorderRadius.circular(8),
-                      child: Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Icon(
-                          Icons.copy,
-                          size: 18,
-                          color: secondaryTextColor,
-                        ),
-                      ),
-                    ),
-                    // Share button
-                    InkWell(
-                      onTap: () {
-                        Share.share(item.finalText);
-                      },
-                      borderRadius: BorderRadius.circular(8),
-                      child: Padding(
-                        padding: const EdgeInsets.all(8),
-                        child: Icon(
-                          Icons.share,
-                          size: 18,
-                          color: secondaryTextColor,
-                        ),
-                      ),
-                    ),
-                  ],
+
+              // Preset name
+              Text(
+                item.presetUsed,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF3B82F6),
                 ),
-              ],
-            ),
-          ],
+              ),
+              const SizedBox(height: 8),
+
+              // Content
+              Text(
+                item.finalText,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: textColor,
+                ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 12),
+
+              // Actions row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    item.formattedDate,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: secondaryTextColor,
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      // Copy button
+                      InkWell(
+                        onTap: () {
+                          Clipboard.setData(ClipboardData(text: item.finalText));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Copied to clipboard'),
+                              backgroundColor: Color(0xFF10B981),
+                              duration: Duration(seconds: 1),
+                            ),
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Icon(
+                            Icons.copy,
+                            size: 18,
+                            color: secondaryTextColor,
+                          ),
+                        ),
+                      ),
+                      // Share button
+                      InkWell(
+                        onTap: () {
+                          Share.share(item.finalText);
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Icon(
+                            Icons.share,
+                            size: 18,
+                            color: secondaryTextColor,
+                          ),
+                        ),
+                      ),
+                      // Delete button
+                      InkWell(
+                        onTap: () => _showDeleteConfirmation(context, item.id),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Icon(
+                            Icons.delete_outline,
+                            size: 18,
+                            color: const Color(0xFFEF4444),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -466,6 +493,53 @@ class _LibraryScreenState extends State<LibraryScreen> {
           ],
         );
       },
+    );
+  }
+  
+  void _showDeleteConfirmation(BuildContext context, String itemId) {
+    final appState = context.read<AppStateProvider>();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: const Text(
+          'Delete Recording?',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: const Text(
+          'This action cannot be undone.',
+          style: TextStyle(color: Color(0xFF94A3B8)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Color(0xFF94A3B8)),
+            ),
+          ),
+          TextButton(
+            onPressed: () async {
+              await appState.deleteRecording(itemId);
+              if (context.mounted) {
+                Navigator.pop(context); // Close dialog
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Recording deleted'),
+                    backgroundColor: Color(0xFF10B981),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              }
+            },
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: Color(0xFFEF4444)),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

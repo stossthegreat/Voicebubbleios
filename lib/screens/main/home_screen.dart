@@ -10,7 +10,6 @@ import '../../widgets/continue_banner.dart';
 import '../../widgets/language_selector_popup.dart';
 import '../main/recording_screen.dart';
 import '../main/preset_selection_screen.dart';
-import '../main/vault_screen.dart';
 import '../settings/settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -269,63 +268,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   ),
                   Row(
                     children: [
-                      // Vault Button
-                      Consumer<AppStateProvider>(
-                        builder: (context, appState, _) {
-                          return Stack(
-                            children: [
-                              Container(
-                                width: 48,
-                                height: 48,
-                                decoration: BoxDecoration(
-                                  color: surfaceColor,
-                                  borderRadius: BorderRadius.circular(48),
-                                ),
-                                child: IconButton(
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => const VaultScreen(),
-                                      ),
-                                    );
-                                  },
-                                  icon: Icon(
-                                    Icons.archive_outlined,
-                                    color: textColor,
-                                  ),
-                                ),
-                              ),
-                              if (appState.archivedItems.isNotEmpty)
-                                Positioned(
-                                  top: 0,
-                                  right: 0,
-                                  child: Container(
-                                    width: 20,
-                                    height: 20,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF9333EA),
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        appState.archivedItems.length > 9
-                                            ? '9+'
-                                            : appState.archivedItems.length.toString(),
-                                        style: const TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          );
-                        },
-                      ),
-                      const SizedBox(width: 12),
                       // Settings Button
                       Container(
                         width: 48,

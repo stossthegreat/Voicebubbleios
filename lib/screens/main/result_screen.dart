@@ -37,6 +37,9 @@ class _ResultScreenState extends State<ResultScreen> {
 
   // Active refinement tracking
   RefinementType? _activeRefinement;
+  
+  // Track saved item ID to prevent duplicates
+  String? _savedItemId;
 
   @override
   void initState() {
@@ -218,11 +221,19 @@ class _ResultScreenState extends State<ResultScreen> {
       }
     });
     debugPrint('🏷️ Outcomes: $_selectedOutcomes');
-    // Auto-save to library when outcome changes
-    _saveRecording();
+    // Update existing item instead of saving new one
+    if (_savedItemId != null) {
+      _updateExistingItem();
+    }
   }
 
   Future<void> _saveRecording() async {
+    // Only save if we haven't saved yet (prevent duplicates)
+    if (_savedItemId != null) {
+      debugPrint('⚠️ Item already saved with ID: $_savedItemId');
+      return;
+    }
+    
     try {
       final appState = context.read<AppStateProvider>();
 
@@ -231,9 +242,10 @@ class _ResultScreenState extends State<ResultScreen> {
       debugPrint('🔍 Rewritten text: $_rewrittenText');
       debugPrint('🔍 Selected outcomes: $_selectedOutcomes');
 
-      // Create new RecordingItem
+      // Create new RecordingItem with generated ID
+      final itemId = const Uuid().v4();
       final item = RecordingItem(
-        id: const Uuid().v4(),
+        id: itemId,
         rawTranscript: appState.transcription,
         finalText: _rewrittenText,
         presetUsed: appState.selectedPreset?.name ?? 'Unknown',
@@ -249,6 +261,9 @@ class _ResultScreenState extends State<ResultScreen> {
       
       await appState.saveRecording(item);
       
+      // Store the ID to prevent duplicate saves
+      _savedItemId = itemId;
+      
       debugPrint('✅ Recording saved successfully!');
       debugPrint('✅ Total recordings now: ${appState.recordingItems.length}');
     } catch (e, stackTrace) {
@@ -256,12 +271,43 @@ class _ResultScreenState extends State<ResultScreen> {
       debugPrint('❌ Stack trace: $stackTrace');
     }
   }
+  
+  Future<void> _updateExistingItem() async {
+    if (_savedItemId == null) return;
+    
+    try {
+      final appState = context.read<AppStateProvider>();
+      
+      // Find the existing item
+      final existingItem = appState.recordingItems.firstWhere(
+        (item) => item.id == _savedItemId,
+        orElse: () => throw Exception('Item not found'),
+      );
+      
+      // Create updated item with new outcomes
+      final updatedItem = existingItem.copyWith(
+        outcomes: _selectedOutcomes.map((o) => o.toStorageString()).toList(),
+        finalText: _rewrittenText, // In case text was edited
+        editHistory: List.from(_textHistory),
+      );
+      
+      await appState.updateRecording(updatedItem);
+      
+      debugPrint('✅ Updated item: $_savedItemId with outcomes: $_selectedOutcomes');
+    } catch (e, stackTrace) {
+      debugPrint('❌ ERROR updating item: $e');
+      debugPrint('❌ Stack trace: $stackTrace');
+    }
+  }
 
   Future<void> _copyToClipboard() async {
     await Clipboard.setData(ClipboardData(text: _rewrittenText));
 
-    // Save recording
-    await _saveRecording();
+    // Don't save again - already saved in _generateRewrite()
+    // Just update if outcomes changed
+    if (_savedItemId != null) {
+      await _updateExistingItem();
+    }
 
     setState(() {
       _showCopied = true;
