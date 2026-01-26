@@ -10,8 +10,10 @@ import '../../widgets/project_card.dart';
 import '../../widgets/create_project_dialog.dart';
 import '../../widgets/preset_filter_chips.dart';
 import '../../constants/presets.dart';
+import '../../services/continue_service.dart';
 import 'project_detail_screen.dart';
 import 'recording_detail_screen.dart';
+import 'recording_screen.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -26,6 +28,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
   String? _selectedPresetId;
   final ScrollController _scrollController = ScrollController();
   bool _showHeader = true;
+  final ContinueService _continueService = ContinueService();
 
   @override
   void initState() {
@@ -78,7 +81,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
-                        color: textColor,
+                        color: const Color(0xFF3B82F6),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -165,52 +168,66 @@ class _LibraryScreenState extends State<LibraryScreen> {
 
             const SizedBox(height: 16),
 
-            // Search Bar
+            // Search Bar + Filter Button
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: surfaceColor,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: TextField(
-                  onChanged: (value) {
-                    setState(() {
-                      _searchQuery = value.toLowerCase();
-                    });
-                  },
-                  style: TextStyle(color: textColor, fontSize: 16),
-                  decoration: InputDecoration(
-                    hintText: 'Search library...',
-                    hintStyle: TextStyle(color: secondaryTextColor),
-                    prefixIcon: Icon(Icons.search, color: secondaryTextColor),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 16,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: surfaceColor,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: TextField(
+                        onChanged: (value) {
+                          setState(() {
+                            _searchQuery = value.toLowerCase();
+                          });
+                        },
+                        style: TextStyle(color: textColor, fontSize: 16),
+                        decoration: InputDecoration(
+                          hintText: 'Search library...',
+                          hintStyle: TextStyle(color: secondaryTextColor),
+                          prefixIcon: Icon(Icons.search, color: secondaryTextColor),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 16,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                  if (!_showProjects) ...[
+                    const SizedBox(width: 12),
+                    GestureDetector(
+                      onTap: () => _showFilterSheet(context, surfaceColor, textColor, secondaryTextColor),
+                      child: Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: _selectedPresetId != null 
+                              ? primaryColor.withOpacity(0.2) 
+                              : surfaceColor,
+                          borderRadius: BorderRadius.circular(12),
+                          border: _selectedPresetId != null
+                              ? Border.all(color: primaryColor, width: 1)
+                              : null,
+                        ),
+                        child: Icon(
+                          Icons.filter_list,
+                          color: _selectedPresetId != null ? primaryColor : secondaryTextColor,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
 
             const SizedBox(height: 16),
-
-            // Preset Filter Chips (only show in "All" view)
-            if (!_showProjects)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: PresetFilterChips(
-                  selectedPresetId: _selectedPresetId,
-                  onPresetSelected: (presetId) {
-                    setState(() {
-                      _selectedPresetId = presetId;
-                    });
-                  },
-                ),
-              ),
-
-            if (!_showProjects) const SizedBox(height: 24),
 
             // Content
             Expanded(
@@ -388,6 +405,19 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   ),
                   Row(
                     children: [
+                      // Continue button
+                      InkWell(
+                        onTap: () => _continueFromItem(item),
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Icon(
+                            Icons.play_arrow,
+                            size: 18,
+                            color: const Color(0xFF3B82F6),
+                          ),
+                        ),
+                      ),
                       // Copy button
                       InkWell(
                         onTap: () {
@@ -548,6 +578,33 @@ class _LibraryScreenState extends State<LibraryScreen> {
     );
   }
   
+  Future<void> _continueFromItem(RecordingItem item) async {
+    try {
+      final context = await _continueService.buildContextFromItem(item.id);
+      if (mounted) {
+        final appState = Provider.of<AppStateProvider>(this.context, listen: false);
+        appState.setContinueContext(context);
+        
+        // Navigate to recording screen
+        Navigator.push(
+          this.context,
+          MaterialPageRoute(
+            builder: (context) => const RecordingScreen(),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(this.context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to continue: ${e.toString()}'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
+    }
+  }
+
   void _showDeleteConfirmation(BuildContext context, String itemId) {
     final appState = context.read<AppStateProvider>();
     

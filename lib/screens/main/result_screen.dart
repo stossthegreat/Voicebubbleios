@@ -49,8 +49,8 @@ class _ResultScreenState extends State<ResultScreen> {
   @override
   void initState() {
     super.initState();
-    // Initialize _savedItemId from continueFromItemId if present
-    _savedItemId = widget.continueFromItemId;
+    // Don't initialize _savedItemId from continueFromItemId anymore
+    // Continue should always create NEW items, not update existing ones
     _generateRewrite();
   }
 
@@ -89,18 +89,6 @@ class _ResultScreenState extends State<ResultScreen> {
           languageCode: language.code,
           contextTexts: continueContext.contextTexts,
         );
-        
-        // If continuing a single item, load existing outcomes
-        if (continueContext.singleItemId != null) {
-          final existingItem = appState.recordingItems.firstWhere(
-            (item) => item.id == continueContext.singleItemId,
-            orElse: () => appState.recordingItems.first,
-          );
-          // Preserve existing outcomes
-          setState(() {
-            _selectedOutcomes = existingItem.outcomeTypes.toSet();
-          });
-        }
       } else {
         // Normal rewriting
         rewrittenText = await aiService.rewriteText(
@@ -124,24 +112,19 @@ class _ResultScreenState extends State<ResultScreen> {
       appState.setRewrittenText(rewrittenText);
       
       // Save or update the recording
-      if (_savedItemId != null || (continueContext != null && continueContext.singleItemId != null)) {
-        // If we have a savedItemId or we're continuing a single item, update it
-        if (_savedItemId == null && continueContext!.singleItemId != null) {
-          _savedItemId = continueContext.singleItemId;
-        }
+      if (_savedItemId != null) {
+        // Only update if we already saved this result (within the same session, not a continuation)
         await _updateExistingItem();
-        // Clear continue context after updating
-        appState.clearContinueContext();
-      } else if (continueContext != null && continueContext.projectId != null) {
-        // If we're continuing a project, create new item and add to project
+      } else if (continueContext != null) {
+        // Whether single item OR project, always CREATE new item
         await _saveRecording();
-        if (_savedItemId != null) {
+        if (continueContext.projectId != null && _savedItemId != null) {
           await appState.addItemToProject(continueContext.projectId!, _savedItemId!);
         }
         // Clear continue context after saving
         appState.clearContinueContext();
       } else {
-        // Create new item
+        // Normal new recording
         await _saveRecording();
       }
     } catch (e) {

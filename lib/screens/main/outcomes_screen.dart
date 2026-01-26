@@ -67,7 +67,7 @@ class _OutcomesScreenState extends State<OutcomesScreen> {
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
-                        color: textColor,
+                        color: const Color(0xFF3B82F6),
                       ),
                     ),
                     const SizedBox(width: 12),
