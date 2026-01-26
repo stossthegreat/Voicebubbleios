@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'providers/app_state_provider.dart';
 import 'providers/theme_provider.dart';
 import 'services/subscription_service.dart';
+import 'services/storage_service.dart'; // ADD THIS
 import 'screens/main/main_navigation.dart';
 import 'screens/onboarding/onboarding_one.dart';
 import 'screens/onboarding/onboarding_two.dart';
@@ -21,6 +22,10 @@ void main() async {
   await Firebase.initializeApp();
   debugPrint('✅ Firebase initialized successfully');
   
+  // Initialize Hive storage - CRITICAL FOR SAVING!
+  await StorageService.initialize();
+  debugPrint('✅ Hive storage initialized successfully');
+  
   // Initialize In-App Purchase system
   await SubscriptionService().initialize();
   debugPrint('✅ Subscription service initialized');
@@ -35,7 +40,9 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AppStateProvider()),
+        ChangeNotifierProvider(
+          create: (_) => AppStateProvider()..initialize(), // INITIALIZE APP STATE
+        ),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
       ],
       child: Consumer<ThemeProvider>(
