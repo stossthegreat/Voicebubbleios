@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:flutter/widgets.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
@@ -14,6 +15,9 @@ const String _reminderPrefix = 'reminder_';
 /// MUST be top-level function for android_alarm_manager_plus
 @pragma('vm:entry-point')
 Future<void> alarmCallback(int id) async {
+  // CRITICAL: Must initialize Flutter bindings in isolate
+  WidgetsFlutterBinding.ensureInitialized();
+  
   debugPrint('⏰ ALARM FIRED: $id');
 
   final prefs = await SharedPreferences.getInstance();
@@ -86,7 +90,6 @@ class NotificationService {
     const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
     await notifications.initialize(const InitializationSettings(android: androidSettings));
 
-    // Create channel with max importance
     await notifications
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(const AndroidNotificationChannel(
@@ -129,10 +132,8 @@ class NotificationService {
 
     final int notificationId = itemId.hashCode.abs() % 2147483647;
 
-    // Cancel existing
     await AndroidAlarmManager.cancel(notificationId);
 
-    // Store data for callback
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('$_reminderPrefix$notificationId', jsonEncode({
       'title': title,
@@ -140,11 +141,10 @@ class NotificationService {
       'itemId': itemId,
     }));
 
-    // Schedule with AlarmManager
     final scheduled = await AndroidAlarmManager.oneShotAt(
       scheduledTime,
       notificationId,
-      alarmCallback,  // Top-level function
+      alarmCallback,
       exact: true,
       wakeup: true,
       rescheduleOnReboot: true,
