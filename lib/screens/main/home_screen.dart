@@ -215,8 +215,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           physics: const BouncingScrollPhysics(),
           child: Column(
             children: [
-              const SizedBox(height: 60), // Push content down
-              // Header
+              // Header (stays at top)
               Padding(
               padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
               child: Row(

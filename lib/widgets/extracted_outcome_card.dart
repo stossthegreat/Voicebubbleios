@@ -87,9 +87,10 @@ class _ExtractedOutcomeCardState extends State<ExtractedOutcomeCard> {
           TextField(
             controller: _controller,
             style: TextStyle(
-              fontSize: 16,
+              fontSize: 18, // Increased from 16
               color: textColor,
               height: 1.5,
+              fontWeight: FontWeight.w500,
             ),
             maxLines: null,
             decoration: InputDecoration(
@@ -102,92 +103,60 @@ class _ExtractedOutcomeCardState extends State<ExtractedOutcomeCard> {
           
           const SizedBox(height: 16),
           
-          // Beautiful action buttons (2 buttons side by side)
+          // Compact action buttons (2 buttons side by side)
           Row(
             children: [
-              // Share button (left side, cyan gradient)
+              // Share button (left side, smaller and cleaner)
               Expanded(
-                child: Container(
-                  height: 56,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF22D3EE), Color(0xFF06B6D4)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF22D3EE).withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: ElevatedButton.icon(
+                child: SizedBox(
+                  height: 42, // Reduced from 56
+                  child: OutlinedButton.icon(
                     onPressed: () {
                       Share.share(_controller.text);
                     },
-                    icon: const Icon(Icons.share, size: 20, color: Colors.black),
+                    icon: const Icon(Icons.share, size: 16, color: Color(0xFF22D3EE)),
                     label: const Text(
                       'Share',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Colors.black,
+                        color: Color(0xFF22D3EE),
                       ),
                     ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFF22D3EE), width: 1.5),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
                     ),
                   ),
                 ),
               ),
               
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               
-              // Continue button (right side, cyan gradient)
+              // Continue button (right side, smaller and cleaner)
               Expanded(
-                child: Container(
-                  height: 56,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF22D3EE), Color(0xFF06B6D4)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF22D3EE).withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: ElevatedButton.icon(
+                child: SizedBox(
+                  height: 42, // Reduced from 56
+                  child: OutlinedButton.icon(
                     onPressed: widget.onContinue,
-                    icon: const Icon(Icons.play_arrow, size: 20, color: Colors.black),
+                    icon: const Icon(Icons.arrow_forward, size: 16, color: Color(0xFF22D3EE)),
                     label: const Text(
                       'Continue',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Colors.black,
+                        color: Color(0xFF22D3EE),
                       ),
                     ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFF22D3EE), width: 1.5),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
                     ),
                   ),
                 ),

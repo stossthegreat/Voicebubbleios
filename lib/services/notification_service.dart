@@ -1,11 +1,16 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-/// Result class for reminder operations
+const String _reminderPrefix = 'reminder_';
+
 class ReminderResult {
   final bool success;
   final String? error;
@@ -20,242 +25,144 @@ class NotificationService {
   factory NotificationService() => _instance;
   NotificationService._internal();
 
-  final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
   bool _initialized = false;
-  bool _permissionRequested = false;
 
-  /// Initialize notification service - call once at app startup
   Future<void> initialize() async {
     if (_initialized) return;
 
-    // Initialize timezone database with device's actual timezone
     tz.initializeTimeZones();
     try {
-      final String timeZoneName = await FlutterTimezone.getLocalTimezone();
+      final timeZoneName = await FlutterTimezone.getLocalTimezone();
       tz.setLocalLocation(tz.getLocation(timeZoneName));
-      debugPrint('🕐 Timezone set to: $timeZoneName');
     } catch (e) {
-      // Fallback to UTC if timezone detection fails
-      debugPrint('⚠️ Timezone detection failed, using UTC: $e');
       tz.setLocalLocation(tz.UTC);
     }
 
-    // Android initialization settings
-    const AndroidInitializationSettings androidSettings = AndroidInitializationSettings(
-      '@mipmap/ic_launcher',
-    );
+    await AndroidAlarmManager.initialize();
 
-    const InitializationSettings settings = InitializationSettings(
-      android: androidSettings,
-    );
+    final notifications = FlutterLocalNotificationsPlugin();
+    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    await notifications.initialize(const InitializationSettings(android: androidSettings));
 
-    await _notifications.initialize(
-      settings,
-      onDidReceiveNotificationResponse: _onNotificationTapped,
-      onDidReceiveBackgroundNotificationResponse: _onBackgroundNotificationTapped,
-    );
-
-    // Create notification channel
-    await _createNotificationChannel();
+    // Create channel with max importance
+    await notifications
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(const AndroidNotificationChannel(
+          'voicebubble_reminders_v2',
+          'Reminders',
+          importance: Importance.max,
+          enableVibration: true,
+          playSound: true,
+        ));
 
     _initialized = true;
-    debugPrint('✅ NotificationService initialized');
   }
 
-  /// Create notification channel for Android 8+
-  Future<void> _createNotificationChannel() async {
-    const AndroidNotificationChannel channel = AndroidNotificationChannel(
-      'voicebubble_reminders',
-      'Reminders',
-      description: 'Reminders for your outcomes and tasks',
-      importance: Importance.high,
-      enableVibration: true,
-      playSound: true,
-    );
-
-    await _notifications
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(channel);
-  }
-
-  /// Request notification permission - call before first reminder or at onboarding
   Future<bool> requestPermission() async {
-    if (_permissionRequested) {
-      return await Permission.notification.isGranted;
-    }
-
     final status = await Permission.notification.request();
-    _permissionRequested = true;
-
-    if (!status.isGranted) {
-      debugPrint('❌ Notification permission denied');
-      return false;
-    }
-
-    // Check exact alarm permission (Android 12+)
-    final exactAlarmStatus = await Permission.scheduleExactAlarm.status;
-    if (!exactAlarmStatus.isGranted) {
-      debugPrint('⚠️ Exact alarm permission not granted, requesting...');
-      await Permission.scheduleExactAlarm.request();
-    }
-
+    if (!status.isGranted) return false;
+    
+    await Permission.scheduleExactAlarm.request();
+    await Permission.ignoreBatteryOptimizations.request();
     return true;
   }
 
-  /// Check if we can schedule exact alarms
-  Future<bool> canScheduleExactAlarms() async {
-    final androidPlugin = _notifications
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
-    
-    if (androidPlugin == null) return false;
-    
-    return await androidPlugin.canScheduleExactNotifications() ?? false;
-  }
-
-  /// Schedule a reminder for an outcome
   Future<ReminderResult> scheduleReminder({
     required String itemId,
     required String title,
     required String body,
     required DateTime scheduledTime,
   }) async {
-    // Ensure initialized
-    if (!_initialized) {
-      await initialize();
-    }
+    if (!_initialized) await initialize();
 
-    // Validate scheduled time is in the future
     if (scheduledTime.isBefore(DateTime.now())) {
-      return ReminderResult.failure('Cannot schedule reminder in the past');
+      return ReminderResult.failure('Cannot schedule in the past');
     }
 
-    // Check permission
-    final hasPermission = await Permission.notification.isGranted;
-    if (!hasPermission) {
-      final granted = await requestPermission();
-      if (!granted) {
-        return ReminderResult.failure('Notification permission denied');
+    if (!await Permission.notification.isGranted) {
+      if (!await requestPermission()) {
+        return ReminderResult.failure('Permission denied');
       }
     }
 
-    // Generate unique notification ID from itemId
-    final int notificationId = _generateNotificationId(itemId);
+    final int notificationId = itemId.hashCode.abs() % 2147483647;
 
-    // Cancel any existing reminder for this item first
-    await _notifications.cancel(notificationId);
+    // Cancel existing
+    await AndroidAlarmManager.cancel(notificationId);
 
-    // Android notification details
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      'voicebubble_reminders',
-      'Reminders',
-      channelDescription: 'Reminders for your outcomes and tasks',
-      importance: Importance.high,
-      priority: Priority.high,
-      ticker: 'VoiceBubble Reminder',
-      icon: '@mipmap/ic_launcher',
-      enableVibration: true,
-      playSound: true,
-      styleInformation: BigTextStyleInformation(''), // Allows expanded text
+    // Store data for callback
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('$_reminderPrefix$notificationId', jsonEncode({
+      'title': title,
+      'body': body.length > 200 ? '${body.substring(0, 197)}...' : body,
+      'itemId': itemId,
+    }));
+
+    // Schedule with AlarmManager
+    final scheduled = await AndroidAlarmManager.oneShotAt(
+      scheduledTime,
+      notificationId,
+      _alarmCallback,
+      exact: true,
+      wakeup: true,
+      rescheduleOnReboot: true,
+      allowWhileIdle: true,
     );
 
-    const NotificationDetails notificationDetails = NotificationDetails(
-      android: androidDetails,
-    );
-
-    // Convert DateTime to TZDateTime
-    final tz.TZDateTime scheduledDate = tz.TZDateTime.from(scheduledTime, tz.local);
-
-    // Truncate body to reasonable length for notification
-    final truncatedBody = body.length > 200 ? '${body.substring(0, 197)}...' : body;
-
-    try {
-      // Check if we can schedule exact alarms
-      final canScheduleExact = await canScheduleExactAlarms();
-      
-      await _notifications.zonedSchedule(
-        notificationId,
-        title,
-        truncatedBody,
-        scheduledDate,
-        notificationDetails,
-        androidScheduleMode: canScheduleExact 
-            ? AndroidScheduleMode.exactAllowWhileIdle 
-            : AndroidScheduleMode.inexactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
-        payload: itemId, // CRITICAL: Pass itemId for tap handling
-      );
-
-      debugPrint('🔔 Scheduled reminder for $scheduledTime (ID: $notificationId, exact: $canScheduleExact)');
+    if (scheduled) {
+      debugPrint('🔔 Scheduled for $scheduledTime (ID: $notificationId)');
       return ReminderResult.success(notificationId);
-    } catch (e) {
-      debugPrint('❌ Failed to schedule reminder: $e');
-      return ReminderResult.failure('Failed to schedule reminder: $e');
     }
+    return ReminderResult.failure('Failed to schedule');
   }
 
-  /// Cancel a reminder by item ID
-  Future<void> cancelReminderByItemId(String itemId) async {
-    final int notificationId = _generateNotificationId(itemId);
-    await cancelReminderByNotificationId(notificationId);
-  }
-
-  /// Cancel a reminder by notification ID
-  Future<void> cancelReminderByNotificationId(int notificationId) async {
-    await _notifications.cancel(notificationId);
-    debugPrint('🔕 Cancelled reminder (ID: $notificationId)');
-  }
-
-  /// Cancel all reminders
-  Future<void> cancelAllReminders() async {
-    await _notifications.cancelAll();
-    debugPrint('🔕 Cancelled all reminders');
-  }
-
-  /// Get all pending notifications (for debugging)
-  Future<List<PendingNotificationRequest>> getPendingNotifications() async {
-    return await _notifications.pendingNotificationRequests();
-  }
-
-  /// Check if a specific reminder is scheduled
-  Future<bool> isReminderScheduled(String itemId) async {
-    final int notificationId = _generateNotificationId(itemId);
-    final pending = await getPendingNotifications();
-    return pending.any((n) => n.id == notificationId);
-  }
-
-  /// Generate consistent notification ID from item ID
-  int _generateNotificationId(String itemId) {
-    // Use hashCode but ensure it's positive and within int32 range
-    return itemId.hashCode.abs() % 2147483647;
-  }
-
-  /// Handle notification tap when app is in foreground/background
-  static void _onNotificationTapped(NotificationResponse response) {
-    debugPrint('📱 Notification tapped: ${response.payload}');
-    _handleNotificationPayload(response.payload);
-  }
-
-  /// Handle notification tap when app was terminated
   @pragma('vm:entry-point')
-  static void _onBackgroundNotificationTapped(NotificationResponse response) {
-    debugPrint('📱 Background notification tapped: ${response.payload}');
-    _handleNotificationPayload(response.payload);
-  }
+  static Future<void> _alarmCallback(int id) async {
+    debugPrint('⏰ ALARM FIRED: $id');
 
-  static void _handleNotificationPayload(String? payload) {
-    if (payload == null || payload.isEmpty) return;
+    final prefs = await SharedPreferences.getInstance();
+    final data = prefs.getString('$_reminderPrefix$id');
+    if (data == null) return;
     
-    // Store the payload to be handled when app is ready
-    _pendingNotificationPayload = payload;
+    await prefs.remove('$_reminderPrefix$id');
+    final json = jsonDecode(data);
+
+    final notifications = FlutterLocalNotificationsPlugin();
+    await notifications.initialize(const InitializationSettings(
+      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+    ));
+
+    await notifications.show(
+      id,
+      json['title'],
+      json['body'],
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          'voicebubble_reminders_v2',
+          'Reminders',
+          importance: Importance.max,
+          priority: Priority.max,
+          enableVibration: true,
+          playSound: true,
+          fullScreenIntent: true,
+          visibility: NotificationVisibility.public,
+          vibrationPattern: Int64List.fromList([0, 500, 200, 500]),
+        ),
+      ),
+      payload: json['itemId'],
+    );
   }
 
-  // Static variable to store pending payload
-  static String? _pendingNotificationPayload;
+  Future<void> cancelReminder(int notificationId) async {
+    await AndroidAlarmManager.cancel(notificationId);
+    final notifications = FlutterLocalNotificationsPlugin();
+    await notifications.cancel(notificationId);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('$_reminderPrefix$notificationId');
+  }
 
-  /// Get and clear any pending notification payload (call on app start)
-  static String? consumePendingPayload() {
-    final payload = _pendingNotificationPayload;
-    _pendingNotificationPayload = null;
-    return payload;
+  Future<void> cancelReminderByItemId(String itemId) async {
+    await cancelReminder(itemId.hashCode.abs() % 2147483647);
   }
 }
+

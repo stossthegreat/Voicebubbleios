@@ -340,7 +340,7 @@ class _OutcomesResultScreenState extends State<OutcomesResultScreen> {
                               
                               const SizedBox(height: 24),
                               
-                              // Different Style button
+                              // Different Style button (smaller and cleaner)
                               Center(
                                 child: OutlinedButton.icon(
                                   onPressed: () {
@@ -353,8 +353,11 @@ class _OutcomesResultScreenState extends State<OutcomesResultScreen> {
                                       ),
                                     );
                                   },
-                                  icon: const Icon(Icons.auto_awesome, size: 20),
-                                  label: const Text('Different Style'),
+                                  icon: const Icon(Icons.auto_awesome, size: 16),
+                                  label: const Text(
+                                    'Different Style',
+                                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                                  ),
                                   style: OutlinedButton.styleFrom(
                                     foregroundColor: const Color(0xFF22D3EE),
                                     side: const BorderSide(
@@ -362,8 +365,8 @@ class _OutcomesResultScreenState extends State<OutcomesResultScreen> {
                                       width: 1.5,
                                     ),
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 24,
-                                      vertical: 16,
+                                      horizontal: 20,
+                                      vertical: 12,
                                     ),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),

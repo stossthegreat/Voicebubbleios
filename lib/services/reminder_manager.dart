@@ -93,7 +93,7 @@ class ReminderManager {
     } else {
       // Removing a reminder
       if (item.reminderNotificationId != null) {
-        await _notificationService.cancelReminderByNotificationId(item.reminderNotificationId!);
+        await _notificationService.cancelReminder(item.reminderNotificationId!);
       } else {
         await _notificationService.cancelReminderByItemId(item.id);
       }
@@ -118,7 +118,7 @@ class ReminderManager {
     if (item.reminderDateTime == null) return;
 
     if (item.reminderNotificationId != null) {
-      await _notificationService.cancelReminderByNotificationId(item.reminderNotificationId!);
+      await _notificationService.cancelReminder(item.reminderNotificationId!);
     } else {
       await _notificationService.cancelReminderByItemId(item.id);
     }
