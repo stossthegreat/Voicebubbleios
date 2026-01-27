@@ -11,6 +11,48 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 const String _reminderPrefix = 'reminder_';
 
+/// MUST be top-level function for android_alarm_manager_plus
+@pragma('vm:entry-point')
+Future<void> alarmCallback(int id) async {
+  debugPrint('⏰ ALARM FIRED: $id');
+
+  final prefs = await SharedPreferences.getInstance();
+  final data = prefs.getString('$_reminderPrefix$id');
+  if (data == null) {
+    debugPrint('❌ No data found for alarm $id');
+    return;
+  }
+  
+  await prefs.remove('$_reminderPrefix$id');
+  final json = jsonDecode(data);
+
+  final notifications = FlutterLocalNotificationsPlugin();
+  await notifications.initialize(const InitializationSettings(
+    android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+  ));
+
+  await notifications.show(
+    id,
+    json['title'],
+    json['body'],
+    NotificationDetails(
+      android: AndroidNotificationDetails(
+        'voicebubble_reminders_v2',
+        'Reminders',
+        importance: Importance.max,
+        priority: Priority.max,
+        enableVibration: true,
+        playSound: true,
+        fullScreenIntent: true,
+        visibility: NotificationVisibility.public,
+        vibrationPattern: Int64List.fromList([0, 500, 200, 500]),
+      ),
+    ),
+    payload: json['itemId'],
+  );
+  debugPrint('✅ Notification shown');
+}
+
 class ReminderResult {
   final bool success;
   final String? error;
@@ -102,7 +144,7 @@ class NotificationService {
     final scheduled = await AndroidAlarmManager.oneShotAt(
       scheduledTime,
       notificationId,
-      _alarmCallback,
+      alarmCallback,  // Top-level function
       exact: true,
       wakeup: true,
       rescheduleOnReboot: true,
@@ -114,43 +156,6 @@ class NotificationService {
       return ReminderResult.success(notificationId);
     }
     return ReminderResult.failure('Failed to schedule');
-  }
-
-  @pragma('vm:entry-point')
-  static Future<void> _alarmCallback(int id) async {
-    debugPrint('⏰ ALARM FIRED: $id');
-
-    final prefs = await SharedPreferences.getInstance();
-    final data = prefs.getString('$_reminderPrefix$id');
-    if (data == null) return;
-    
-    await prefs.remove('$_reminderPrefix$id');
-    final json = jsonDecode(data);
-
-    final notifications = FlutterLocalNotificationsPlugin();
-    await notifications.initialize(const InitializationSettings(
-      android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-    ));
-
-    await notifications.show(
-      id,
-      json['title'],
-      json['body'],
-      NotificationDetails(
-        android: AndroidNotificationDetails(
-          'voicebubble_reminders_v2',
-          'Reminders',
-          importance: Importance.max,
-          priority: Priority.max,
-          enableVibration: true,
-          playSound: true,
-          fullScreenIntent: true,
-          visibility: NotificationVisibility.public,
-          vibrationPattern: Int64List.fromList([0, 500, 200, 500]),
-        ),
-      ),
-      payload: json['itemId'],
-    );
   }
 
   Future<void> cancelReminder(int notificationId) async {
@@ -165,4 +170,3 @@ class NotificationService {
     await cancelReminder(itemId.hashCode.abs() % 2147483647);
   }
 }
-
