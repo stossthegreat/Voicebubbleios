@@ -60,17 +60,7 @@ app.get("/stats", (req, res) => {
 app.use("/api/rewrite", rewriteRoutes);
 app.use("/api/transcribe", transcribeRoutes);
 app.use("/api/subscription", subscriptionRoutes);
-
-// Try to load extract routes dynamically (optional for backwards compatibility)
-(async () => {
-  try {
-    const { default: extractRoutes } = await import("./routes/extract.js");
-    app.use("/api/extract", extractRoutes);
-    console.log("✅ Extract routes registered");
-  } catch (err) {
-    console.warn("⚠️ Extract routes not available:", err.message);
-  }
-})();
+app.use("/api/extract", extractRoutes);
 
 // ========= 404 HANDLER =========
 app.all("*", (req, res, next) => {

@@ -1,54 +1,133 @@
-// backend/prompt_engine/builder.js
+// ============================================================
+//        MESSAGE BUILDER — UPGRADED
+// ============================================================
+//
+// Constructs OpenAI messages by combining:
+// 1. Global Engine (master brain)
+// 2. Mode Amplifier (social/email/creative/extraction)
+// 3. Preset Behaviour (specific instructions)
+// 4. Language Requirement (if specified)
+// 5. Few-shot Examples (pattern learning)
+//
+// ============================================================
 
-import { GLOBAL_ENGINE } from "./global.js";
+import { GLOBAL_ENGINE, MODE_AMPLIFIERS } from "./global.js";
 import { PRESET_DEFINITIONS } from "./presets.js";
+
+// ============================================================
+// PRESET TO MODE MAPPING
+// ============================================================
+
+const PRESET_TO_MODE = {
+  // Social Media
+  "x_thread": "social",
+  "x_post": "social",
+  "facebook_post": "social",
+  "instagram_caption": "social",
+  "instagram_hook": "social",
+  "linkedin_post": "social",
+  
+  // Email
+  "email_professional": "email",
+  "email_casual": "email",
+  
+  // Creative
+  "story_novel": "creative",
+  "poem": "creative",
+  "script_dialogue": "creative",
+  
+  // Extraction
+  "outcomes": "extraction",
+  "unstuck": "extraction",
+  "to_do": "extraction",
+  "meeting_notes": "extraction",
+  
+  // Others use default (no amplifier)
+  "magic": null,
+  "quick_reply": null,
+  "shorten": null,
+  "expand": null,
+  "formal_business": null,
+  "casual_friendly": null,
+};
+
+// ============================================================
+// GET PRESET CONFIG
+// ============================================================
 
 /**
  * Get configuration for a specific preset
+ * @param {string} presetId 
+ * @returns {object} Preset config or magic as fallback
  */
 export function getPresetConfig(presetId) {
   const config = PRESET_DEFINITIONS[presetId];
   if (!config) {
-    // default to magic if unknown
+    console.warn(`Unknown preset: ${presetId}, falling back to magic`);
     return PRESET_DEFINITIONS["magic"];
   }
   return config;
 }
 
+// ============================================================
+// BUILD SYSTEM CONTENT
+// ============================================================
+
 /**
- * Build the system message content combining:
- * - global engine
- * - active preset behaviour
- * - language instruction (if specified)
+ * Build the complete system message
+ * @param {string} presetId 
+ * @param {string} language 
+ * @returns {string}
  */
 function buildSystemContent(presetId, language = "auto") {
   const preset = getPresetConfig(presetId);
+  const mode = PRESET_TO_MODE[presetId];
   
-  const parts = [
-    GLOBAL_ENGINE,
-    "",
-    `ACTIVE PRESET: "${presetId}" (${preset.label})`
-  ];
+  // Start with global engine
+  const parts = [GLOBAL_ENGINE];
   
-  // Add language instruction if specified
+  // Add mode amplifier if applicable
+  if (mode && MODE_AMPLIFIERS[mode]) {
+    parts.push(MODE_AMPLIFIERS[mode]);
+  }
+  
+  // Add language requirement
   if (language && language !== "auto") {
-    parts.push("", `LANGUAGE REQUIREMENT: You MUST respond in "${language}" language.`);
+    parts.push(`
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🌍 LANGUAGE REQUIREMENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+OUTPUT LANGUAGE: ${language}
+
+You MUST respond in ${language}.
+This overrides language detection.
+JSON keys remain in English if outputting JSON.
+`);
   }
   
   // Add preset-specific behaviour
-  if (preset.behaviour) {
-    parts.push("", "PRESET BEHAVIOUR:", preset.behaviour.trim());
-  }
-  
-  return parts.filter(Boolean).join("\n\n");
+  parts.push(`
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 ACTIVE PRESET: ${presetId.toUpperCase()} (${preset.label})
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${preset.behaviour ? preset.behaviour.trim() : "Apply standard transformation rules."}
+`);
+
+  return parts.join("\n\n");
 }
 
+// ============================================================
+// BUILD MESSAGES
+// ============================================================
+
 /**
- * Build OpenAI chat messages with optional few-shot examples
+ * Build complete OpenAI chat messages
  * @param {object} options
- * @param {string} options.presetId
- * @param {string} options.userText
- * @param {string} [options.language] - 'auto' or ISO code (e.g. 'en', 'fa', 'es')
+ * @param {string} options.presetId - The preset to use
+ * @param {string} options.userText - User's input text
+ * @param {string} [options.language] - Target language ('auto' or ISO code)
+ * @returns {Array} Messages array for OpenAI
  */
 export function buildMessages({ presetId, userText, language = "auto" }) {
   const preset = getPresetConfig(presetId);
@@ -61,16 +140,25 @@ export function buildMessages({ presetId, userText, language = "auto" }) {
     }
   ];
 
-  // Few-shot examples if available
-  if (Array.isArray(preset.examples)) {
-    for (const ex of preset.examples) {
-      if (!ex || !ex.input || !ex.output) continue;
-      messages.push({ role: "user", content: ex.input });
-      messages.push({ role: "assistant", content: ex.output });
+  // Add few-shot examples if available
+  if (Array.isArray(preset.examples) && preset.examples.length > 0) {
+    for (const example of preset.examples) {
+      if (!example || !example.input || !example.output) continue;
+      
+      messages.push({ 
+        role: "user", 
+        content: example.input 
+      });
+      messages.push({ 
+        role: "assistant", 
+        content: typeof example.output === "string" 
+          ? example.output 
+          : JSON.stringify(example.output)
+      });
     }
   }
 
-  // Actual user input
+  // Add actual user input
   messages.push({
     role: "user",
     content: userText
@@ -79,9 +167,14 @@ export function buildMessages({ presetId, userText, language = "auto" }) {
   return messages;
 }
 
+// ============================================================
+// GET PRESET PARAMETERS
+// ============================================================
+
 /**
  * Get OpenAI parameters for a preset
- * @param {string} presetId
+ * @param {string} presetId 
+ * @returns {object} { temperature, max_tokens }
  */
 export function getPresetParameters(presetId) {
   const preset = getPresetConfig(presetId);
@@ -91,3 +184,63 @@ export function getPresetParameters(presetId) {
   };
 }
 
+// ============================================================
+// GET PRESET INFO (for debugging/logging)
+// ============================================================
+
+/**
+ * Get preset metadata
+ * @param {string} presetId 
+ * @returns {object}
+ */
+export function getPresetInfo(presetId) {
+  const preset = getPresetConfig(presetId);
+  const mode = PRESET_TO_MODE[presetId];
+  
+  return {
+    id: presetId,
+    label: preset.label,
+    mode: mode || "default",
+    temperature: preset.temperature,
+    max_tokens: preset.max_tokens,
+    exampleCount: preset.examples?.length || 0,
+  };
+}
+
+// ============================================================
+// VALIDATE PRESET EXISTS
+// ============================================================
+
+/**
+ * Check if a preset ID is valid
+ * @param {string} presetId 
+ * @returns {boolean}
+ */
+export function isValidPreset(presetId) {
+  return presetId in PRESET_DEFINITIONS;
+}
+
+// ============================================================
+// GET ALL PRESET IDS
+// ============================================================
+
+/**
+ * Get list of all available preset IDs
+ * @returns {string[]}
+ */
+export function getAllPresetIds() {
+  return Object.keys(PRESET_DEFINITIONS);
+}
+
+// ============================================================
+// EXPORTS
+// ============================================================
+
+export default {
+  getPresetConfig,
+  buildMessages,
+  getPresetParameters,
+  getPresetInfo,
+  isValidPreset,
+  getAllPresetIds,
+};
