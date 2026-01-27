@@ -7,14 +7,12 @@ import '../widgets/outcome_chip.dart';
 class ExtractedOutcomeCard extends StatefulWidget {
   final ExtractedOutcome outcome;
   final VoidCallback onContinue;
-  final VoidCallback onAddToProject;
   final Function(String) onTextChanged;
   
   const ExtractedOutcomeCard({
     super.key,
     required this.outcome,
     required this.onContinue,
-    required this.onAddToProject,
     required this.onTextChanged,
   });
 
@@ -86,58 +84,92 @@ class _ExtractedOutcomeCardState extends State<ExtractedOutcomeCard> {
           
           const SizedBox(height: 16),
           
-          // Action buttons
+          // Beautiful action buttons (2 buttons side by side)
           Row(
             children: [
-              // Share button
+              // Share button (left side, cyan gradient)
               Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    Share.share(_controller.text);
-                  },
-                  icon: const Icon(Icons.share, size: 16),
-                  label: const Text('Share'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF3B82F6),
-                    side: BorderSide(color: const Color(0xFF3B82F6).withOpacity(0.3)),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  height: 56,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF22D3EE), Color(0xFF06B6D4)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF22D3EE).withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Share.share(_controller.text);
+                    },
+                    icon: const Icon(Icons.share, size: 20, color: Colors.black),
+                    label: const Text(
+                      'Share',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
                   ),
                 ),
               ),
               
-              const SizedBox(width: 8),
+              const SizedBox(width: 12),
               
-              // Continue button
+              // Continue button (right side, cyan gradient)
               Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: widget.onContinue,
-                  icon: const Icon(Icons.play_arrow, size: 16),
-                  label: const Text('Continue'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF10B981),
-                    side: BorderSide(color: const Color(0xFF10B981).withOpacity(0.3)),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  height: 56,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF22D3EE), Color(0xFF06B6D4)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF22D3EE).withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                ),
-              ),
-              
-              const SizedBox(width: 8),
-              
-              // Add to Project button
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: widget.onAddToProject,
-                  icon: const Icon(Icons.folder_outlined, size: 16),
-                  label: const Text('Project'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF9333EA),
-                    side: BorderSide(color: const Color(0xFF9333EA).withOpacity(0.3)),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                  child: ElevatedButton.icon(
+                    onPressed: widget.onContinue,
+                    icon: const Icon(Icons.play_arrow, size: 20, color: Colors.black),
+                    label: const Text(
+                      'Continue',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
                   ),
                 ),

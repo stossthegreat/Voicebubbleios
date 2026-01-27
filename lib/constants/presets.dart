@@ -27,7 +27,17 @@ class AppPresets {
           color: const Color(0xFF22D3EE), // Bright Cyan
         ),
         
-        // 3. Quick Reply - Bright Blue (CONTRAST)
+        // 3. UNSTUCK - Light Cyan (CALM)
+        Preset(
+          id: 'unstuck',
+          icon: Icons.psychology,
+          name: 'Unstuck',
+          description: 'One insight, one small action',
+          category: 'All Presets',
+          color: const Color(0xFF67E8F9), // Light Cyan - calming
+        ),
+        
+        // 4. Quick Reply - Bright Blue (CONTRAST)
         Preset(
           id: 'quick_reply',
           icon: Icons.flash_on,
@@ -127,17 +137,7 @@ class AppPresets {
           color: const Color(0xFF84CC16), // Lime Green
         ),
         
-        // 12. UNSTUCK - Light Cyan (CALM)
-        Preset(
-          id: 'unstuck',
-          icon: Icons.psychology,
-          name: 'Unstuck',
-          description: 'One insight, one small action',
-          category: 'All Presets',
-          color: const Color(0xFF67E8F9), // Light Cyan - calming
-        ),
-        
-        // 13. Meeting Notes - Deep Indigo (CONTRAST)
+        // 12. Meeting Notes - Deep Indigo (CONTRAST)
         Preset(
           id: 'meeting_notes',
           icon: Icons.event_note,

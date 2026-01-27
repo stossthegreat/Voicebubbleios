@@ -70,7 +70,12 @@ app.get("/stats", (req, res) => {
 app.use("/api/rewrite", rewriteRoutes);
 app.use("/api/transcribe", transcribeRoutes);
 app.use("/api/subscription", subscriptionRoutes);
-app.use("/api/extract", extractRoutes);
+
+// Register extract routes if available
+if (extractRoutes) {
+  app.use("/api/extract", extractRoutes);
+  console.log("✅ Extract endpoints registered at /api/extract");
+}
 
 // ========= 404 HANDLER =========
 app.all("*", (req, res, next) => {

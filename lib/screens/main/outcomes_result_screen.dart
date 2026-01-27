@@ -147,28 +147,6 @@ class _OutcomesResultScreenState extends State<OutcomesResultScreen> {
     }
   }
 
-  Future<void> _addOutcomeToProject(ExtractedOutcome outcome) async {
-    final appState = context.read<AppStateProvider>();
-    final items = appState.recordingItems;
-    
-    // Find the item for this outcome
-    final matchingItem = items.firstWhere(
-      (item) => item.finalText == outcome.text,
-      orElse: () => items.first,
-    );
-    
-    if (mounted) {
-      showModalBottomSheet(
-        context: context,
-        backgroundColor: Colors.transparent,
-        isScrollControlled: true,
-        builder: (context) => AddToProjectDialog(
-          recordingItemId: matchingItem.id,
-        ),
-      );
-    }
-  }
-
   void _onOutcomeTextChanged(int index, String newText) {
     setState(() {
       _outcomes[index] = ExtractedOutcome(
@@ -208,14 +186,7 @@ class _OutcomesResultScreenState extends State<OutcomesResultScreen> {
                     child: IconButton(
                       padding: EdgeInsets.zero,
                       onPressed: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const PresetSelectionScreen(
-                              fromRecording: true,
-                            ),
-                          ),
-                        );
+                        Navigator.of(context).popUntil((route) => route.isFirst);
                       },
                       icon: Icon(Icons.close, color: textColor, size: 20),
                     ),
@@ -324,10 +295,43 @@ class _OutcomesResultScreenState extends State<OutcomesResultScreen> {
                                 return ExtractedOutcomeCard(
                                   outcome: outcome,
                                   onContinue: () => _continueFromOutcome(outcome),
-                                  onAddToProject: () => _addOutcomeToProject(outcome),
                                   onTextChanged: (newText) => _onOutcomeTextChanged(index, newText),
                                 );
                               }).toList(),
+                              
+                              const SizedBox(height: 24),
+                              
+                              // Different Style button
+                              Center(
+                                child: OutlinedButton.icon(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => const PresetSelectionScreen(
+                                          fromRecording: true,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.auto_awesome, size: 20),
+                                  label: const Text('Different Style'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: const Color(0xFF22D3EE),
+                                    side: const BorderSide(
+                                      color: Color(0xFF22D3EE),
+                                      width: 1.5,
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 24,
+                                      vertical: 16,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                ),
+                              ),
                               
                               const SizedBox(height: 16),
                               

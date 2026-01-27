@@ -164,6 +164,16 @@ class _PresetSelectionScreenState extends State<PresetSelectionScreen>
                 itemBuilder: (context, categoryIndex) {
                   final category = AppPresets.categories[categoryIndex];
                   
+                  // Sort presets: favorites first, then others
+                  final sortedPresets = [...category.presets];
+                  sortedPresets.sort((a, b) {
+                    final aIsFavorite = _favoritePresetIds.contains(a.id);
+                    final bIsFavorite = _favoritePresetIds.contains(b.id);
+                    if (aIsFavorite && !bIsFavorite) return -1;
+                    if (!aIsFavorite && bIsFavorite) return 1;
+                    return 0; // Keep original order
+                  });
+                  
                   return FadeTransition(
                     opacity: _cardAnimations[categoryIndex],
                     child: SlideTransition(
@@ -188,8 +198,8 @@ class _PresetSelectionScreenState extends State<PresetSelectionScreen>
                             ),
                           ),
                           
-                          // Presets in Category
-                          ...category.presets.map((preset) {
+                          // Presets in Category (now sorted with favorites first)
+                          ...sortedPresets.map((preset) {
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 8),
                               child: _buildPresetCard(

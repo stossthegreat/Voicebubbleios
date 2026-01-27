@@ -160,14 +160,7 @@ class _UnstuckResultScreenState extends State<UnstuckResultScreen> {
                     child: IconButton(
                       padding: EdgeInsets.zero,
                       onPressed: () {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const PresetSelectionScreen(
-                              fromRecording: true,
-                            ),
-                          ),
-                        );
+                        Navigator.of(context).popUntil((route) => route.isFirst);
                       },
                       icon: Icon(Icons.close, color: textColor, size: 20),
                     ),
