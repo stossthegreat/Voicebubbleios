@@ -21,6 +21,179 @@ const MIN_OUTCOMES_SCORE = 60;
 const MIN_UNSTUCK_SCORE = 60;
 
 // ============================================================
+// LANGUAGE CODE TO NAME MAPPING
+// ============================================================
+
+const LANGUAGE_NAMES = {
+  "en": "English",
+  "es": "Spanish",
+  "fr": "French",
+  "de": "German",
+  "it": "Italian",
+  "pt": "Portuguese",
+  "ru": "Russian",
+  "ja": "Japanese",
+  "ko": "Korean",
+  "zh": "Chinese (Simplified)",
+  "ar": "Arabic",
+  "hi": "Hindi",
+  "bn": "Bengali",
+  "pa": "Punjabi",
+  "te": "Telugu",
+  "mr": "Marathi",
+  "ta": "Tamil",
+  "ur": "Urdu",
+  "tr": "Turkish",
+  "vi": "Vietnamese",
+  "fa": "Farsi (Persian)",
+  "pl": "Polish",
+  "uk": "Ukrainian",
+  "nl": "Dutch",
+  "ro": "Romanian",
+  "el": "Greek",
+  "cs": "Czech",
+  "sv": "Swedish",
+  "hu": "Hungarian",
+  "fi": "Finnish",
+  "da": "Danish",
+  "no": "Norwegian",
+  "sk": "Slovak",
+  "bg": "Bulgarian",
+  "hr": "Croatian",
+  "sr": "Serbian",
+  "lt": "Lithuanian",
+  "lv": "Latvian",
+  "et": "Estonian",
+  "sl": "Slovenian",
+  "th": "Thai",
+  "id": "Indonesian",
+  "ms": "Malay",
+  "fil": "Filipino (Tagalog)",
+  "sw": "Swahili",
+  "am": "Amharic",
+  "ne": "Nepali",
+  "si": "Sinhala",
+  "km": "Khmer",
+  "lo": "Lao",
+  "my": "Burmese",
+  "ka": "Georgian",
+  "hy": "Armenian",
+  "az": "Azerbaijani",
+  "kk": "Kazakh",
+  "uz": "Uzbek",
+  "he": "Hebrew",
+  "yi": "Yiddish",
+  "af": "Afrikaans",
+  "sq": "Albanian",
+  "eu": "Basque",
+  "be": "Belarusian",
+  "bs": "Bosnian",
+  "ca": "Catalan",
+  "co": "Corsican",
+  "cy": "Welsh",
+  "eo": "Esperanto",
+  "fo": "Faroese",
+  "fy": "Frisian",
+  "ga": "Irish",
+  "gd": "Scottish Gaelic",
+  "gl": "Galician",
+  "gu": "Gujarati",
+  "ha": "Hausa",
+  "haw": "Hawaiian",
+  "is": "Icelandic",
+  "ig": "Igbo",
+  "jv": "Javanese",
+  "kn": "Kannada",
+  "ky": "Kyrgyz",
+  "lb": "Luxembourgish",
+  "mk": "Macedonian",
+  "mg": "Malagasy",
+  "ml": "Malayalam",
+  "mt": "Maltese",
+  "mi": "Maori",
+  "mn": "Mongolian",
+  "ps": "Pashto",
+  "sa": "Sanskrit",
+  "sm": "Samoan",
+  "sn": "Shona",
+  "sd": "Sindhi",
+  "so": "Somali",
+  "st": "Southern Sotho",
+  "su": "Sundanese",
+  "tg": "Tajik",
+  "tt": "Tatar",
+  "tk": "Turkmen",
+  "ug": "Uyghur",
+  "xh": "Xhosa",
+  "yo": "Yoruba",
+  "zu": "Zulu"
+};
+
+function getLanguageName(code) {
+  if (!code || code === "auto") return null;
+  return LANGUAGE_NAMES[code] || code;
+}
+
+// ============================================================
+// QUALITY VALIDATION HELPERS
+// ============================================================
+
+function validateOutcomesQuality(outcomes) {
+  let score = 100;
+  const issues = [];
+  
+  // Must have at least 1 outcome
+  if (!outcomes || outcomes.length === 0) {
+    return { score: 0, issues: ["No outcomes extracted"] };
+  }
+  
+  // Check each outcome
+  outcomes.forEach((outcome, i) => {
+    if (!outcome.text || outcome.text.length < 5) {
+      score -= 30;
+      issues.push(`Outcome ${i + 1} is too short or empty`);
+    }
+    if (outcome.text && outcome.text.length > 300) {
+      score -= 10;
+      issues.push(`Outcome ${i + 1} is too long (should be atomic)`);
+    }
+    if (!outcome.type || !["message", "task", "idea", "content", "note"].includes(outcome.type)) {
+      score -= 20;
+      issues.push(`Outcome ${i + 1} has invalid type`);
+    }
+  });
+  
+  return { score: Math.max(0, score), issues };
+}
+
+function validateUnstuckQuality(insight, action, originalInput) {
+  let score = 100;
+  const issues = [];
+  
+  // Insight checks
+  if (!insight || insight.length < 10) {
+    score -= 40;
+    issues.push("Insight is too short or empty");
+  }
+  if (insight && insight.length > 250) {
+    score -= 20;
+    issues.push("Insight is too long (should be concise)");
+  }
+  
+  // Action checks
+  if (!action || action.length < 5) {
+    score -= 40;
+    issues.push("Action is too short or empty");
+  }
+  if (action && action.length > 150) {
+    score -= 20;
+    issues.push("Action is too long (should be one small move)");
+  }
+  
+  return { score: Math.max(0, score), issues };
+}
+
+// ============================================================
 // OUTCOMES — SYSTEM PROMPT
 // ============================================================
 const OUTCOMES_SYSTEM_PROMPT = `You are an OUTCOME EXTRACTION ENGINE.
@@ -344,10 +517,15 @@ export async function extractOutcomes(req, res, next) {
     }
 
     // Build base messages
+    const languageName = getLanguageName(language);
+    const languageInstruction = languageName 
+      ? `\n\n🌍 LANGUAGE REQUIREMENT: You MUST write ALL outcome text in ${languageName}. Every word must be in ${languageName}. JSON keys stay in English, but all text values must be ${languageName}.`
+      : "";
+    
     const baseMessages = [
       { 
         role: "system", 
-        content: OUTCOMES_SYSTEM_PROMPT + (language !== "auto" ? `\n\nLANGUAGE: You MUST respond with outcome text in "${language}" language. JSON keys stay in English.` : "")
+        content: OUTCOMES_SYSTEM_PROMPT + languageInstruction
       }
     ];
 

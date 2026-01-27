@@ -15,6 +15,120 @@ import { GLOBAL_ENGINE, MODE_AMPLIFIERS } from "./global.js";
 import { PRESET_DEFINITIONS } from "./presets.js";
 
 // ============================================================
+// LANGUAGE CODE TO NAME MAPPING
+// ============================================================
+
+const LANGUAGE_NAMES = {
+  "en": "English",
+  "es": "Spanish",
+  "fr": "French",
+  "de": "German",
+  "it": "Italian",
+  "pt": "Portuguese",
+  "ru": "Russian",
+  "ja": "Japanese",
+  "ko": "Korean",
+  "zh": "Chinese (Simplified)",
+  "ar": "Arabic",
+  "hi": "Hindi",
+  "bn": "Bengali",
+  "pa": "Punjabi",
+  "te": "Telugu",
+  "mr": "Marathi",
+  "ta": "Tamil",
+  "ur": "Urdu",
+  "tr": "Turkish",
+  "vi": "Vietnamese",
+  "fa": "Farsi (Persian)",
+  "pl": "Polish",
+  "uk": "Ukrainian",
+  "nl": "Dutch",
+  "ro": "Romanian",
+  "el": "Greek",
+  "cs": "Czech",
+  "sv": "Swedish",
+  "hu": "Hungarian",
+  "fi": "Finnish",
+  "da": "Danish",
+  "no": "Norwegian",
+  "sk": "Slovak",
+  "bg": "Bulgarian",
+  "hr": "Croatian",
+  "sr": "Serbian",
+  "lt": "Lithuanian",
+  "lv": "Latvian",
+  "et": "Estonian",
+  "sl": "Slovenian",
+  "th": "Thai",
+  "id": "Indonesian",
+  "ms": "Malay",
+  "fil": "Filipino (Tagalog)",
+  "sw": "Swahili",
+  "am": "Amharic",
+  "ne": "Nepali",
+  "si": "Sinhala",
+  "km": "Khmer",
+  "lo": "Lao",
+  "my": "Burmese",
+  "ka": "Georgian",
+  "hy": "Armenian",
+  "az": "Azerbaijani",
+  "kk": "Kazakh",
+  "uz": "Uzbek",
+  "he": "Hebrew",
+  "yi": "Yiddish",
+  "af": "Afrikaans",
+  "sq": "Albanian",
+  "eu": "Basque",
+  "be": "Belarusian",
+  "bs": "Bosnian",
+  "ca": "Catalan",
+  "co": "Corsican",
+  "cy": "Welsh",
+  "eo": "Esperanto",
+  "fo": "Faroese",
+  "fy": "Frisian",
+  "ga": "Irish",
+  "gd": "Scottish Gaelic",
+  "gl": "Galician",
+  "gu": "Gujarati",
+  "ha": "Hausa",
+  "haw": "Hawaiian",
+  "is": "Icelandic",
+  "ig": "Igbo",
+  "jv": "Javanese",
+  "kn": "Kannada",
+  "ky": "Kyrgyz",
+  "lb": "Luxembourgish",
+  "mk": "Macedonian",
+  "mg": "Malagasy",
+  "ml": "Malayalam",
+  "mt": "Maltese",
+  "mi": "Maori",
+  "mn": "Mongolian",
+  "ps": "Pashto",
+  "sa": "Sanskrit",
+  "sm": "Samoan",
+  "sn": "Shona",
+  "sd": "Sindhi",
+  "so": "Somali",
+  "st": "Southern Sotho",
+  "su": "Sundanese",
+  "tg": "Tajik",
+  "tt": "Tatar",
+  "tk": "Turkmen",
+  "ug": "Uyghur",
+  "xh": "Xhosa",
+  "yo": "Yoruba",
+  "zu": "Zulu"
+};
+
+function getLanguageName(code) {
+  if (!code || code === "auto") return null;
+  return LANGUAGE_NAMES[code] || code;
+}
+
+// ============================================================
 // PRESET TO MODE MAPPING
 // ============================================================
 
@@ -93,16 +207,17 @@ function buildSystemContent(presetId, language = "auto") {
   
   // Add language requirement
   if (language && language !== "auto") {
+    const languageName = getLanguageName(language);
     parts.push(`
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🌍 LANGUAGE REQUIREMENT
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-OUTPUT LANGUAGE: ${language}
+OUTPUT LANGUAGE: ${languageName}
 
-You MUST respond in ${language}.
-This overrides language detection.
-JSON keys remain in English if outputting JSON.
+You MUST write your ENTIRE response in ${languageName}.
+This is non-negotiable. Every word of output must be in ${languageName}.
+If outputting JSON, write JSON values in ${languageName} (keys stay English).
 `);
   }
   

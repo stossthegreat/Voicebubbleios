@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../providers/app_state_provider.dart';
 import '../../services/ai_service.dart';
 import '../../services/refinement_service.dart';
+import '../../services/continue_service.dart';
 import '../../models/recording_item.dart';
 import '../../models/outcome_type.dart';
 import '../../widgets/editable_result_box.dart';
@@ -281,6 +282,9 @@ class _ResultScreenState extends State<ResultScreen> {
       debugPrint('🔍 Rewritten text: $_rewrittenText');
       debugPrint('🔍 Selected outcomes: $_selectedOutcomes');
 
+      // Get continue context if exists
+      final continueContext = appState.continueContext;
+
       // Create new RecordingItem with generated ID
       final itemId = const Uuid().v4();
       final item = RecordingItem(
@@ -289,16 +293,28 @@ class _ResultScreenState extends State<ResultScreen> {
         finalText: _rewrittenText,
         presetUsed: appState.selectedPreset?.name ?? 'Unknown',
         outcomes: _selectedOutcomes.map((o) => o.toStorageString()).toList(),
-        projectId: null,
+        projectId: continueContext?.projectId, // Link to project if continuing from project
         createdAt: DateTime.now(),
         editHistory: List.from(_textHistory),
         presetId: appState.selectedPreset?.id ?? '',
+        continuedFromId: continueContext?.singleItemId, // 🔥 LINK TO ORIGINAL CARD
       );
 
       debugPrint('💾 Created item: ${item.id}');
       debugPrint('💾 Item outcomes: ${item.outcomes}');
+      debugPrint('💾 Continued from: ${item.continuedFromId}');
       
       await appState.saveRecording(item);
+      
+      // 🔥 Link the continuation chain
+      if (continueContext?.singleItemId != null) {
+        final continueService = ContinueService();
+        await continueService.linkContinuationChain(
+          newItemId: itemId,
+          continuedFromId: continueContext!.singleItemId,
+        );
+        debugPrint('🔗 Linked: ${continueContext.singleItemId} → $itemId');
+      }
       
       // Store the ID to prevent duplicate saves
       _savedItemId = itemId;
