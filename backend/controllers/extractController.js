@@ -13,7 +13,6 @@
 
 import { AppError } from "../utils/errors.js";
 import { createChatCompletion } from "../services/openaiService.js";
-import { validateOutcomesQuality, validateUnstuckQuality } from "./qualityValidation.js";
 
 // Maximum retry attempts
 const MAX_QUALITY_RETRIES = 2;
