@@ -12,7 +12,12 @@ import 'preset_selection_screen.dart';
 import 'result_screen.dart';
 
 class RecordingScreen extends StatefulWidget {
-  const RecordingScreen({super.key});
+  final bool isInstructionsMode;
+  
+  const RecordingScreen({
+    super.key,
+    this.isInstructionsMode = false,
+  });
   
   @override
   State<RecordingScreen> createState() => _RecordingScreenState();
@@ -251,6 +256,14 @@ class _RecordingScreenState extends State<RecordingScreen>
         
         print('Final transcription: $transcription');
         
+        // If in instructions mode, return transcription directly
+        if (widget.isInstructionsMode) {
+          if (mounted) {
+            Navigator.pop(context, transcription);
+          }
+          return;
+        }
+        
         // Navigate directly to preset selection (skip showing transcription)
         if (mounted) {
           Navigator.pushReplacement(
@@ -311,6 +324,39 @@ class _RecordingScreenState extends State<RecordingScreen>
         child: Column(
           children: [
             const SizedBox(height: 40),
+            
+            // Instructions mode banner (if applicable)
+            if (widget.isInstructionsMode) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                margin: const EdgeInsets.symmetric(horizontal: 24),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF3B82F6).withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: const Color(0xFF3B82F6).withOpacity(0.3),
+                    width: 1,
+                  ),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.mic, color: Color(0xFF3B82F6), size: 20),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Speak your instructions',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 32),
+            ],
             
             // Waveform visualization
             Container(
