@@ -362,6 +362,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
             ),
           ],
         ),
+      );
+          },
+        ),
       ),
       floatingActionButton: _showProjects
           ? FloatingActionButton(

@@ -508,7 +508,7 @@ class _ResultScreenState extends State<ResultScreen> {
       
       // Update history and text
       setState(() {
-        _addToHistory(_rewrittenText);
+        _saveToHistory(_rewrittenText);
         _rewrittenText = refined;
         _isLoading = false;
       });
