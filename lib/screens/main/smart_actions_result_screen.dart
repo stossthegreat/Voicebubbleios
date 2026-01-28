@@ -89,15 +89,17 @@ class _SmartActionsResultScreenState extends State<SmartActionsResultScreen> {
         final itemId = const Uuid().v4();
         final item = RecordingItem(
           id: itemId,
-          transcription: widget.transcription,
-          rewrittenText: action.formattedText,
-          timestamp: DateTime.now(),
+          rawTranscript: widget.transcription, // FIXED: correct field name
+          finalText: action.formattedText,
+          createdAt: DateTime.now(),
+          presetUsed: 'Smart Actions',
           presetId: 'smart_actions',
-          outcomeType: _getOutcomeType(action.type),
+          outcomes: [_getOutcomeType(action.type).toString().split('.').last],
+          editHistory: [],
           tags: [],
         );
         
-        await appState.addRecording(item);
+        await appState.saveRecording(item); // FIXED: correct method name
         print('✅ Saved action to library: ${action.title}');
       }
     } catch (e) {
