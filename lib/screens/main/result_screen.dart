@@ -806,6 +806,76 @@ class _ResultScreenState extends State<ResultScreen> {
                             isLoading: _activeRefinement != null,
                           ),
 
+                        const SizedBox(height: 16),
+
+                        // Add More and Rewrite buttons (right under output box)
+                        Row(
+                          children: [
+                            // Add More Button (live refinement)
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () => _showAddMoreDialog(context),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: primaryColor,
+                                  side: BorderSide(color: primaryColor, width: 2),
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.add_circle_outline, size: 18),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'Add More',
+                                      style: TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            // Rewrite Button
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: _isLoading ? null : _regenerateOutput,
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: const Color(0xFF10B981),
+                                  side: BorderSide(color: _isLoading ? Colors.grey : const Color(0xFF10B981), width: 2),
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: _isLoading
+                                    ? const SizedBox(
+                                        height: 18,
+                                        width: 18,
+                                        child: CircularProgressIndicator(strokeWidth: 2),
+                                      )
+                                    : const Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.refresh, size: 18),
+                                          SizedBox(width: 8),
+                                          Text(
+                                            'Rewrite',
+                                            style: TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                              ),
+                            ),
+                          ],
+                        ),
                         const SizedBox(height: 24),
 
                         // Refinement Buttons
@@ -922,76 +992,6 @@ class _ResultScreenState extends State<ResultScreen> {
                           ),
 
                           const SizedBox(height: 24),
-
-                          // Add More and Rewrite buttons
-                          Row(
-                            children: [
-                              // Add More Button (live refinement)
-                              Expanded(
-                                child: OutlinedButton(
-                                  onPressed: () => _showAddMoreDialog(context),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: primaryColor,
-                                    side: BorderSide(color: primaryColor, width: 2),
-                                    padding: const EdgeInsets.symmetric(vertical: 14),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                  child: const Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.add_circle_outline, size: 18),
-                                      SizedBox(width: 8),
-                                      Text(
-                                        'Add More',
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              // Rewrite Button
-                              Expanded(
-                                child: OutlinedButton(
-                                  onPressed: _isLoading ? null : _regenerateOutput,
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: const Color(0xFF10B981),
-                                    side: BorderSide(color: _isLoading ? Colors.grey : const Color(0xFF10B981), width: 2),
-                                    padding: const EdgeInsets.symmetric(vertical: 14),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                  ),
-                                  child: _isLoading
-                                      ? const SizedBox(
-                                          height: 18,
-                                          width: 18,
-                                          child: CircularProgressIndicator(strokeWidth: 2),
-                                        )
-                                      : const Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            Icon(Icons.refresh, size: 18),
-                                            SizedBox(width: 8),
-                                            Text(
-                                              'Rewrite',
-                                              style: TextStyle(
-                                                fontSize: 15,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
 
                           // Share and Different Style buttons side by side
                           Row(

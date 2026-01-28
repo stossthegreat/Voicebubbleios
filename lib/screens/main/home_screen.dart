@@ -356,50 +356,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
             ),
             
-            // Activate Voice Bubble button (below header)
-            if (Platform.isAndroid) ...[
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-                child: GestureDetector(
-                  onTap: () async {
-                    await _toggleOverlay();
-                    await Future.delayed(const Duration(milliseconds: 500));
-                    await _checkOverlayStatus();
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: _overlayEnabled ? const Color(0xFF10B981) : const Color(0xFF1A1A1A),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: _overlayEnabled ? const Color(0xFF10B981) : const Color(0xFF3B82F6),
-                        width: 2,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          _overlayEnabled ? Icons.check_circle : Icons.bubble_chart,
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          _overlayEnabled ? 'Voice Bubble Active' : 'Activate Voice Bubble',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-            
             // Add spacing before main content
             const SizedBox(height: 32),
             
@@ -533,6 +489,85 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         },
                       ),
                     ),
+                    
+                    const SizedBox(height: 20),
+                    
+                    // Upload Audio Button
+                    GestureDetector(
+                      onTap: _pickAudioFile,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                        decoration: BoxDecoration(
+                          color: surfaceColor,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: const Color(0xFF10B981),
+                            width: 2,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.upload_file,
+                              color: Color(0xFF10B981),
+                              size: 22,
+                            ),
+                            const SizedBox(width: 10),
+                            const Text(
+                              'Upload Audio File',
+                              style: TextStyle(
+                                color: Color(0xFF10B981),
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    
+                    // Activate Voice Bubble button (after language selector)
+                    if (Platform.isAndroid) ...[
+                      const SizedBox(height: 20),
+                      GestureDetector(
+                        onTap: () async {
+                          await _toggleOverlay();
+                          await Future.delayed(const Duration(milliseconds: 500));
+                          await _checkOverlayStatus();
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: _overlayEnabled ? const Color(0xFF10B981) : surfaceColor,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: _overlayEnabled ? const Color(0xFF10B981) : const Color(0xFF3B82F6),
+                              width: 2,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                _overlayEnabled ? Icons.check_circle : Icons.bubble_chart,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                _overlayEnabled ? 'Voice Bubble Active' : 'Activate Voice Bubble',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                     
                     const SizedBox(height: 40),
                   ],
