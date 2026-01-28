@@ -468,42 +468,6 @@ class RecordingDetailScreen extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               ListTile(
-                leading: const Icon(Icons.visibility_off, color: Color(0xFF3B82F6)),
-                title: const Text('Hide from Library', style: TextStyle(color: Colors.white)),
-                onTap: () async {
-                  await appState.hideInLibrary(itemId);
-                  if (context.mounted) {
-                    Navigator.pop(context); // Close bottom sheet
-                    Navigator.pop(context); // Go back to library
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Hidden from library'),
-                        backgroundColor: Color(0xFF10B981),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  }
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.remove_circle_outline, color: Color(0xFFF59E0B)),
-                title: const Text('Hide from Outcomes', style: TextStyle(color: Colors.white)),
-                onTap: () async {
-                  await appState.hideInOutcomes(itemId);
-                  if (context.mounted) {
-                    Navigator.pop(context); // Close bottom sheet
-                    Navigator.pop(context); // Go back
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Hidden from outcomes'),
-                        backgroundColor: Color(0xFF10B981),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  }
-                },
-              ),
-              ListTile(
                 leading: const Icon(Icons.delete_forever, color: Color(0xFFEF4444)),
                 title: const Text('Delete Permanently', style: TextStyle(color: Color(0xFFEF4444))),
                 onTap: () {

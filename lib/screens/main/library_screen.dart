@@ -29,6 +29,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
   String _searchQuery = '';
   String? _selectedTagId;
 
+  Future<void> _showCreateProjectDialog(BuildContext context) async {
+    await showDialog(
+      context: context,
+      builder: (context) => const CreateProjectDialog(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final backgroundColor = const Color(0xFF000000);
@@ -356,6 +363,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
           ],
         ),
       ),
+      floatingActionButton: _showProjects
+          ? FloatingActionButton(
+              onPressed: () => _showCreateProjectDialog(context),
+              backgroundColor: const Color(0xFF3B82F6),
+              child: const Icon(Icons.add, color: Colors.white),
+            )
+          : null,
     );
   }
 }

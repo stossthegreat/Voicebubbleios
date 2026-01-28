@@ -420,6 +420,160 @@ class _ResultScreenState extends State<ResultScreen> {
     }
   }
   
+  /// Show dialog to add more text and regenerate with AI
+  Future<void> _showAddMoreDialog(BuildContext context) async {
+    final textController = TextEditingController();
+    
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1F1F1F),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Add More',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Add text or instructions, AI will rewrite the whole thing:',
+              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: textController,
+              autofocus: true,
+              maxLines: 3,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'e.g., "make it funnier" or "add a conclusion"',
+                hintStyle: const TextStyle(color: Color(0xFF64748B)),
+                filled: true,
+                fillColor: const Color(0xFF2D2D2D),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: Color(0xFF94A3B8))),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (textController.text.trim().isNotEmpty) {
+                Navigator.pop(context, textController.text.trim());
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF3B82F6),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Rewrite'),
+          ),
+        ],
+      ),
+    );
+    
+    if (result != null && result.isNotEmpty) {
+      await _addMoreAndRewrite(result);
+    }
+  }
+  
+  /// Add user text and regenerate with AI
+  Future<void> _addMoreAndRewrite(String additionalText) async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    
+    try {
+      final appState = context.read<AppStateProvider>();
+      final refinementService = RefinementService();
+      
+      // Combine current text with additional instruction
+      final combinedPrompt = '$_rewrittenText\n\n[User adds: $additionalText]';
+      
+      // Use the refinement service to regenerate
+      final refined = await refinementService.customRefine(
+        combinedPrompt,
+        'Rewrite the entire text incorporating the user\'s addition or instruction. Maintain the original style unless the user asks to change it.',
+      );
+      
+      // Update history and text
+      setState(() {
+        _addToHistory(_rewrittenText);
+        _rewrittenText = refined;
+        _isLoading = false;
+      });
+      
+      // Auto-save the update
+      if (_savedItemId != null) {
+        await _updateExistingItem();
+      } else {
+        await _saveRecording();
+      }
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✨ Rewritten with your additions!'),
+            backgroundColor: Color(0xFF10B981),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to rewrite: ${e.toString()}'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
+    }
+  }
+  
+  /// Regenerate the output from scratch
+  Future<void> _regenerateOutput() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+    
+    try {
+      // Just call _generateRewrite again - it will regenerate from original transcription
+      await _generateRewrite();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('🔄 Regenerated!'),
+            backgroundColor: Color(0xFF10B981),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+  
   Future<void> _showReminderPicker() async {
     if (_savedItemId == null) return;
     
@@ -768,6 +922,76 @@ class _ResultScreenState extends State<ResultScreen> {
                           ),
 
                           const SizedBox(height: 24),
+
+                          // Add More and Rewrite buttons
+                          Row(
+                            children: [
+                              // Add More Button (live refinement)
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: () => _showAddMoreDialog(context),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: primaryColor,
+                                    side: BorderSide(color: primaryColor, width: 2),
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.add_circle_outline, size: 18),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'Add More',
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              // Rewrite Button
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: _isLoading ? null : _regenerateOutput,
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: const Color(0xFF10B981),
+                                    side: BorderSide(color: _isLoading ? Colors.grey : const Color(0xFF10B981), width: 2),
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  child: _isLoading
+                                      ? const SizedBox(
+                                          height: 18,
+                                          width: 18,
+                                          child: CircularProgressIndicator(strokeWidth: 2),
+                                        )
+                                      : const Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.refresh, size: 18),
+                                            SizedBox(width: 8),
+                                            Text(
+                                              'Rewrite',
+                                              style: TextStyle(
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
 
                           // Share and Different Style buttons side by side
                           Row(

@@ -100,4 +100,28 @@ class RefinementService {
   Future<String> translate(String text, String targetLanguage) async {
     return await refineText(text, RefinementType.translate, targetLanguage: targetLanguage);
   }
+  
+  /// Custom refinement with user instruction
+  Future<String> customRefine(String text, String instruction) async {
+    try {
+      debugPrint('🎨 Custom refining with instruction: $instruction');
+      
+      final response = await _dio.post(
+        '$_backendUrl/api/rewrite/batch',
+        data: {
+          'text': text,
+          'presetId': 'magic', // Use magic preset for flexible refinement
+          'language': 'auto',
+          'customInstruction': instruction,
+        },
+      );
+      
+      final refined = response.data['text'] ?? text;
+      debugPrint('✅ Custom refinement complete');
+      return refined;
+    } catch (e) {
+      debugPrint('❌ Custom refinement error: $e');
+      throw Exception('Failed to refine text: $e');
+    }
+  }
 }
