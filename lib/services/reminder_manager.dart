@@ -61,9 +61,6 @@ class ReminderManager {
         body: _getNotificationBody(item),
         scheduledTime: newDateTime,
       );
-      
-      // Test notification immediately after scheduling
-      await _notificationService.testNotificationNow();
 
       if (result.success) {
         // Update item with reminder info

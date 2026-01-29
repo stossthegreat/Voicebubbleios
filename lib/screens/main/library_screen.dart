@@ -174,7 +174,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
                                   context: context,
                                   builder: (context) => const TagManagementDialog(),
                                 );
-                                if (mounted) appState.refreshTags();
+                                if (mounted) {
+                                  await appState.refreshTags();
+                                  setState(() {}); // Force rebuild
+                                }
                               },
                               child: Container(
                                 width: 48,
