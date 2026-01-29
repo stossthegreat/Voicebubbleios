@@ -46,51 +46,52 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
               orElse: () => throw Exception('Recording not found'),
             );
 
-            return CustomScrollView(
-              slivers: [
-                // Collapsible Header
-                SliverAppBar(
-                  backgroundColor: backgroundColor,
-                  elevation: 0,
-                  pinned: false,
-                  floating: true,
-                  snap: true,
-                  expandedHeight: 60,
-                  toolbarHeight: 60,
-                  leading: Container(
-                    margin: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: surfaceColor,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: IconButton(
-                      padding: EdgeInsets.zero,
-                      onPressed: () => Navigator.pop(context),
-                      icon: Icon(Icons.arrow_back, color: textColor, size: 20),
-                    ),
-                  ),
-                  title: Text(
-                    _getTitleFromContent(item.finalText),
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: textColor,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  actions: [
-                    Container(
-                      margin: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: surfaceColor,
-                        borderRadius: BorderRadius.circular(20),
+            return Column(
+              children: [
+                // Compact Header
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: surfaceColor,
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: IconButton(
+                          padding: EdgeInsets.zero,
+                          onPressed: () => Navigator.pop(context),
+                          icon: Icon(Icons.arrow_back, color: textColor, size: 18),
+                        ),
                       ),
-                      child: PopupMenuButton<String>(
-                        icon: Icon(Icons.more_vert, color: textColor, size: 20),
-                        color: surfaceColor,
-                        onSelected: (value) => _handleMenuAction(context, appState, item, value),
-                        itemBuilder: (context) => [
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _getTitleFromContent(item.finalText),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: textColor,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: surfaceColor,
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: PopupMenuButton<String>(
+                          padding: EdgeInsets.zero,
+                          icon: Icon(Icons.more_vert, color: textColor, size: 18),
+                          color: surfaceColor,
+                          onSelected: (value) => _handleMenuAction(context, appState, item, value),
+                          itemBuilder: (context) => [
                           PopupMenuItem(
                             value: 'continue',
                             child: Row(
@@ -143,14 +144,14 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
                             ),
                           ),
                         ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
 
-                // Rich Text Editor in SliverFillRemaining
-                SliverFillRemaining(
-                  hasScrollBody: false,
+                // Rich Text Editor (FULL SCREEN)
+                Expanded(
                   child: RichTextEditor(
                     initialFormattedContent: item.formattedContent,
                     initialPlainText: item.finalText,
