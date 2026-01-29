@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import '../services/rich_text_service.dart';
+import '../services/text_transformation_service.dart';
+import 'ai_actions_menu.dart';
 
 // ============================================================
 //        RICH TEXT EDITOR WIDGET
@@ -50,10 +52,20 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
   bool _showSaved = false;
   bool _hasUnsavedChanges = false;
   final _richTextService = RichTextService();
+  final _transformationService = TextTransformationService();
   late AnimationController _saveIndicatorController;
   late Animation<double> _saveIndicatorAnimation;
   int _wordCount = 0;
   int _characterCount = 0;
+  
+  // AI Actions Menu State
+  bool _showAIActions = false;
+  TextSelection? _currentSelection;
+  Offset? _selectionPosition;
+  String _selectedText = '';
+  late AnimationController _aiMenuController;
+  late Animation<double> _aiMenuAnimation;
+  bool _isTransforming = false;
 
   @override
   void initState() {
@@ -73,6 +85,19 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
       parent: _saveIndicatorController,
       curve: Curves.easeInOut,
     ));
+    
+    // AI Actions Menu Animation
+    _aiMenuController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    _aiMenuAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _aiMenuController,
+      curve: Curves.elasticOut,
+    ));
   }
 
   void _initializeController() {
@@ -85,6 +110,53 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
       document: doc,
       selection: const TextSelection.collapsed(offset: 0),
     );
+    
+    // Listen for selection changes
+    _controller.addListener(_onSelectionChanged);
+  }
+  
+  void _onSelectionChanged() {
+    final selection = _controller.selection;
+    
+    // Hide AI menu if no selection or collapsed selection
+    if (!selection.isValid || selection.isCollapsed) {
+      if (_showAIActions) {
+        _hideAIActionsMenu();
+      }
+      return;
+    }
+    
+    // Show AI menu for text selection
+    final selectedText = _controller.document.toPlainText().substring(
+      selection.start,
+      selection.end,
+    ).trim();
+    
+    if (selectedText.isNotEmpty && selectedText.length > 2) {
+      _showAIActionsMenu(selection, selectedText);
+    }
+  }
+  
+  void _showAIActionsMenu(TextSelection selection, String selectedText) {
+    setState(() {
+      _currentSelection = selection;
+      _selectedText = selectedText;
+      _showAIActions = true;
+    });
+    
+    _aiMenuController.forward();
+  }
+  
+  void _hideAIActionsMenu() {
+    _aiMenuController.reverse().then((_) {
+      if (mounted) {
+        setState(() {
+          _showAIActions = false;
+          _currentSelection = null;
+          _selectedText = '';
+        });
+      }
+    });
   }
 
   @override
@@ -94,6 +166,7 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
     _controller.dispose();
     _focusNode.dispose();
     _saveIndicatorController.dispose();
+    _aiMenuController.dispose();
     super.dispose();
   }
 
@@ -356,9 +429,166 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
                   },
                 ),
               ),
+              
+              // AI Actions Menu Overlay
+            if (_showAIActions && _currentSelection != null)
+              Positioned(
+                top: 100, // Position above selected text (we'll improve this)
+                left: 50,
+                right: 50,
+                child: AIActionsMenu(
+                  selectedText: _selectedText,
+                  animation: _aiMenuAnimation,
+                  onActionSelected: _handleAIAction,
+                  onDismiss: _hideAIActionsMenu,
+                ),
+              ),
+              
+            // Loading overlay for AI transformations
+            if (_isTransforming)
+              Container(
+                color: Colors.black.withValues(alpha: 0.7),
+                child: const Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(
+                        color: Color(0xFF3B82F6),
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'AI is working its magic...',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
           ],
         ),
       ),
     );
+  }
+  
+  void _handleAIAction(AIAction action) async {
+    if (_currentSelection == null) return;
+    
+    _hideAIActionsMenu();
+    
+    // Show loading state
+    // TODO: Implement AI transformation
+    
+    switch (action) {
+      case AIAction.rewrite:
+        await _transformText('rewrite');
+        break;
+      case AIAction.expand:
+        await _transformText('expand');
+        break;
+      case AIAction.shorten:
+        await _transformText('shorten');
+        break;
+      case AIAction.professional:
+        await _transformText('professional');
+        break;
+      case AIAction.casual:
+        await _transformText('casual');
+        break;
+      case AIAction.translate:
+        await _transformText('translate');
+        break;
+      case AIAction.delete:
+        _deleteSelectedText();
+        break;
+    }
+  }
+  
+  Future<void> _transformText(String action) async {
+    if (_isTransforming || _currentSelection == null) return;
+    
+    setState(() {
+      _isTransforming = true;
+    });
+    
+    try {
+      // Get context (surrounding text for better AI understanding)
+      final fullText = _controller.document.toPlainText();
+      final contextStart = (_currentSelection!.start - 100).clamp(0, fullText.length);
+      final contextEnd = (_currentSelection!.end + 100).clamp(0, fullText.length);
+      final context = fullText.substring(contextStart, contextEnd);
+      
+      String transformedText;
+      
+      switch (action) {
+        case 'rewrite':
+          transformedText = await _transformationService.rewriteText(_selectedText, context: context);
+          break;
+        case 'expand':
+          transformedText = await _transformationService.expandText(_selectedText, context: context);
+          break;
+        case 'shorten':
+          transformedText = await _transformationService.shortenText(_selectedText, context: context);
+          break;
+        case 'professional':
+          transformedText = await _transformationService.makeProfessional(_selectedText, context: context);
+          break;
+        case 'casual':
+          transformedText = await _transformationService.makeCasual(_selectedText, context: context);
+          break;
+        case 'translate':
+          // For now, translate to Spanish. Later we'll add language selection
+          transformedText = await _transformationService.translateText(_selectedText, 'es', context: context);
+          break;
+        default:
+          transformedText = _selectedText;
+      }
+      
+      _replaceSelectedText(transformedText);
+      
+    } catch (e) {
+      debugPrint('❌ Text transformation error: $e');
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to transform text: ${e.toString()}'),
+            backgroundColor: const Color(0xFFEF4444),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isTransforming = false;
+        });
+      }
+    }
+  }
+  
+  void _deleteSelectedText() {
+    if (_currentSelection == null) return;
+    
+    _controller.document.delete(_currentSelection!.start, _currentSelection!.length);
+    _controller.updateSelection(
+      TextSelection.collapsed(offset: _currentSelection!.start),
+      quill.ChangeSource.local,
+    );
+  }
+  
+  void _replaceSelectedText(String newText) {
+    if (_currentSelection == null) return;
+    
+    _controller.document.delete(_currentSelection!.start, _currentSelection!.length);
+    _controller.document.insert(_currentSelection!.start, newText);
+    _controller.updateSelection(
+      TextSelection.collapsed(offset: _currentSelection!.start + newText.length),
+      quill.ChangeSource.local,
+    );
+  }
   }
 }

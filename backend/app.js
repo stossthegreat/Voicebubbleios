@@ -9,6 +9,7 @@ import rateLimit from "express-rate-limit";
 import rewriteRoutes from "./routes/rewrite.js";
 import transcribeRoutes from "./routes/transcribe.js";
 import subscriptionRoutes from "./routes/subscription.js";
+import textTransformRoutes from "./routes/textTransform.js";
 
 import { AppError, globalErrorHandler } from "./utils/errors.js";
 
@@ -70,6 +71,7 @@ app.get("/stats", (req, res) => {
 app.use("/api/rewrite", rewriteRoutes);
 app.use("/api/transcribe", transcribeRoutes);
 app.use("/api/subscription", subscriptionRoutes);
+app.use("/api/transform", textTransformRoutes);
 
 // Register extract routes if available
 if (extractRoutes) {
