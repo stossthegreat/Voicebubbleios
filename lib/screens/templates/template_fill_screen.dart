@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import '../../constants/app_templates.dart';
-import '../../services/ai_service.dart';
-import 'result_screen.dart';
+import '../../constants/presets.dart';
+import '../../providers/app_state_provider.dart';
+import '../main/result_screen.dart';
 
 class TemplateFillScreen extends StatefulWidget {
   final DocumentTemplate template;
@@ -97,14 +99,20 @@ class _TemplateFillScreenState extends State<TemplateFillScreen>
 
       // Navigate to result screen with the combined prompt
       if (mounted) {
+        // Set the transcription and preset in app state
+        final appState = context.read<AppStateProvider>();
+        appState.setTranscription(buffer.toString());
+
+        // Find the magic preset
+        final magicPreset = AppPresets.quickPresets.firstWhere(
+          (p) => p.id == 'magic',
+        );
+        appState.setSelectedPreset(magicPreset);
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => ResultScreen(
-              presetId: 'magic',
-              presetName: widget.template.name,
-              customPrompt: buffer.toString(),
-            ),
+            builder: (context) => const ResultScreen(),
           ),
         );
       }
