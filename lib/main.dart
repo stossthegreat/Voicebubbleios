@@ -8,6 +8,7 @@ import 'providers/theme_provider.dart';
 import 'services/subscription_service.dart';
 import 'services/storage_service.dart'; // ADD THIS
 import 'services/reminder_manager.dart';
+import 'services/analytics_service.dart';
 import 'screens/main/main_navigation.dart';
 import 'screens/onboarding/onboarding_one.dart';
 import 'screens/onboarding/onboarding_two.dart';
@@ -22,6 +23,10 @@ void main() async {
   // Initialize Firebase - REQUIRED for App Store
   await Firebase.initializeApp();
   debugPrint('✅ Firebase initialized successfully');
+  
+  // Initialize Firebase Analytics
+  final analytics = AnalyticsService();
+  debugPrint('✅ Firebase Analytics initialized successfully');
   
   // Initialize Hive storage - CRITICAL FOR SAVING!
   await StorageService.initialize();
@@ -66,6 +71,9 @@ class MyApp extends StatelessWidget {
               scaffoldBackgroundColor: const Color(0xFF000000),
               useMaterial3: true,
             ),
+            navigatorObservers: [
+              AnalyticsService().observer, // Track screen views
+            ],
             home: const SplashScreen(),
           );
         },
