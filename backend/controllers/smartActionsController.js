@@ -1,6 +1,6 @@
 // ============================================================
-// SMART ACTIONS CONTROLLER
-// Extracts actionable items from voice input
+// SMART ACTIONS CONTROLLER - INTELLIGENT VERSION
+// Extracts actionable items from voice input with HIGH ACCURACY
 // ============================================================
 
 import { OpenAI } from "openai";
@@ -21,64 +21,90 @@ function getLanguageName(code) {
   return LANGUAGE_NAMES[code] || "English";
 }
 
-const SMART_ACTIONS_PROMPT = `You are a SMART ACTION EXTRACTION ENGINE.
+const SMART_ACTIONS_PROMPT = `You are an EXPERT ACTION CLASSIFIER. Your job is to ACCURATELY identify what the user wants to do.
 
-Your job: Analyze voice input and extract ALL actionable items.
+🎯 BE EXTREMELY SMART ABOUT CLASSIFICATION:
 
-For each action, identify:
+📧 EMAIL - Strong indicators (if ANY of these → EMAIL):
+- Email signature phrases: "yours sincerely", "best regards", "kind regards", "thanks", "cheers", "sincerely"
+- Greeting: "Dear [name]", "Hi [name]", "Hello [name]"
+- Email-specific: "email to", "send to", "write to", "forward to"
+- Professional tone with proper structure
+- Mentions "subject line" or email format
+- Multiple paragraphs of formal/professional text
+⚠️ CRITICAL: If text has "yours sincerely", "best regards", "dear [name]" → ALWAYS EMAIL, NEVER calendar!
 
-📅 CALENDAR EVENTS:
-- Meeting, call, appointment, event with specific time
-- Extract: title, date/time, duration, location, attendees
-- Time keywords: "tomorrow", "next week", "Monday at 3pm", "in 2 hours"
+📅 CALENDAR - ONLY if ALL of these:
+- Explicit time/date mentioned ("tomorrow at 3pm", "Monday at 10am", "next Tuesday")
+- Meeting/appointment/event context ("meeting with", "call with", "appointment")
+- NOT just "I need to do X" (that's a task)
+⚠️ CRITICAL: If NO specific time mentioned → NOT a calendar event!
 
-✉️ EMAILS:
-- "Email X", "send to Y", "write to Z"
-- Extract: recipient, subject (inferred from context), body
-- Maintain professional/casual tone based on context
+✅ TODO/TASK:
+- Action verbs: "need to", "have to", "must", "remember to", "don't forget to"
+- No specific time = task (if time → maybe calendar)
+- "Buy groceries", "call mom", "finish report"
 
-✅ TASKS/TODOS:
-- Action verbs: "need to", "have to", "must", "remember to"
-- Extract: task, due date (if mentioned), priority
-- Priority indicators: "urgent", "ASAP", "important", "when you can"
+📝 NOTE:
+- Information to save/remember
+- Lists, ideas, thoughts
+- No action required, just storing info
 
-📝 NOTES:
-- Information to remember, lists, ideas
-- Shopping lists, checklists, reminders without time
-- Extract: title, content, type (list/note/idea)
+💬 MESSAGE:
+- "Tell the team", "post in Slack", "message on Discord"
+- Casual communication, not formal email
 
-💬 MESSAGES:
-- "Tell team", "post in Slack", "message on Discord"
-- Extract: platform (if mentioned), recipient, content
-- Adapt format to platform (Slack vs Discord vs WhatsApp)
+🧠 INTELLIGENCE RULES:
+1. Context is KING - look at the WHOLE message
+2. Email signatures = EMAIL (not calendar!)
+3. Greetings like "Dear X" = EMAIL
+4. No datetime = NOT calendar (it's task or note)
+5. Professional multi-paragraph = likely EMAIL
+6. One sentence action = likely TASK
+7. "Remind me to X" = TASK (not calendar unless specific time given)
 
-CRITICAL RULES:
-1. Extract EVERY actionable item (one input can have multiple actions)
-2. Be smart about dates: "tomorrow" = actual tomorrow date
-3. Infer missing info intelligently (subject line from email body)
-4. Format professionally and clearly
-5. Include ALL context needed for action
+OUTPUT REQUIREMENTS:
+- Return ONLY actions you're CONFIDENT about
+- If no date/time → DON'T make calendar event
+- If has email structure → EMAIL (not task)
+- VALIDATE: Calendar MUST have datetime, Email MUST have recipient/body
 
-OUTPUT FORMAT:
-Return ONLY valid JSON (no markdown, no explanation):
+OUTPUT JSON (no markdown):
 {
   "actions": [
     {
       "type": "calendar|email|todo|note|message",
-      "title": "Short title",
-      "description": "Full details (optional)",
-      "datetime": "ISO 8601 datetime (if applicable)",
-      "location": "Place (if applicable)",
-      "attendees": ["person1", "person2"] (if applicable),
-      "recipient": "email recipient (if applicable)",
-      "subject": "email subject (if applicable)",
-      "body": "email/message body (if applicable)",
-      "priority": "high|normal|low (if applicable)",
-      "platform": "Slack|Discord|WhatsApp|etc (if mentioned)",
-      "formatted": "Beautifully formatted text ready for export"
+      "title": "Brief title",
+      "description": "Details (optional)",
+      "datetime": "YYYY-MM-DDTHH:MM:SS+00:00 (ONLY if specific time mentioned)",
+      "location": "Place (optional)",
+      "attendees": ["person1"] (optional),
+      "recipient": "email@example.com (REQUIRED for email)",
+      "subject": "Subject line (for email)",
+      "body": "Full body text (for email/message)",
+      "priority": "high|normal|low (optional)",
+      "platform": "Gmail|Calendar|Tasks|etc",
+      "formattedText": "Ready-to-use formatted text"
     }
   ]
-}`;
+}
+
+EXAMPLE - Email with signature:
+Input: "Dear John, I hope this email finds you well. I wanted to discuss the project timeline. Could we schedule a call next week? Best regards"
+→ Type: EMAIL (has greeting + signature "Best regards")
+→ NOT calendar (no specific time like "Tuesday at 3pm")
+
+EXAMPLE - Calendar with time:
+Input: "Meeting with Sarah tomorrow at 3pm to discuss budget"
+→ Type: CALENDAR (specific time given)
+→ datetime: [actual tomorrow date]T15:00:00
+
+EXAMPLE - Task without time:
+Input: "I need to call mom sometime this week"
+→ Type: TODO (no specific time)
+→ NOT calendar
+
+BE SMART. BE ACCURATE. DON'T GUESS.`;
 
 export async function extractSmartActions(req, res) {
   try {
@@ -107,8 +133,8 @@ export async function extractSmartActions(req, res) {
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: messages,
-      temperature: 0.3, // Lower temperature for more consistent extraction
-      max_tokens: 1500,
+      temperature: 0.1, // Very low for consistency
+      max_tokens: 2000,
     });
 
     const responseText = completion.choices[0].message.content.trim();
@@ -132,10 +158,34 @@ export async function extractSmartActions(req, res) {
       throw new Error("Invalid response structure");
     }
 
-    // Ensure all actions have required fields
-    const validActions = parsed.actions.filter(action => 
-      action.type && action.title && action.formatted
-    );
+    // STRICT VALIDATION - Filter out invalid actions
+    const validActions = parsed.actions.filter(action => {
+      // Must have type, title, formattedText
+      if (!action.type || !action.title || !action.formattedText) {
+        console.warn(`⚠️ Skipping action without required fields:`, action);
+        return false;
+      }
+
+      // CALENDAR must have datetime
+      if (action.type === 'calendar' && !action.datetime) {
+        console.warn(`⚠️ Skipping calendar action without datetime:`, action.title);
+        return false;
+      }
+
+      // EMAIL must have body or recipient
+      if (action.type === 'email' && !action.body && !action.recipient) {
+        console.warn(`⚠️ Skipping email action without body/recipient:`, action.title);
+        return false;
+      }
+
+      return true;
+    });
+
+    // Log what we extracted
+    console.log(`✅ Extracted ${validActions.length} valid actions from: "${text.substring(0, 50)}..."`);
+    validActions.forEach(action => {
+      console.log(`  - ${action.type.toUpperCase()}: ${action.title}`);
+    });
 
     res.json({
       actions: validActions,
