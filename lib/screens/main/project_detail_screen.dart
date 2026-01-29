@@ -8,6 +8,8 @@ import '../../models/recording_item.dart';
 import '../../services/project_service.dart';
 import '../../services/continue_service.dart';
 import '../../widgets/outcome_chip.dart';
+import '../../features/elite_projects/elite_projects.dart';
+import '../../features/elite_projects/project_bridge.dart';
 import 'recording_screen.dart';
 import 'recording_detail_screen.dart';
 
@@ -26,9 +28,12 @@ class ProjectDetailScreen extends StatefulWidget {
 class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
   final _projectService = ProjectService();
   final _continueService = ContinueService();
+  final _eliteProjectService = EliteProjectService();
   Project? _project;
+  EliteProject? _eliteProject;
   List<RecordingItem> _items = [];
   bool _isLoading = true;
+  bool _isMigrating = false;
 
   @override
   void initState() {
@@ -41,6 +46,21 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
       _isLoading = true;
     });
 
+    try {
+      // First, try to load as Elite Project
+      final eliteProject = await _eliteProjectService.getProject(widget.projectId);
+      if (eliteProject != null) {
+        setState(() {
+          _eliteProject = eliteProject;
+          _isLoading = false;
+        });
+        return;
+      }
+    } catch (e) {
+      // Elite project doesn't exist, try legacy project
+    }
+
+    // Load legacy project and migrate
     final projects = await _projectService.getAllProjects();
     final project = projects.firstWhere(
       (p) => p.id == widget.projectId,
@@ -54,6 +74,33 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
       _items = items;
       _isLoading = false;
     });
+
+    // Auto-migrate to Elite Project
+    _migrateToEliteProject(project, items);
+  }
+
+  Future<void> _migrateToEliteProject(Project legacyProject, List<RecordingItem> items) async {
+    setState(() {
+      _isMigrating = true;
+    });
+
+    try {
+      // Convert to Elite Project
+      final eliteProject = ProjectBridge.fromLegacyProject(legacyProject, items);
+      
+      // Save to Elite Projects system
+      await _eliteProjectService.createProject(eliteProject);
+      
+      setState(() {
+        _eliteProject = eliteProject;
+        _isMigrating = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isMigrating = false;
+      });
+      // Continue with legacy view if migration fails
+    }
   }
 
 
@@ -74,6 +121,60 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
       );
     }
 
+    // Show Elite Workspace if available
+    if (_eliteProject != null) {
+      return EliteWorkspace(
+        project: _eliteProject!,
+        projectService: _eliteProjectService,
+        onRecordPressed: () {
+          // Navigate to recording screen
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => RecordingScreen(
+                projectId: _eliteProject!.id,
+                projectName: _eliteProject!.name,
+              ),
+            ),
+          );
+        },
+        onAIPresetPressed: (presetId, systemPrompt) {
+          // Handle AI preset - connect to your existing AI system
+          _handleAIPreset(presetId, systemPrompt);
+        },
+        onExportPressed: (content) {
+          // Handle export
+          Share.share(content, subject: _eliteProject!.name);
+        },
+      );
+    }
+
+    // Show migration screen if migrating
+    if (_isMigrating) {
+      return Scaffold(
+        backgroundColor: backgroundColor,
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(color: primaryColor),
+              const SizedBox(height: 20),
+              Text(
+                'Upgrading your project...',
+                style: TextStyle(color: textColor, fontSize: 18),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Adding AI memory, progress tracking, and more!',
+                style: TextStyle(color: secondaryTextColor),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     if (_project == null) {
       return Scaffold(
         backgroundColor: backgroundColor,
@@ -86,6 +187,30 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
       );
     }
 
+    // Fallback to legacy project view (should rarely happen after migration)
+    return _buildLegacyProjectView();
+  }
+
+  void _handleAIPreset(String presetId, String systemPrompt) {
+    // TODO: Connect to your existing AI service
+    // Example:
+    // final appState = Provider.of<AppStateProvider>(context, listen: false);
+    // appState.generateWithPreset(presetId, systemPrompt);
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('AI Preset: $presetId'),
+        backgroundColor: const Color(0xFF10B981),
+      ),
+    );
+  }
+
+  Widget _buildLegacyProjectView() {
+    final backgroundColor = const Color(0xFF000000);
+    final surfaceColor = const Color(0xFF1A1A1A);
+    final textColor = Colors.white;
+    final secondaryTextColor = const Color(0xFF94A3B8);
+    final primaryColor = const Color(0xFF3B82F6);
     final gradientColors = _getGradientColors(_project!.colorIndex ?? 0);
 
     return Scaffold(
