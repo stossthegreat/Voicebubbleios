@@ -45,11 +45,6 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
   late Animation<double> _saveIndicatorAnimation;
   int _wordCount = 0;
   int _characterCount = 0;
-  
-  // AI Actions Menu state
-  bool _showAIMenu = false;
-  TextSelection? _currentSelection;
-  String _selectedText = '';
 
   @override
   void initState() {
@@ -57,8 +52,6 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
     _initializeController();
     _controller.addListener(_onTextChanged);
     
-    // Listen for selection changes
-    _controller.addListener(_onSelectionChanged);
     
     _saveIndicatorController = AnimationController(
       duration: const Duration(milliseconds: 300),
@@ -164,56 +157,6 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
     }
   }
 
-  void _onSelectionChanged() {
-    final selection = _controller.selection;
-    if (selection.isValid && !selection.isCollapsed) {
-      final plainText = _controller.document.toPlainText();
-      if (selection.start < plainText.length && selection.end <= plainText.length) {
-        final selectedText = plainText.substring(selection.start, selection.end).trim();
-        
-        if (selectedText.isNotEmpty) {
-          setState(() {
-            _currentSelection = selection;
-            _selectedText = selectedText;
-            _showAIMenu = true;
-          });
-          return;
-        }
-      }
-    }
-    
-    setState(() {
-      _showAIMenu = false;
-      _currentSelection = null;
-      _selectedText = '';
-    });
-  }
-
-  void _replaceSelectedText(String newText) {
-    if (_currentSelection == null) return;
-
-    final selection = _currentSelection!;
-    _controller.replaceText(
-      selection.start,
-      selection.end - selection.start,
-      newText,
-      TextSelection.collapsed(offset: selection.start + newText.length),
-    );
-
-    setState(() {
-      _showAIMenu = false;
-      _currentSelection = null;
-      _selectedText = '';
-    });
-  }
-
-  void _dismissAIMenu() {
-    setState(() {
-      _showAIMenu = false;
-      _currentSelection = null;
-      _selectedText = '';
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -410,18 +353,6 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
                 ),
               ),
             
-            // AI Actions Menu - THE VIRAL KILLER
-            if (_showAIMenu && _currentSelection != null)
-              Positioned(
-                top: 100, // Position above the text
-                left: 50,
-                child: AIActionsMenu(
-                  selectedText: _selectedText,
-                  selection: _currentSelection!,
-                  onTextReplaced: _replaceSelectedText,
-                  onDismiss: _dismissAIMenu,
-                ),
-              ),
           ],
         ),
       ),

@@ -18,6 +18,7 @@ class _MainNavigationState extends State<MainNavigation> {
     LibraryScreen(),    // Index 0
     HomeScreen(),       // Index 1 (Record)
     OutcomesScreen(),   // Index 2
+    TemplateSelectionScreen(), // Index 3
   ];
 
   @override
@@ -67,6 +68,14 @@ class _MainNavigationState extends State<MainNavigation> {
                   icon: Icons.dashboard,
                   label: 'Outcomes',
                   index: 2,
+                  primaryColor: primaryColor,
+                  textColor: textColor,
+                  secondaryTextColor: secondaryTextColor,
+                ),
+                _buildNavItem(
+                  icon: Icons.description,
+                  label: 'Templates',
+                  index: 3,
                   primaryColor: primaryColor,
                   textColor: textColor,
                   secondaryTextColor: secondaryTextColor,
