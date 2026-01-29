@@ -481,6 +481,9 @@ class ProjectMemory {
   final String? voiceStyle;  // Writing style/tone
   final String? targetAudience;
   final DateTime lastUpdated;
+  final List<TopicMemory> topics;
+  final List<FactMemory> facts;
+  final StyleMemory style;
 
   const ProjectMemory({
     this.characters = const {},
@@ -491,6 +494,9 @@ class ProjectMemory {
     this.voiceStyle,
     this.targetAudience,
     required this.lastUpdated,
+    this.topics = const [],
+    this.facts = const [],
+    this.style = const StyleMemory(),
   });
 
   Map<String, dynamic> toJson() => {
@@ -502,6 +508,9 @@ class ProjectMemory {
     'voiceStyle': voiceStyle,
     'targetAudience': targetAudience,
     'lastUpdated': lastUpdated.toIso8601String(),
+    'topics': topics.map((t) => {'id': t.id, 'name': t.name, 'description': t.description, 'keyPoints': t.keyPoints}).toList(),
+    'facts': facts.map((f) => {'id': f.id, 'fact': f.fact, 'category': f.category, 'isImportant': f.isImportant}).toList(),
+    'style': {'tone': style.tone, 'pointOfView': style.pointOfView, 'tense': style.tense, 'avoidWords': style.avoidWords, 'preferWords': style.preferWords, 'customInstructions': style.customInstructions},
   };
 
   factory ProjectMemory.fromJson(Map<String, dynamic> json) => ProjectMemory(
@@ -517,6 +526,9 @@ class ProjectMemory {
     voiceStyle: json['voiceStyle'],
     targetAudience: json['targetAudience'],
     lastUpdated: DateTime.parse(json['lastUpdated']),
+    topics: (json['topics'] as List<dynamic>?)?.map((t) => TopicMemory(id: t['id'], name: t['name'], description: t['description'] ?? '', keyPoints: List<String>.from(t['keyPoints'] ?? []))).toList() ?? [],
+    facts: (json['facts'] as List<dynamic>?)?.map((f) => FactMemory(id: f['id'], fact: f['fact'], category: f['category'], isImportant: f['isImportant'] ?? false)).toList() ?? [],
+    style: json['style'] != null ? StyleMemory(tone: json['style']['tone'], pointOfView: json['style']['pointOfView'], tense: json['style']['tense'], avoidWords: List<String>.from(json['style']['avoidWords'] ?? []), preferWords: List<String>.from(json['style']['preferWords'] ?? []), customInstructions: json['style']['customInstructions']) : const StyleMemory(),
   );
 
   /// Generate context string for AI
@@ -696,6 +708,110 @@ class PlotPoint {
     sectionId: json['sectionId'],
     order: json['order'],
     isResolved: json['isResolved'] ?? false,
+  );
+}
+
+// =============================================================================
+// TOPIC MEMORY - TOPIC/THEME TRACKING
+// =============================================================================
+
+class TopicMemory {
+  final String id;
+  final String name;
+  final String description;
+  final List<String> keyPoints;
+
+  const TopicMemory({
+    required this.id,
+    required this.name,
+    this.description = '',
+    this.keyPoints = const [],
+  });
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'description': description,
+    'keyPoints': keyPoints,
+  };
+
+  factory TopicMemory.fromJson(Map<String, dynamic> json) => TopicMemory(
+    id: json['id'],
+    name: json['name'],
+    description: json['description'] ?? '',
+    keyPoints: List<String>.from(json['keyPoints'] ?? []),
+  );
+}
+
+// =============================================================================
+// FACT MEMORY - FACT TRACKING
+// =============================================================================
+
+class FactMemory {
+  final String id;
+  final String fact;
+  final String? category;
+  final bool isImportant;
+
+  const FactMemory({
+    required this.id,
+    required this.fact,
+    this.category,
+    this.isImportant = false,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'fact': fact,
+    'category': category,
+    'isImportant': isImportant,
+  };
+
+  factory FactMemory.fromJson(Map<String, dynamic> json) => FactMemory(
+    id: json['id'],
+    fact: json['fact'],
+    category: json['category'],
+    isImportant: json['isImportant'] ?? false,
+  );
+}
+
+// =============================================================================
+// STYLE MEMORY - WRITING STYLE PREFERENCES
+// =============================================================================
+
+class StyleMemory {
+  final String? tone;
+  final String? pointOfView;
+  final String? tense;
+  final List<String> avoidWords;
+  final List<String> preferWords;
+  final String? customInstructions;
+
+  const StyleMemory({
+    this.tone,
+    this.pointOfView,
+    this.tense,
+    this.avoidWords = const [],
+    this.preferWords = const [],
+    this.customInstructions,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'tone': tone,
+    'pointOfView': pointOfView,
+    'tense': tense,
+    'avoidWords': avoidWords,
+    'preferWords': preferWords,
+    'customInstructions': customInstructions,
+  };
+
+  factory StyleMemory.fromJson(Map<String, dynamic> json) => StyleMemory(
+    tone: json['tone'],
+    pointOfView: json['pointOfView'],
+    tense: json['tense'],
+    avoidWords: List<String>.from(json['avoidWords'] ?? []),
+    preferWords: List<String>.from(json['preferWords'] ?? []),
+    customInstructions: json['customInstructions'],
   );
 }
 
