@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:hive/hive.dart';
 import '../../providers/app_state_provider.dart';
 import '../../models/project.dart';
 import '../../models/recording_item.dart';
@@ -67,7 +68,16 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
         updatedAt: DateTime.now(),
       );
 
-      await _projectService.updateProject(updatedProject);
+      await _projectService.updateProject(
+        projectId: updatedProject.id,
+        name: updatedProject.name,
+        description: updatedProject.description,
+        colorIndex: updatedProject.colorIndex,
+      );
+      
+      // Update the project service to handle content fields
+      final box = await Hive.openBox<Project>('projects');
+      await box.put(updatedProject.id, updatedProject);
       
       setState(() {
         _project = updatedProject;
@@ -241,7 +251,6 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                       initialPlainText: _project!.content ?? '',
                       onSave: (plainText, deltaJson) => _saveProjectContent(plainText, deltaJson),
                       readOnly: false,
-                      showToolbar: true,
                     ),
                   ),
                 ],

@@ -419,7 +419,7 @@ class AnalyticsService {
   }) async {
     await _analytics.logEvent(
       name: eventName,
-      parameters: parameters,
+      parameters: parameters?.cast<String, Object>(),
     );
   }
 }
