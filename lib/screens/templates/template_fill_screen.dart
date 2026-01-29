@@ -1,20 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../models/document_template.dart';
-import '../../models/recording_item.dart';
-import '../../services/template_service.dart';
-import '../../providers/app_state_provider.dart';
-import '../main/recording_detail_screen.dart';
-import '../main/recording_screen.dart';
-
-// ============================================================
-//        TEMPLATE FILL SCREEN
-// ============================================================
-//
-// Elite voice-powered template filling experience.
-// Users speak their responses and AI creates perfect documents.
-//
-// ============================================================
+import 'package:flutter/services.dart';
+import '../../constants/app_templates.dart';
+import '../../services/ai_service.dart';
+import 'result_screen.dart';
 
 class TemplateFillScreen extends StatefulWidget {
   final DocumentTemplate template;
@@ -30,520 +18,92 @@ class TemplateFillScreen extends StatefulWidget {
 
 class _TemplateFillScreenState extends State<TemplateFillScreen>
     with TickerProviderStateMixin {
-  final _templateService = TemplateService();
-  final PageController _pageController = PageController();
-  
+  final Map<String, TextEditingController> _controllers = {};
+  final Map<String, bool> _isExpanded = {};
+  final Map<String, bool> _isRecording = {};
+  int _currentSectionIndex = 0;
+  bool _isGenerating = false;
   late AnimationController _progressController;
-  late Animation<double> _progressAnimation;
-  
-  int _currentPromptIndex = 0;
-  Map<String, String> _responses = {};
-  bool _isRecording = false;
-  bool _isProcessing = false;
 
   @override
   void initState() {
     super.initState();
+    for (final section in widget.template.sections) {
+      _controllers[section.id] = TextEditingController();
+      _isExpanded[section.id] = false;
+      _isRecording[section.id] = false;
+    }
+    // First section expanded by default
+    if (widget.template.sections.isNotEmpty) {
+      _isExpanded[widget.template.sections.first.id] = true;
+    }
+    
     _progressController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
     );
-    _progressAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _progressController,
-      curve: Curves.easeOut,
-    ));
-    _updateProgress();
   }
 
   @override
   void dispose() {
+    for (final controller in _controllers.values) {
+      controller.dispose();
+    }
     _progressController.dispose();
-    _pageController.dispose();
     super.dispose();
   }
 
-  void _updateProgress() {
-    final progress = (_currentPromptIndex + 1) / widget.template.voicePrompts.length;
-    _progressController.animateTo(progress);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final backgroundColor = const Color(0xFF000000);
-    final surfaceColor = const Color(0xFF1A1A1A);
-    final textColor = Colors.white;
-    final primaryColor = const Color(0xFF3B82F6);
-
-    return Scaffold(
-      backgroundColor: backgroundColor,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header with progress
-            Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                children: [
-                  // Top bar
-                  Row(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: surfaceColor,
-                          borderRadius: BorderRadius.circular(40),
-                        ),
-                        child: IconButton(
-                          padding: EdgeInsets.zero,
-                          onPressed: () => _showExitDialog(),
-                          icon: Icon(Icons.close, color: textColor, size: 20),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  widget.template.icon,
-                                  style: const TextStyle(fontSize: 20),
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    widget.template.name,
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w600,
-                                      color: textColor,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Text(
-                              'Step ${_currentPromptIndex + 1} of ${widget.template.voicePrompts.length}',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: textColor.withValues(alpha: 0.7),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (_currentPromptIndex > 0)
-                        TextButton(
-                          onPressed: _previousPrompt,
-                          child: Text(
-                            'Back',
-                            style: TextStyle(color: primaryColor),
-                          ),
-                        ),
-                    ],
-                  ),
-                  
-                  const SizedBox(height: 20),
-                  
-                  // Progress bar
-                  Container(
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: surfaceColor,
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                    child: AnimatedBuilder(
-                      animation: _progressAnimation,
-                      builder: (context, child) {
-                        return FractionallySizedBox(
-                          alignment: Alignment.centerLeft,
-                          widthFactor: _progressAnimation.value,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: primaryColor,
-                              borderRadius: BorderRadius.circular(3),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Current prompt
-            Expanded(
-              child: PageView.builder(
-                controller: _pageController,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: widget.template.voicePrompts.length,
-                itemBuilder: (context, index) {
-                  return _buildPromptPage(widget.template.voicePrompts[index]);
-                },
-              ),
-            ),
-
-            // Bottom actions
-            Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                children: [
-                  // Voice recording button
-                  GestureDetector(
-                    onTap: _isProcessing ? null : _startVoiceRecording,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        color: _isRecording 
-                            ? const Color(0xFFEF4444)
-                            : _isProcessing
-                                ? surfaceColor
-                                : primaryColor,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: (_isRecording 
-                                ? const Color(0xFFEF4444)
-                                : primaryColor).withValues(alpha: 0.3),
-                            blurRadius: _isRecording ? 20 : 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: _isProcessing
-                          ? const CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            )
-                          : Icon(
-                              _isRecording ? Icons.stop : Icons.mic,
-                              color: Colors.white,
-                              size: 32,
-                            ),
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  Text(
-                    _isProcessing
-                        ? 'Processing your response...'
-                        : _isRecording
-                            ? 'Tap to stop recording'
-                            : 'Tap to record your response',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: textColor.withValues(alpha: 0.8),
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // Skip and continue buttons
-                  Row(
-                    children: [
-                      if (!widget.template.voicePrompts[_currentPromptIndex].isRequired)
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: _skipPrompt,
-                            style: OutlinedButton.styleFrom(
-                              side: BorderSide(color: textColor.withValues(alpha: 0.3)),
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: Text(
-                              'Skip',
-                              style: TextStyle(
-                                color: textColor.withValues(alpha: 0.7),
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                      
-                      if (!widget.template.voicePrompts[_currentPromptIndex].isRequired)
-                        const SizedBox(width: 16),
-                      
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: _canContinue() ? _nextPrompt : null,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: primaryColor,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: Text(
-                            _isLastPrompt() ? 'Create Document' : 'Continue',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPromptPage(VoicePrompt prompt) {
-    final textColor = Colors.white;
-    final surfaceColor = const Color(0xFF1A1A1A);
-    final response = _responses[prompt.id] ?? '';
-
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Prompt title
-          Text(
-            prompt.placeholder,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w700,
-              color: textColor,
-            ),
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // Prompt description
-          Text(
-            prompt.prompt,
-            style: TextStyle(
-              fontSize: 16,
-              color: textColor.withValues(alpha: 0.8),
-              height: 1.5,
-            ),
-          ),
-          
-          if (prompt.example != null) ...[
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: surfaceColor,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.1),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Example:',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: textColor.withValues(alpha: 0.6),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    prompt.example!,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: textColor.withValues(alpha: 0.8),
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-          
-          const SizedBox(height: 24),
-          
-          // Response preview
-          if (response.isNotEmpty) ...[
-            Text(
-              'Your Response:',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: textColor,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
-                ),
-              ),
-              child: Text(
-                response,
-                style: TextStyle(
-                  fontSize: 15,
-                  color: textColor,
-                  height: 1.4,
-                ),
-              ),
-            ),
-          ],
-          
-          const Spacer(),
-          
-          // Word count and requirements
-          Row(
-            children: [
-              Icon(
-                Icons.info_outline,
-                size: 16,
-                color: textColor.withValues(alpha: 0.5),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Max ${prompt.maxWords} words • ${prompt.isRequired ? 'Required' : 'Optional'}',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: textColor.withValues(alpha: 0.5),
-                ),
-              ),
-              if (response.isNotEmpty) ...[
-                const Spacer(),
-                Text(
-                  '${response.split(' ').length} words',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: textColor.withValues(alpha: 0.6),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  bool _canContinue() {
-    final currentPrompt = widget.template.voicePrompts[_currentPromptIndex];
-    final response = _responses[currentPrompt.id] ?? '';
-    
-    return !currentPrompt.isRequired || response.isNotEmpty;
-  }
-
-  bool _isLastPrompt() {
-    return _currentPromptIndex == widget.template.voicePrompts.length - 1;
-  }
-
-  void _startVoiceRecording() {
-    // Navigate to recording screen with template context
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const RecordingScreen(),
-      ),
-    );
-  }
-
-  void _handleVoiceResponse(String response) {
-    setState(() {
-      _responses[widget.template.voicePrompts[_currentPromptIndex].id] = response;
-    });
-  }
-
-  void _skipPrompt() {
-    if (_isLastPrompt()) {
-      _createDocument();
-    } else {
-      _nextPrompt();
+  double get _completionProgress {
+    if (widget.template.sections.isEmpty) return 0;
+    int filled = 0;
+    for (final section in widget.template.sections) {
+      if (_controllers[section.id]?.text.trim().isNotEmpty == true) {
+        filled++;
+      }
     }
+    return filled / widget.template.sections.length;
   }
 
-  void _nextPrompt() {
-    if (_isLastPrompt()) {
-      _createDocument();
-    } else {
-      setState(() {
-        _currentPromptIndex++;
-      });
-      _updateProgress();
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
+  bool get _canGenerate {
+    for (final section in widget.template.sections) {
+      if (section.isRequired && 
+          _controllers[section.id]?.text.trim().isEmpty == true) {
+        return false;
+      }
     }
+    return true;
   }
 
-  void _previousPrompt() {
-    if (_currentPromptIndex > 0) {
-      setState(() {
-        _currentPromptIndex--;
-      });
-      _updateProgress();
-      _pageController.previousPage(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    }
-  }
+  Future<void> _generateDocument() async {
+    if (!_canGenerate || _isGenerating) return;
 
-  void _createDocument() async {
-    setState(() {
-      _isProcessing = true;
-    });
+    setState(() => _isGenerating = true);
+    HapticFeedback.mediumImpact();
 
     try {
-      // Create document from template
-      final documentContent = _templateService.createDocumentFromTemplate(
-        widget.template,
-        _responses,
-      );
+      // Build the prompt from all sections
+      final buffer = StringBuffer();
+      buffer.writeln('Create a ${widget.template.name} using this information:\n');
+      
+      for (final section in widget.template.sections) {
+        final value = _controllers[section.id]?.text.trim() ?? '';
+        if (value.isNotEmpty) {
+          buffer.writeln('${section.title}: $value');
+          buffer.writeln('(AI guidance: ${section.aiPrompt})\n');
+        }
+      }
+      
+      buffer.writeln('\nGenerate a polished, professional ${widget.template.name} that incorporates all the above. Write in a natural, human voice.');
 
-      // Create recording item
-      final appState = Provider.of<AppStateProvider>(context, listen: false);
-      final recordingItem = RecordingItem(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        rawTranscript: 'Template: ${widget.template.name}',
-        finalText: documentContent,
-        presetId: 'template',
-        presetUsed: 'template',
-        createdAt: DateTime.now(),
-        outcomes: [],
-        editHistory: [],
-      );
-
-      // Save the document
-      await appState.saveRecording(recordingItem);
-
+      // Navigate to result screen with the combined prompt
       if (mounted) {
-        // Navigate to document editor
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => RecordingDetailScreen(
-              recordingId: recordingItem.id,
+            builder: (context) => ResultScreen(
+              presetId: 'magic',
+              presetName: widget.template.name,
+              customPrompt: buffer.toString(),
             ),
           ),
         );
@@ -552,52 +112,577 @@ class _TemplateFillScreenState extends State<TemplateFillScreen>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error creating document: $e'),
+            content: Text('Error: $e'),
             backgroundColor: const Color(0xFFEF4444),
           ),
         );
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _isProcessing = false;
-        });
+        setState(() => _isGenerating = false);
       }
     }
   }
 
-  void _showExitDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text(
-          'Exit Template?',
-          style: TextStyle(color: Colors.white),
-        ),
-        content: const Text(
-          'Your progress will be lost if you exit now.',
-          style: TextStyle(color: Color(0xFF94A3B8)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'Continue',
-              style: TextStyle(color: Color(0xFF94A3B8)),
+  void _expandSection(int index) {
+    HapticFeedback.selectionClick();
+    setState(() {
+      // Collapse all
+      for (final section in widget.template.sections) {
+        _isExpanded[section.id] = false;
+      }
+      // Expand selected
+      _isExpanded[widget.template.sections[index].id] = true;
+      _currentSectionIndex = index;
+    });
+  }
+
+  void _nextSection() {
+    if (_currentSectionIndex < widget.template.sections.length - 1) {
+      _expandSection(_currentSectionIndex + 1);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const backgroundColor = Color(0xFF000000);
+    const surfaceColor = Color(0xFF1A1A1A);
+    const textColor = Colors.white;
+    const secondaryTextColor = Color(0xFF94A3B8);
+    final templateColor = widget.template.color;
+
+    return Scaffold(
+      backgroundColor: backgroundColor,
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Header
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: surfaceColor,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.close, color: textColor, size: 20),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.template.name,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: textColor,
+                          ),
+                        ),
+                        Text(
+                          widget.template.description,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: secondaryTextColor,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Template icon
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: templateColor.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      widget.template.icon,
+                      color: templateColor,
+                      size: 24,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context); // Close dialog
-              Navigator.pop(context); // Exit template
-            },
-            child: const Text(
-              'Exit',
-              style: TextStyle(color: Color(0xFFEF4444)),
+
+            // Progress Bar
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '${(_completionProgress * 100).toInt()}% complete',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: secondaryTextColor,
+                        ),
+                      ),
+                      Text(
+                        '${widget.template.sections.length} sections',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: secondaryTextColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: _completionProgress,
+                      backgroundColor: surfaceColor,
+                      valueColor: AlwaysStoppedAnimation(templateColor),
+                      minHeight: 6,
+                    ),
+                  ),
+                ],
+              ),
             ),
+
+            const SizedBox(height: 20),
+
+            // Sections List
+            Expanded(
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                itemCount: widget.template.sections.length,
+                itemBuilder: (context, index) {
+                  final section = widget.template.sections[index];
+                  final isExpanded = _isExpanded[section.id] ?? false;
+                  final hasContent = _controllers[section.id]?.text.trim().isNotEmpty == true;
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _SectionCard(
+                      section: section,
+                      controller: _controllers[section.id]!,
+                      isExpanded: isExpanded,
+                      hasContent: hasContent,
+                      templateColor: templateColor,
+                      onTap: () => _expandSection(index),
+                      onNext: _nextSection,
+                      isLast: index == widget.template.sections.length - 1,
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            // Generate Button
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: _canGenerate && !_isGenerating ? _generateDocument : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: _canGenerate ? templateColor : surfaceColor,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: surfaceColor,
+                    disabledForegroundColor: secondaryTextColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: _canGenerate ? 4 : 0,
+                    shadowColor: templateColor.withOpacity(0.4),
+                  ),
+                  child: _isGenerating
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation(Colors.white),
+                          ),
+                        )
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              _canGenerate ? Icons.auto_awesome : Icons.lock_outline,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              _canGenerate ? 'Generate ${widget.template.name}' : 'Fill required sections',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionCard extends StatefulWidget {
+  final TemplateSection section;
+  final TextEditingController controller;
+  final bool isExpanded;
+  final bool hasContent;
+  final Color templateColor;
+  final VoidCallback onTap;
+  final VoidCallback onNext;
+  final bool isLast;
+
+  const _SectionCard({
+    required this.section,
+    required this.controller,
+    required this.isExpanded,
+    required this.hasContent,
+    required this.templateColor,
+    required this.onTap,
+    required this.onNext,
+    required this.isLast,
+  });
+
+  @override
+  State<_SectionCard> createState() => _SectionCardState();
+}
+
+class _SectionCardState extends State<_SectionCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animController;
+  late Animation<double> _expandAnimation;
+  bool _isRecording = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _animController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    _expandAnimation = CurvedAnimation(
+      parent: _animController,
+      curve: Curves.easeInOut,
+    );
+    if (widget.isExpanded) {
+      _animController.value = 1.0;
+    }
+  }
+
+  @override
+  void didUpdateWidget(_SectionCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isExpanded != oldWidget.isExpanded) {
+      if (widget.isExpanded) {
+        _animController.forward();
+      } else {
+        _animController.reverse();
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const surfaceColor = Color(0xFF1A1A1A);
+    const textColor = Colors.white;
+    const secondaryTextColor = Color(0xFF94A3B8);
+
+    return GestureDetector(
+      onTap: widget.isExpanded ? null : widget.onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        decoration: BoxDecoration(
+          color: surfaceColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: widget.isExpanded
+                ? widget.templateColor.withOpacity(0.5)
+                : widget.hasContent
+                    ? const Color(0xFF10B981).withOpacity(0.5)
+                    : Colors.white.withOpacity(0.1),
+            width: widget.isExpanded ? 2 : 1,
           ),
-        ],
+        ),
+        child: Column(
+          children: [
+            // Header (always visible)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  // Status Icon
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: widget.hasContent
+                          ? const Color(0xFF10B981).withOpacity(0.2)
+                          : widget.isExpanded
+                              ? widget.templateColor.withOpacity(0.2)
+                              : Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      widget.hasContent
+                          ? Icons.check
+                          : widget.section.icon,
+                      color: widget.hasContent
+                          ? const Color(0xFF10B981)
+                          : widget.isExpanded
+                              ? widget.templateColor
+                              : secondaryTextColor,
+                      size: 18,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                widget.section.title,
+                                style: TextStyle(
+                                  color: textColor,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            if (!widget.section.isRequired)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  'Optional',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: secondaryTextColor,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        if (!widget.isExpanded && widget.hasContent)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              widget.controller.text,
+                              style: TextStyle(
+                                color: secondaryTextColor,
+                                fontSize: 12,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    widget.isExpanded
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
+                    color: secondaryTextColor,
+                  ),
+                ],
+              ),
+            ),
+
+            // Expanded Content
+            SizeTransition(
+              sizeFactor: _expandAnimation,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Hint
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: widget.templateColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.lightbulb_outline,
+                            color: widget.templateColor,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              widget.section.hint,
+                              style: TextStyle(
+                                color: widget.templateColor,
+                                fontSize: 12,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Text Input
+                    Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0A0A0A),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.1),
+                        ),
+                      ),
+                      child: TextField(
+                        controller: widget.controller,
+                        maxLines: widget.section.maxLines,
+                        style: const TextStyle(
+                          color: textColor,
+                          fontSize: 14,
+                          height: 1.5,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'Type or tap mic to speak...',
+                          hintStyle: TextStyle(
+                            color: secondaryTextColor.withOpacity(0.5),
+                          ),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.all(14),
+                        ),
+                        onChanged: (_) => setState(() {}),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Action Buttons
+                    Row(
+                      children: [
+                        // Voice Input Button
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              // TODO: Implement voice input
+                              HapticFeedback.mediumImpact();
+                              setState(() => _isRecording = !_isRecording);
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              decoration: BoxDecoration(
+                                color: _isRecording
+                                    ? const Color(0xFFEF4444).withOpacity(0.2)
+                                    : Colors.white.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: _isRecording
+                                      ? const Color(0xFFEF4444)
+                                      : Colors.transparent,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    _isRecording ? Icons.stop : Icons.mic,
+                                    color: _isRecording
+                                        ? const Color(0xFFEF4444)
+                                        : textColor,
+                                    size: 18,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    _isRecording ? 'Recording...' : 'Voice Input',
+                                    style: TextStyle(
+                                      color: _isRecording
+                                          ? const Color(0xFFEF4444)
+                                          : textColor,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        // Next Button
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () {
+                              HapticFeedback.lightImpact();
+                              widget.onNext();
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              decoration: BoxDecoration(
+                                color: widget.templateColor,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    widget.isLast ? 'Done' : 'Next',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Icon(
+                                    widget.isLast
+                                        ? Icons.check
+                                        : Icons.arrow_forward,
+                                    color: Colors.white,
+                                    size: 16,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
