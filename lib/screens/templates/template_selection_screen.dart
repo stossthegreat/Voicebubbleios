@@ -1,18 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../models/document_template.dart';
-import '../../services/template_service.dart';
-import '../../providers/app_state_provider.dart';
+import 'package:flutter/services.dart';
+import '../../constants/app_templates.dart';
 import 'template_fill_screen.dart';
-
-// ============================================================
-//        TEMPLATE SELECTION SCREEN
-// ============================================================
-//
-// Elite template browser with instant access to productivity.
-// Beautiful, fast, and powerful template selection.
-//
-// ============================================================
 
 class TemplateSelectionScreen extends StatefulWidget {
   const TemplateSelectionScreen({super.key});
@@ -22,35 +11,48 @@ class TemplateSelectionScreen extends StatefulWidget {
 }
 
 class _TemplateSelectionScreenState extends State<TemplateSelectionScreen>
-    with TickerProviderStateMixin {
-  final _templateService = TemplateService();
-  final _searchController = TextEditingController();
-  
-  late TabController _tabController;
-  String _searchQuery = '';
+    with SingleTickerProviderStateMixin {
   String _selectedCategory = 'All';
-  
-  final List<String> _categories = ['All', 'Business', 'Creative', 'Personal', 'Marketing'];
+  String _searchQuery = '';
+  late AnimationController _animController;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: _categories.length, vsync: this);
+    _animController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    )..forward();
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
-    _searchController.dispose();
+    _animController.dispose();
     super.dispose();
+  }
+
+  List<DocumentTemplate> get _filteredTemplates {
+    var templates = _selectedCategory == 'All'
+        ? AppTemplates.all
+        : AppTemplates.getByCategory(_selectedCategory);
+
+    if (_searchQuery.isNotEmpty) {
+      templates = templates.where((t) {
+        return t.name.toLowerCase().contains(_searchQuery) ||
+            t.description.toLowerCase().contains(_searchQuery);
+      }).toList();
+    }
+
+    return templates;
   }
 
   @override
   Widget build(BuildContext context) {
-    final backgroundColor = const Color(0xFF000000);
-    final surfaceColor = const Color(0xFF1A1A1A);
-    final textColor = Colors.white;
-    final primaryColor = const Color(0xFF3B82F6);
+    const backgroundColor = Color(0xFF000000);
+    const surfaceColor = Color(0xFF1A1A1A);
+    const textColor = Colors.white;
+    const secondaryTextColor = Color(0xFF94A3B8);
+    const primaryColor = Color(0xFF3B82F6);
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -59,237 +61,221 @@ class _TemplateSelectionScreenState extends State<TemplateSelectionScreen>
           children: [
             // Header
             Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              padding: const EdgeInsets.all(20),
+              child: Row(
                 children: [
-                  // Top bar
-                  Row(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: surfaceColor,
-                          borderRadius: BorderRadius.circular(40),
-                        ),
-                        child: IconButton(
-                          padding: EdgeInsets.zero,
-                          onPressed: () => Navigator.pop(context),
-                          icon: Icon(Icons.arrow_back, color: textColor, size: 20),
-                        ),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: surfaceColor,
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Document Templates',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w700,
-                                color: textColor,
-                              ),
-                            ),
-                            Text(
-                              'Professional structures for instant productivity',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: textColor.withValues(alpha: 0.7),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // Search bar
-                  Container(
-                    decoration: BoxDecoration(
-                      color: surfaceColor,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.1),
-                        width: 1,
-                      ),
+                      child: const Icon(Icons.arrow_back, color: textColor, size: 20),
                     ),
-                    child: TextField(
-                      controller: _searchController,
-                      style: TextStyle(color: textColor),
-                      decoration: InputDecoration(
-                        hintText: 'Search templates...',
-                        hintStyle: TextStyle(color: textColor.withValues(alpha: 0.5)),
-                        prefixIcon: Icon(
-                          Icons.search,
-                          color: textColor.withValues(alpha: 0.5),
-                        ),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 16,
-                        ),
+                  ),
+                  const SizedBox(width: 16),
+                  const Expanded(
+                    child: Text(
+                      'Templates',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
                       ),
-                      onChanged: (value) {
-                        setState(() {
-                          _searchQuery = value;
-                        });
-                      },
                     ),
                   ),
                 ],
               ),
             ),
 
-            // Category tabs
-            Container(
-              height: 50,
-              margin: const EdgeInsets.symmetric(horizontal: 24),
-              child: TabBar(
-                controller: _tabController,
-                isScrollable: true,
-                tabAlignment: TabAlignment.start,
-                indicator: BoxDecoration(
-                  color: primaryColor,
-                  borderRadius: BorderRadius.circular(25),
+            // Search Bar
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: surfaceColor,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                labelColor: Colors.white,
-                unselectedLabelColor: textColor.withValues(alpha: 0.6),
-                labelStyle: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
+                child: TextField(
+                  onChanged: (value) => setState(() => _searchQuery = value.toLowerCase()),
+                  style: const TextStyle(color: textColor, fontSize: 16),
+                  decoration: const InputDecoration(
+                    hintText: 'Search templates...',
+                    hintStyle: TextStyle(color: secondaryTextColor),
+                    prefixIcon: Icon(Icons.search, color: secondaryTextColor),
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  ),
                 ),
-                unselectedLabelStyle: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-                onTap: (index) {
-                  setState(() {
-                    _selectedCategory = _categories[index];
-                  });
-                },
-                tabs: _categories.map((category) {
-                  return Tab(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Text(category),
-                    ),
-                  );
-                }).toList(),
               ),
             ),
 
-            const SizedBox(height: 24),
-
-            // Templates grid
-            Expanded(
-              child: _buildTemplatesGrid(),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTemplatesGrid() {
-    List<DocumentTemplate> templates;
-    
-    if (_searchQuery.isNotEmpty) {
-      templates = _templateService.searchTemplates(_searchQuery);
-    } else if (_selectedCategory == 'All') {
-      templates = _templateService.getAllTemplates();
-    } else {
-      templates = _templateService.getTemplatesByCategory(_selectedCategory);
-    }
-
-    if (templates.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.search_off,
-              size: 64,
-              color: Colors.white.withValues(alpha: 0.3),
-            ),
             const SizedBox(height: 16),
-            Text(
-              'No templates found',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Colors.white.withValues(alpha: 0.7),
+
+            // Category Chips
+            SizedBox(
+              height: 40,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                children: [
+                  _buildCategoryChip('All', primaryColor, surfaceColor, textColor),
+                  ...AppTemplates.categories.map((cat) => 
+                    _buildCategoryChip(cat, primaryColor, surfaceColor, textColor)),
+                ],
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Try adjusting your search or category',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.white.withValues(alpha: 0.5),
-              ),
+
+            const SizedBox(height: 20),
+
+            // Templates Grid
+            Expanded(
+              child: _filteredTemplates.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.search_off,
+                            size: 64,
+                            color: secondaryTextColor.withOpacity(0.5),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No templates found',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: secondaryTextColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : GridView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        childAspectRatio: 0.85,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                      ),
+                      itemCount: _filteredTemplates.length,
+                      itemBuilder: (context, index) {
+                        final template = _filteredTemplates[index];
+                        return _TemplateCard(
+                          template: template,
+                          onTap: () {
+                            HapticFeedback.lightImpact();
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => TemplateFillScreen(template: template),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
             ),
           ],
         ),
-      );
-    }
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: GridView.builder(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          childAspectRatio: 0.8,
-        ),
-        itemCount: templates.length,
-        itemBuilder: (context, index) {
-          return _buildTemplateCard(templates[index]);
-        },
       ),
     );
   }
 
-  Widget _buildTemplateCard(DocumentTemplate template) {
-    final surfaceColor = const Color(0xFF1A1A1A);
-    final textColor = Colors.white;
-    final primaryColor = const Color(0xFF3B82F6);
+  Widget _buildCategoryChip(
+    String category,
+    Color primaryColor,
+    Color surfaceColor,
+    Color textColor,
+  ) {
+    final isSelected = _selectedCategory == category;
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          setState(() => _selectedCategory = category);
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? primaryColor : surfaceColor,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isSelected ? primaryColor : Colors.white.withOpacity(0.1),
+            ),
+          ),
+          child: Text(
+            category,
+            style: TextStyle(
+              color: isSelected ? Colors.white : textColor.withOpacity(0.8),
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              fontSize: 14,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
+class _TemplateCard extends StatelessWidget {
+  final DocumentTemplate template;
+  final VoidCallback onTap;
+
+  const _TemplateCard({
+    required this.template,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => _selectTemplate(template),
+      onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: surfaceColor,
+          color: const Color(0xFF1A1A1A),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: Colors.white.withValues(alpha: 0.1),
+            color: template.color.withOpacity(0.3),
             width: 1,
           ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header with icon and premium badge
+            // Header with Icon
             Container(
               padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    template.color.withOpacity(0.2),
+                    template.color.withOpacity(0.05),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+              ),
               child: Row(
                 children: [
                   Container(
-                    width: 48,
-                    height: 48,
+                    width: 44,
+                    height: 44,
                     decoration: BoxDecoration(
-                      color: primaryColor.withValues(alpha: 0.1),
+                      color: template.color.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Center(
-                      child: Text(
-                        template.icon,
-                        style: const TextStyle(fontSize: 24),
-                      ),
+                    child: Icon(
+                      template.icon,
+                      color: template.color,
+                      size: 24,
                     ),
                   ),
                   const Spacer(),
@@ -297,16 +283,23 @@ class _TemplateSelectionScreenState extends State<TemplateSelectionScreen>
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF59E0B),
-                        borderRadius: BorderRadius.circular(12),
+                        color: const Color(0xFFF59E0B).withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Text(
-                        'PRO',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.star, color: Color(0xFFF59E0B), size: 12),
+                          SizedBox(width: 4),
+                          Text(
+                            'PRO',
+                            style: TextStyle(
+                              color: Color(0xFFF59E0B),
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                 ],
@@ -316,54 +309,48 @@ class _TemplateSelectionScreenState extends State<TemplateSelectionScreen>
             // Content
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       template.name,
-                      style: TextStyle(
-                        fontSize: 16,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: textColor,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      template.description,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: textColor.withValues(alpha: 0.7),
-                        height: 1.4,
+                    const SizedBox(height: 6),
+                    Expanded(
+                      child: Text(
+                        template.description,
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.6),
+                          fontSize: 12,
+                          height: 1.4,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                    const Spacer(),
-                    
-                    // Footer with time estimate
+                    // Section count
                     Row(
                       children: [
                         Icon(
-                          Icons.access_time,
+                          Icons.layers_outlined,
                           size: 14,
-                          color: textColor.withValues(alpha: 0.5),
+                          color: Colors.white.withOpacity(0.4),
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          '${template.estimatedMinutes} min',
+                          '${template.sections.length} sections',
                           style: TextStyle(
-                            fontSize: 12,
-                            color: textColor.withValues(alpha: 0.5),
+                            color: Colors.white.withOpacity(0.4),
+                            fontSize: 11,
                           ),
-                        ),
-                        const Spacer(),
-                        Icon(
-                          Icons.arrow_forward,
-                          size: 16,
-                          color: primaryColor,
                         ),
                       ],
                     ),
@@ -371,141 +358,8 @@ class _TemplateSelectionScreenState extends State<TemplateSelectionScreen>
                 ),
               ),
             ),
-            
-            const SizedBox(height: 16),
           ],
         ),
-      ),
-    );
-  }
-
-  void _selectTemplate(DocumentTemplate template) {
-    // Check if premium template and user has access
-    final appState = Provider.of<AppStateProvider>(context, listen: false);
-    
-    if (template.isPremium && !appState.isPremium) {
-      _showPremiumDialog(template);
-      return;
-    }
-
-    // Navigate to template fill screen
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => TemplateFillScreen(template: template),
-      ),
-    );
-  }
-
-  void _showPremiumDialog(DocumentTemplate template) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Text(
-              template.icon,
-              style: const TextStyle(fontSize: 24),
-            ),
-            const SizedBox(width: 12),
-            const Expanded(
-              child: Text(
-                'Premium Template',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              template.name,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'This professional template is available with VoiceBubble Pro.',
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.7),
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
-                ),
-              ),
-              child: const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'VoiceBubble Pro includes:',
-                    style: TextStyle(
-                      color: Color(0xFF3B82F6),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    '• All premium templates\n• Unlimited voice minutes\n• Advanced AI features\n• Priority support',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      height: 1.4,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Maybe Later',
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.7)),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // Navigate to subscription screen
-              // TODO: Implement navigation to paywall
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF3B82F6),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: const Text(
-              'Upgrade to Pro',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
