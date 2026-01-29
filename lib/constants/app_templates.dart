@@ -424,7 +424,7 @@ class AppTemplates {
         id: 'accomplishments',
         title: 'Key accomplishments',
         hint: 'Major wins with measurable impact',
-        aiPrompt: 'Quantify impact where possible (%, $, time saved)',
+        aiPrompt: 'Quantify impact where possible (%, \$, time saved)',
         icon: Icons.emoji_events,
         maxLines: 6,
       ),
