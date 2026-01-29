@@ -1,158 +1,152 @@
-import 'package:hive/hive.dart';
-
-part 'document_template.g.dart';
-
 // ============================================================
 //        DOCUMENT TEMPLATE MODEL
 // ============================================================
 //
-// The data structure that powers instant productivity.
-// Each template is a masterpiece of structured writing.
+// Elite document templates for instant productivity.
+// Professional structures that users can fill with voice.
 //
 // ============================================================
 
-@HiveType(typeId: 10)
 class DocumentTemplate {
-  @HiveField(0)
-  String id;
+  final String id;
+  final String name;
+  final String description;
+  final String icon;
+  final String category;
+  final String structure;
+  final List<VoicePrompt> voicePrompts;
+  final List<String> tags;
+  final int estimatedMinutes;
+  final bool isPremium;
 
-  @HiveField(1)
-  String name;
-
-  @HiveField(2)
-  String description;
-
-  @HiveField(3)
-  String category; // 'writing', 'business', 'creative', 'personal'
-
-  @HiveField(4)
-  String icon; // Icon name for UI
-
-  @HiveField(5)
-  String structure; // The template content with placeholders
-
-  @HiveField(6)
-  List<VoicePrompt> voicePrompts; // Guided voice sections
-
-  @HiveField(7)
-  List<String> tags; // For filtering and search
-
-  @HiveField(8)
-  int estimatedTimeMinutes; // How long to complete
-
-  @HiveField(9)
-  int wordCountEstimate; // Expected final word count
-
-  @HiveField(10)
-  bool isPremium; // Free vs Pro templates
-
-  @HiveField(11)
-  DateTime createdAt;
-
-  DocumentTemplate({
+  const DocumentTemplate({
     required this.id,
     required this.name,
     required this.description,
-    required this.category,
     required this.icon,
+    required this.category,
     required this.structure,
     required this.voicePrompts,
-    this.tags = const [],
-    this.estimatedTimeMinutes = 15,
-    this.wordCountEstimate = 500,
+    required this.tags,
+    required this.estimatedMinutes,
     this.isPremium = false,
-    DateTime? createdAt,
-  }) : createdAt = createdAt ?? DateTime.now();
+  });
 
-  // Copy with method
-  DocumentTemplate copyWith({
-    String? id,
-    String? name,
-    String? description,
-    String? category,
-    String? icon,
-    String? structure,
-    List<VoicePrompt>? voicePrompts,
-    List<String>? tags,
-    int? estimatedTimeMinutes,
-    int? wordCountEstimate,
-    bool? isPremium,
-    DateTime? createdAt,
-  }) {
+  factory DocumentTemplate.fromJson(Map<String, dynamic> json) {
     return DocumentTemplate(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      description: description ?? this.description,
-      category: category ?? this.category,
-      icon: icon ?? this.icon,
-      structure: structure ?? this.structure,
-      voicePrompts: voicePrompts ?? List.from(this.voicePrompts),
-      tags: tags ?? List.from(this.tags),
-      estimatedTimeMinutes: estimatedTimeMinutes ?? this.estimatedTimeMinutes,
-      wordCountEstimate: wordCountEstimate ?? this.wordCountEstimate,
-      isPremium: isPremium ?? this.isPremium,
-      createdAt: createdAt ?? this.createdAt,
+      id: json['id'],
+      name: json['name'],
+      description: json['description'],
+      icon: json['icon'],
+      category: json['category'],
+      structure: json['structure'],
+      voicePrompts: (json['voicePrompts'] as List)
+          .map((p) => VoicePrompt.fromJson(p))
+          .toList(),
+      tags: List<String>.from(json['tags']),
+      estimatedMinutes: json['estimatedMinutes'],
+      isPremium: json['isPremium'] ?? false,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'description': description,
+      'icon': icon,
+      'category': category,
+      'structure': structure,
+      'voicePrompts': voicePrompts.map((p) => p.toJson()).toList(),
+      'tags': tags,
+      'estimatedMinutes': estimatedMinutes,
+      'isPremium': isPremium,
+    };
   }
 }
 
-@HiveType(typeId: 11)
 class VoicePrompt {
-  @HiveField(0)
-  String id;
+  final String id;
+  final String placeholder;
+  final String prompt;
+  final String? example;
+  final int maxWords;
+  final bool isRequired;
 
-  @HiveField(1)
-  String placeholder; // The placeholder text in template (e.g., "[Voice: Introduction]")
-
-  @HiveField(2)
-  String prompt; // AI prompt to guide user's voice input
-
-  @HiveField(3)
-  String example; // Example of what to say
-
-  @HiveField(4)
-  int estimatedSeconds; // How long this section should take
-
-  @HiveField(5)
-  bool isRequired; // Must be filled vs optional
-
-  VoicePrompt({
+  const VoicePrompt({
     required this.id,
     required this.placeholder,
     required this.prompt,
-    required this.example,
-    this.estimatedSeconds = 30,
+    this.example,
+    required this.maxWords,
     this.isRequired = true,
   });
 
-  VoicePrompt copyWith({
-    String? id,
-    String? placeholder,
-    String? prompt,
-    String? example,
-    int? estimatedSeconds,
-    bool? isRequired,
-  }) {
+  factory VoicePrompt.fromJson(Map<String, dynamic> json) {
     return VoicePrompt(
-      id: id ?? this.id,
-      placeholder: placeholder ?? this.placeholder,
-      prompt: prompt ?? this.prompt,
-      example: example ?? this.example,
-      estimatedSeconds: estimatedSeconds ?? this.estimatedSeconds,
-      isRequired: isRequired ?? this.isRequired,
+      id: json['id'],
+      placeholder: json['placeholder'],
+      prompt: json['prompt'],
+      example: json['example'],
+      maxWords: json['maxWords'],
+      isRequired: json['isRequired'] ?? true,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'placeholder': placeholder,
+      'prompt': prompt,
+      'example': example,
+      'maxWords': maxWords,
+      'isRequired': isRequired,
+    };
   }
 }
 
-// Template categories for organization
+// Elite template categories
 enum TemplateCategory {
-  writing('writing', 'Writing', '✍️'),
-  business('business', 'Business', '💼'),
-  creative('creative', 'Creative', '🎨'),
-  personal('personal', 'Personal', '📝');
+  business,
+  creative,
+  academic,
+  personal,
+  marketing,
+  technical,
+}
 
-  const TemplateCategory(this.id, this.name, this.icon);
-  final String id;
-  final String name;
-  final String icon;
+extension TemplateCategoryExtension on TemplateCategory {
+  String get displayName {
+    switch (this) {
+      case TemplateCategory.business:
+        return 'Business';
+      case TemplateCategory.creative:
+        return 'Creative';
+      case TemplateCategory.academic:
+        return 'Academic';
+      case TemplateCategory.personal:
+        return 'Personal';
+      case TemplateCategory.marketing:
+        return 'Marketing';
+      case TemplateCategory.technical:
+        return 'Technical';
+    }
+  }
+
+  String get icon {
+    switch (this) {
+      case TemplateCategory.business:
+        return '💼';
+      case TemplateCategory.creative:
+        return '🎨';
+      case TemplateCategory.academic:
+        return '🎓';
+      case TemplateCategory.personal:
+        return '📝';
+      case TemplateCategory.marketing:
+        return '📈';
+      case TemplateCategory.technical:
+        return '⚙️';
+    }
+  }
 }

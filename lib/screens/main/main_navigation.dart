@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'home_screen.dart';
 import 'outcomes_screen.dart';
 import 'library_screen.dart';
+import '../templates/template_selection_screen.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
