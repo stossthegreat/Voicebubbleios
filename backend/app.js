@@ -11,6 +11,9 @@ import transcribeRoutes from "./routes/transcribe.js";
 import subscriptionRoutes from "./routes/subscription.js";
 import textTransformRoutes from "./routes/textTransform.js";
 
+// Import text transformation controller
+import { transformText, translateText, getActions } from "./controllers/textTransformationController.js";
+
 import { AppError, globalErrorHandler } from "./utils/errors.js";
 
 // Try to import extract routes (optional - backward compatible)
@@ -72,6 +75,11 @@ app.use("/api/rewrite", rewriteRoutes);
 app.use("/api/transcribe", transcribeRoutes);
 app.use("/api/subscription", subscriptionRoutes);
 app.use("/api/transform", textTransformRoutes);
+
+// AI Text Transformation Routes - THE VIRAL KILLER
+app.post("/api/transform-text", transformText);
+app.post("/api/translate-text", translateText);
+app.get("/api/ai-actions", getActions);
 
 // Register extract routes if available
 if (extractRoutes) {
