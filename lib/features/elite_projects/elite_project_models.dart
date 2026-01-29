@@ -443,16 +443,6 @@ extension SectionStatusExtension on SectionStatus {
   }
 }
 
-enum PlotPointType {
-  event,
-  revelation,
-  conflict,
-  resolution,
-  foreshadowing,
-  callback,
-  twist,
-}
-
 // =============================================================================
 // PROJECT GOAL - TARGETS AND DEADLINES
 // =============================================================================
@@ -765,7 +755,6 @@ class PlotPoint {
     'id': id,
     'description': description,
     'sectionId': sectionId,
-    'type': type.name,
     'order': order,
     'isResolved': isResolved,
     'type': type.name,
@@ -775,18 +764,13 @@ class PlotPoint {
     id: json['id'],
     description: json['description'],
     sectionId: json['sectionId'],
-<<<<<<< HEAD
     order: json['order'] ?? 0,
-=======
-    type: PlotPointType.values.firstWhere(
-      (t) => t.name == json['type'],
-      orElse: () => PlotPointType.event,
-    ),
-    order: json['order'],
->>>>>>> 27aa54cf (🔧 Fix Elite Projects build errors - Add missing getters and enum cases)
     isResolved: json['isResolved'] ?? false,
     type: json['type'] != null
-        ? PlotPointType.values.firstWhere((t) => t.name == json['type'], orElse: () => PlotPointType.event)
+        ? PlotPointType.values.firstWhere(
+            (t) => t.name == json['type'],
+            orElse: () => PlotPointType.event,
+          )
         : PlotPointType.event,
   );
 }
