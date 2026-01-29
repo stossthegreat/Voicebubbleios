@@ -22,6 +22,24 @@ enum EliteProjectType {
   freeform,     // 📋 Free Form (current behavior)
 }
 
+extension EliteProjectTypeExtension on EliteProjectType {
+  ProjectTypeMetadata get metadata => ProjectTypeMetadata.all[this]!;
+  
+  String get name => metadata.name;
+  String get emoji => metadata.emoji;
+  String get tagline => metadata.tagline;
+  String get description => metadata.description;
+  Color get primaryColor => metadata.primaryColor;
+  Color get accentColor => metadata.accentColor;
+  IconData get icon => metadata.icon;
+  List<String> get benefits => metadata.benefits;
+  List<String> get exportFormats => metadata.exportFormats;
+  String get progressMetric => metadata.progressMetric;
+  int? get suggestedGoal => metadata.suggestedGoal;
+  Duration? get suggestedTimeframe => metadata.suggestedTimeframe;
+  bool get isPremium => metadata.isPremium;
+}
+
 // =============================================================================
 // PROJECT TYPE METADATA - EVERYTHING ABOUT EACH TYPE
 // =============================================================================
@@ -408,6 +426,33 @@ enum SectionStatus {
   completed,
 }
 
+extension SectionStatusExtension on SectionStatus {
+  Color get color {
+    switch (this) {
+      case SectionStatus.notStarted:
+        return Colors.grey;
+      case SectionStatus.inProgress:
+        return Colors.blue;
+      case SectionStatus.drafted:
+        return Colors.orange;
+      case SectionStatus.reviewing:
+        return Colors.purple;
+      case SectionStatus.completed:
+        return Colors.green;
+    }
+  }
+}
+
+enum PlotPointType {
+  event,
+  revelation,
+  conflict,
+  resolution,
+  foreshadowing,
+  callback,
+  twist,
+}
+
 // =============================================================================
 // PROJECT GOAL - TARGETS AND DEADLINES
 // =============================================================================
@@ -691,6 +736,7 @@ class PlotPoint {
   final String id;
   final String description;
   final String? sectionId;
+  final PlotPointType type;
   final int order;
   final bool isResolved;
   final PlotPointType type;  // Type for adapters
@@ -699,7 +745,12 @@ class PlotPoint {
     required this.id,
     required this.description,
     this.sectionId,
+<<<<<<< HEAD
     this.order = 0,
+=======
+    required this.type,
+    required this.order,
+>>>>>>> 27aa54cf (🔧 Fix Elite Projects build errors - Add missing getters and enum cases)
     this.isResolved = false,
     this.type = PlotPointType.event,
   });
@@ -708,6 +759,7 @@ class PlotPoint {
     'id': id,
     'description': description,
     'sectionId': sectionId,
+    'type': type.name,
     'order': order,
     'isResolved': isResolved,
     'type': type.name,
@@ -717,7 +769,15 @@ class PlotPoint {
     id: json['id'],
     description: json['description'],
     sectionId: json['sectionId'],
+<<<<<<< HEAD
     order: json['order'] ?? 0,
+=======
+    type: PlotPointType.values.firstWhere(
+      (t) => t.name == json['type'],
+      orElse: () => PlotPointType.event,
+    ),
+    order: json['order'],
+>>>>>>> 27aa54cf (🔧 Fix Elite Projects build errors - Add missing getters and enum cases)
     isResolved: json['isResolved'] ?? false,
     type: json['type'] != null
         ? PlotPointType.values.firstWhere((t) => t.name == json['type'], orElse: () => PlotPointType.event)

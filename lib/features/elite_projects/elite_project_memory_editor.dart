@@ -745,6 +745,8 @@ class _EliteProjectMemoryEditorState extends State<EliteProjectMemoryEditor>
         return const Color(0xFF8B5CF6);
       case PlotPointType.callback:
         return const Color(0xFFEC4899);
+      case PlotPointType.twist:
+        return const Color(0xFFFF6B9D);
     }
   }
 
