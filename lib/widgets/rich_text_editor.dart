@@ -3,15 +3,9 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
-import '../services/rich_text_service.dart';
 
 // ============================================================
 //        RICH TEXT EDITOR WIDGET
-// ============================================================
-//
-// Professional rich text editor matching Samsung Notes quality.
-// Full formatting toolbar, auto-save, dark theme.
-//
 // ============================================================
 
 // KEYBOARD SHORTCUTS INTENTS
@@ -46,16 +40,10 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
   Timer? _saveTimer;
   bool _showSaved = false;
   bool _hasUnsavedChanges = false;
-  final _richTextService = RichTextService();
   late AnimationController _saveIndicatorController;
   late Animation<double> _saveIndicatorAnimation;
   int _wordCount = 0;
   int _characterCount = 0;
-  
-  // AI Actions Menu state
-  bool _showingAIMenu = false;
-  TextSelection? _currentSelection;
-  Offset? _selectionPosition;
 
   @override
   void initState() {
@@ -63,7 +51,6 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
     _initializeController();
     _controller.addListener(_onTextChanged);
     
-    // Initialize animations
     _saveIndicatorController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
@@ -78,25 +65,33 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
   }
 
   void _initializeController() {
-    final doc = _richTextService.createDocument(
-      formattedContent: widget.initialFormattedContent,
-      plainText: widget.initialPlainText ?? '',
-    );
+    quill.Document doc;
+    
+    // Try to load from formatted content (Delta JSON)
+    if (widget.initialFormattedContent != null && widget.initialFormattedContent!.isNotEmpty) {
+      try {
+        final deltaJson = jsonDecode(widget.initialFormattedContent!);
+        doc = quill.Document.fromJson(deltaJson);
+      } catch (e) {
+        // Fallback to plain text
+        doc = quill.Document()..insert(0, widget.initialPlainText ?? '');
+      }
+    } else if (widget.initialPlainText != null && widget.initialPlainText!.isNotEmpty) {
+      doc = quill.Document()..insert(0, widget.initialPlainText!);
+    } else {
+      doc = quill.Document();
+    }
 
     _controller = quill.QuillController(
       document: doc,
       selection: const TextSelection.collapsed(offset: 0),
     );
-    
-    // Listen for selection changes
-    _controller.addListener(_onSelectionChanged);
   }
 
   @override
   void dispose() {
     _saveTimer?.cancel();
     _controller.removeListener(_onTextChanged);
-    _controller.removeListener(_onSelectionChanged);
     _controller.dispose();
     _focusNode.dispose();
     _saveIndicatorController.dispose();
@@ -117,7 +112,6 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
       _characterCount = characters;
     });
 
-    // Debounce auto-save
     if (_saveTimer?.isActive ?? false) _saveTimer!.cancel();
     _saveTimer = Timer(const Duration(milliseconds: 500), () {
       _saveContent();
@@ -131,7 +125,6 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
 
       await widget.onSave(plainText, deltaJson);
 
-      // Animate save indicator
       if (mounted) {
         setState(() {
           _hasUnsavedChanges = false;
@@ -162,74 +155,10 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
     }
   }
 
-  void _onSelectionChanged() {
-    if (widget.readOnly) return;
-    
-    final selection = _controller.selection;
-    
-    // Hide AI menu if no selection or collapsed selection
-    if (!selection.isValid || selection.isCollapsed) {
-      if (_showingAIMenu) {
-        setState(() {
-          _showingAIMenu = false;
-          _currentSelection = null;
-          _selectionPosition = null;
-        });
-      }
-      return;
-    }
-
-    // Show AI menu for text selection
-    final selectedText = _controller.document.toPlainText().substring(
-      selection.start,
-      selection.end,
-    ).trim();
-
-    if (selectedText.isNotEmpty && selectedText.length > 2) {
-      // Calculate position for AI menu (simplified - would need proper text position calculation)
-      final position = Offset(200, 100); // Placeholder position
-      
-      setState(() {
-        _showingAIMenu = true;
-        _currentSelection = selection;
-        _selectionPosition = position;
-      });
-    }
-  }
-
-  void _replaceSelectedText(String newText) {
-    if (_currentSelection == null) return;
-    
-    // Replace the selected text
-    _controller.replaceText(
-      _currentSelection!.start,
-      _currentSelection!.end - _currentSelection!.start,
-      newText,
-      TextSelection.collapsed(offset: _currentSelection!.start + newText.length),
-    );
-    
-    // Hide AI menu
-    setState(() {
-      _showingAIMenu = false;
-      _currentSelection = null;
-      _selectionPosition = null;
-    });
-  }
-
-  void _dismissAIMenu() {
-    setState(() {
-      _showingAIMenu = false;
-      _currentSelection = null;
-      _selectionPosition = null;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
-    final backgroundColor = const Color(0xFF000000);
     final surfaceColor = const Color(0xFF1A1A1A);
     final textColor = Colors.white;
-    final primaryColor = const Color(0xFF3B82F6);
 
     return Shortcuts(
       shortcuts: <LogicalKeySet, Intent>{
@@ -259,8 +188,8 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
                     color: surfaceColor,
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                     child: quill.QuillSimpleToolbar(
-                      controller: _controller,
                       configurations: quill.QuillSimpleToolbarConfigurations(
+                        controller: _controller,
                         multiRowsDisplay: false,
                         showBoldButton: true,
                         showItalicButton: true,
@@ -295,9 +224,9 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     child: quill.QuillEditor.basic(
-                      controller: _controller,
                       focusNode: _focusNode,
                       configurations: quill.QuillEditorConfigurations(
+                        controller: _controller,
                         padding: EdgeInsets.zero,
                         autoFocus: !widget.readOnly,
                         expands: true,
@@ -315,7 +244,7 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
                     color: surfaceColor,
                     border: Border(
                       top: BorderSide(
-                        color: Colors.white.withValues(alpha: 0.1),
+                        color: Colors.white.withOpacity(0.1),
                         width: 1,
                       ),
                     ),
@@ -325,7 +254,7 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
                       Text(
                         '$_wordCount words • $_characterCount characters',
                         style: TextStyle(
-                          color: textColor.withValues(alpha: 0.6),
+                          color: textColor.withOpacity(0.6),
                           fontSize: 12,
                         ),
                       ),
@@ -377,7 +306,7 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
               ],
             ),
             
-            // Animated Save Indicator (top-right)
+            // Animated Save Indicator
             if (_showSaved)
               Positioned(
                 top: 16,
@@ -394,7 +323,7 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF10B981).withValues(alpha: 0.3),
+                              color: const Color(0xFF10B981).withOpacity(0.3),
                               blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),
@@ -403,11 +332,7 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
-                              Icons.check_circle,
-                              color: Colors.white,
-                              size: 16,
-                            ),
+                            Icon(Icons.check_circle, color: Colors.white, size: 16),
                             SizedBox(width: 6),
                             Text(
                               'Saved',
@@ -423,20 +348,6 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
                     );
                   },
                 ),
-              ),
-
-            // AI Actions Menu (THE VIRAL FEATURE!)
-            if (_showingAIMenu && _currentSelection != null && _selectionPosition != null)
-              AIActionsMenu(
-                selectedText: _controller.document.toPlainText().substring(
-                  _currentSelection!.start,
-                  _currentSelection!.end,
-                ),
-                selection: _currentSelection!,
-                position: _selectionPosition!,
-                onTextReplaced: _replaceSelectedText,
-                onDismiss: _dismissAIMenu,
-                documentContext: _controller.document.toPlainText(),
               ),
           ],
         ),
