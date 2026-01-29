@@ -317,13 +317,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Logo and VoiceBubble text
+                  // Logo and VoiceBubble text (BIGGER LOGO)
                   Row(
                     children: [
                       Image.asset(
                         'assets/app_logo.png',
-                        width: 32,
-                        height: 32,
+                        width: 48, // Increased from 32
+                        height: 48, // Increased from 32
                       ),
                       const SizedBox(width: 12),
                       Text(
@@ -338,6 +338,51 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   ),
                   Row(
                     children: [
+                      // Activate Voice Bubble Button (tiny square)
+                      if (Platform.isAndroid) ...[
+                        GestureDetector(
+                          onTap: () async {
+                            await _toggleOverlay();
+                            await Future.delayed(const Duration(milliseconds: 500));
+                            await _checkOverlayStatus();
+                          },
+                          child: Container(
+                            width: 70,
+                            height: 70,
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: _overlayEnabled ? const Color(0xFF10B981) : surfaceColor,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: _overlayEnabled ? const Color(0xFF10B981) : const Color(0xFF3B82F6),
+                                width: 2,
+                              ),
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.bubble_chart,
+                                  color: _overlayEnabled ? Colors.white : const Color(0xFF3B82F6),
+                                  size: 20,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Voice\nBubble',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w600,
+                                    color: _overlayEnabled ? Colors.white : const Color(0xFF3B82F6),
+                                    height: 1.1,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                      ],
                       // Settings Button
                       IconButton(
                         icon: Icon(Icons.settings, color: textColor),
@@ -420,44 +465,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         color: secondaryTextColor,
                       ),
                     ),
-                    const SizedBox(height: 24),
-                    
-                    // Upload Audio Button (MOVED ABOVE language selector)
-                    GestureDetector(
-                      onTap: _pickAudioFile,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                        decoration: BoxDecoration(
-                          color: surfaceColor,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: const Color(0xFF10B981),
-                            width: 2,
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.upload_file,
-                              color: Color(0xFF10B981),
-                              size: 22,
-                            ),
-                            const SizedBox(width: 10),
-                            const Text(
-                              'Upload Audio File',
-                              style: TextStyle(
-                                color: Color(0xFF10B981),
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 32),
                     
                     // Language Selector Button
                     Padding(
@@ -527,48 +535,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       ),
                     ),
                     
-                    // Activate Voice Bubble button (after language selector)
-                    if (Platform.isAndroid) ...[
-                      const SizedBox(height: 20),
-                      GestureDetector(
-                        onTap: () async {
-                          await _toggleOverlay();
-                          await Future.delayed(const Duration(milliseconds: 500));
-                          await _checkOverlayStatus();
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          decoration: BoxDecoration(
-                            color: _overlayEnabled ? const Color(0xFF10B981) : surfaceColor,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: _overlayEnabled ? const Color(0xFF10B981) : const Color(0xFF3B82F6),
-                              width: 2,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                _overlayEnabled ? Icons.check_circle : Icons.bubble_chart,
-                                color: Colors.white,
-                                size: 20,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                _overlayEnabled ? 'Voice Bubble Active' : 'Activate Voice Bubble',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                    
                     const SizedBox(height: 40),
                   ],
                 ),
@@ -580,6 +546,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ],
         ),
       ),
+      // Floating Upload Audio Button (bottom left)
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: Tooltip(
+          message: 'Upload Audio',
+          child: FloatingActionButton(
+            onPressed: _pickAudioFile,
+            backgroundColor: const Color(0xFF10B981),
+            child: const Icon(
+              Icons.upload_file,
+              color: Colors.white,
+              size: 24,
+            ),
+          ),
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
     );
   }
   
