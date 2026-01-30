@@ -531,7 +531,6 @@ class _EliteProjectSectionEditorState extends State<EliteProjectSectionEditor> {
             final context = EliteProjectAIContextService.generateFullContext(
               widget.project,
               sectionId: widget.sectionId,
-              currentSectionContent: _contentController.text,
             );
             widget.onAIPresetSelected!(preset.id, context);
           }
