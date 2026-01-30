@@ -110,7 +110,7 @@ class _MoveToProjectSheetState extends State<MoveToProjectSheet> {
       
       if (_createNewSection) {
         // Create new section first
-        final newSection = await widget.projectService.addSection(
+        final newSection = await widget.projectService.addSectionByTitle(
           _selectedProject!.id,
           _newSectionController.text.trim(),
         );
