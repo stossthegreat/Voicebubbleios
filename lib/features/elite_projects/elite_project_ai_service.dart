@@ -28,6 +28,9 @@ class AIPreset {
   });
 }
 
+// Alias for backward compatibility
+typedef EliteProjectPresets = EliteProjectAIContextService;
+
 // ============================================================================
 // AI CONTEXT SERVICE
 // ============================================================================
@@ -153,6 +156,11 @@ class EliteProjectAIContextService {
       if (preset.supportedTypes.isEmpty) return true;
       return preset.supportedTypes.contains(type);
     }).toList();
+  }
+
+  /// Generate full context (alias for getFullContext)
+  static String generateFullContext(EliteProject project, {String? sectionId}) {
+    return getFullContext(project, sectionId: sectionId);
   }
 
   /// Generate context string for AI from project memory
