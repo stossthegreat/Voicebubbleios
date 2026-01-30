@@ -1,11 +1,6 @@
 // ============================================================
 //        DOCUMENT TEMPLATE MODEL
 // ============================================================
-//
-// Elite document templates for instant productivity.
-// Professional structures that users can fill with voice.
-//
-// ============================================================
 
 class DocumentTemplate {
   final String id;
@@ -70,7 +65,8 @@ class VoicePrompt {
   final String placeholder;
   final String prompt;
   final String? example;
-  final int maxWords;
+  final int? maxWords;          // Made optional
+  final int? estimatedSeconds;  // Added
   final bool isRequired;
 
   const VoicePrompt({
@@ -78,7 +74,8 @@ class VoicePrompt {
     required this.placeholder,
     required this.prompt,
     this.example,
-    required this.maxWords,
+    this.maxWords,           // Now optional
+    this.estimatedSeconds,   // New field
     this.isRequired = true,
   });
 
@@ -89,6 +86,7 @@ class VoicePrompt {
       prompt: json['prompt'],
       example: json['example'],
       maxWords: json['maxWords'],
+      estimatedSeconds: json['estimatedSeconds'],
       isRequired: json['isRequired'] ?? true,
     );
   }
@@ -100,6 +98,7 @@ class VoicePrompt {
       'prompt': prompt,
       'example': example,
       'maxWords': maxWords,
+      'estimatedSeconds': estimatedSeconds,
       'isRequired': isRequired,
     };
   }
