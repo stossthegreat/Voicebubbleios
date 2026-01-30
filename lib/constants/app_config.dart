@@ -9,7 +9,6 @@ class AppConfig {
   
   // API Endpoints
   static const String textTransformEndpoint = '$baseUrl/text-transform';
-  static const String templateEndpoint = '$baseUrl/template';
   
   // Timeouts
   static const Duration networkTimeout = Duration(seconds: 30);
