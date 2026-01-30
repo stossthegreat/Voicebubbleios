@@ -25,7 +25,7 @@ class ProjectBridge {
       structure: ProjectStructure(
         sections: _createSectionsFromItems(items),
         totalSections: items.length,
-        completedSections: items.where((item) => (item.transcription?.isNotEmpty ?? false)).length,
+        completedSections: items.where((item) => item.finalText.isNotEmpty).length,
       ),
       progress: ProjectProgress(
         wordCount: _calculateWordCount(items),
@@ -64,34 +64,43 @@ class ProjectBridge {
   static List<ProjectSection> _createSectionsFromItems(List<RecordingItem> items) {
     return items.map((item) => ProjectSection(
       id: item.id,
-      title: item.title ?? 'Recording ${item.createdAt.toString().substring(0, 10)}',
-      content: item.transcription ?? '',
-      status: (item.transcription?.isNotEmpty ?? false)
+      title: _getTitleFromContent(item.finalText, item.createdAt),
+      content: item.finalText,
+      status: item.finalText.isNotEmpty
           ? SectionStatus.completed
           : SectionStatus.notStarted,
       createdAt: item.createdAt,
-      updatedAt: item.updatedAt ?? item.createdAt,
+      updatedAt: item.createdAt,
       recordingIds: [item.id],
     )).toList();
+  }
+
+  /// Get title from content or date
+  static String _getTitleFromContent(String content, DateTime createdAt) {
+    if (content.isEmpty) {
+      return 'Recording ${createdAt.toString().substring(0, 10)}';
+    }
+    final firstLine = content.split('\n').first.trim();
+    if (firstLine.length <= 50) return firstLine;
+    return '${firstLine.substring(0, 47)}...';
   }
 
   /// Calculate total word count from items
   static int _calculateWordCount(List<RecordingItem> items) {
     int total = 0;
     for (final item in items) {
-      final text = item.transcription ?? '';
-      total += text.split(RegExp(r'\s+')).where((s) => s.isNotEmpty).length;
+      final text = item.finalText;
+      total = total + text.split(RegExp(r'\s+')).where((s) => s.isNotEmpty).length;
     }
     return total;
   }
 
   /// Extract common topics from items
   static List<TopicMemory> _extractTopics(List<RecordingItem> items) {
-    // Simple topic extraction - can be enhanced with NLP
     final wordCounts = <String, int>{};
     
     for (final item in items) {
-      final text = (item.transcription ?? '').toLowerCase();
+      final text = item.finalText.toLowerCase();
       final words = text.split(RegExp(r'\s+'))
           .where((w) => w.length > 5)
           .toList();
@@ -101,7 +110,6 @@ class ProjectBridge {
       }
     }
     
-    // Get top topics
     final sortedWords = wordCounts.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
     
