@@ -160,7 +160,7 @@ class _EliteProjectMemoryEditorState extends State<EliteProjectMemoryEditor>
   // ============================================================================
 
   Widget _buildCharactersTab(bool isDark) {
-    final characters = _project.memory.characters;
+    final characters = _project.memory?.characters ?? {};
 
     return Column(
       children: [
@@ -394,7 +394,7 @@ class _EliteProjectMemoryEditorState extends State<EliteProjectMemoryEditor>
   // ============================================================================
 
   Widget _buildLocationsTab(bool isDark) {
-    final locations = _project.memory.locations;
+    final locations = _project.memory?.locations ?? {};
 
     return Column(
       children: [
@@ -459,12 +459,13 @@ class _EliteProjectMemoryEditorState extends State<EliteProjectMemoryEditor>
                       'Delete Location',
                       'Delete "${location.name}"?',
                       () async {
-                        final locs = _project.memory.locations
-                            .where((l) => l.id != location.id)
-                            .toList();
+                        final memory = _project.memory;
+                        if (memory == null) return;
+                        final locs = Map<String, LocationMemory>.from(memory.locations)
+                          ..remove(location.id);
                         await widget.projectService.updateProjectMemory(
                           _project.id,
-                          _project.memory.copyWith(locations: locs),
+                          memory.copyWith(locations: locs),
                         );
                         setState(() {});
                       },
@@ -584,11 +585,7 @@ class _EliteProjectMemoryEditorState extends State<EliteProjectMemoryEditor>
                             : atmosphereController.text.trim(),
                       );
 
-                      final locs = [..._project.memory.locations, location];
-                      await widget.projectService.updateProjectMemory(
-                        _project.id,
-                        _project.memory.copyWith(locations: locs),
-                      );
+                      await widget.projectService.addLocation(_project.id, location);
 
                       Navigator.pop(context);
                       setState(() {});
@@ -614,7 +611,7 @@ class _EliteProjectMemoryEditorState extends State<EliteProjectMemoryEditor>
   // ============================================================================
 
   Widget _buildPlotPointsTab(bool isDark) {
-    final plotPoints = _project.memory.plotPoints;
+    final plotPoints = _project.memory?.plotPoints ?? [];
 
     return Column(
       children: [
@@ -662,6 +659,8 @@ class _EliteProjectMemoryEditorState extends State<EliteProjectMemoryEditor>
         children: [
           GestureDetector(
             onTap: () async {
+              final memory = _project.memory;
+              if (memory == null) return;
               final updated = PlotPoint(
                 id: plotPoint.id,
                 description: plotPoint.description,
@@ -669,12 +668,12 @@ class _EliteProjectMemoryEditorState extends State<EliteProjectMemoryEditor>
                 type: plotPoint.type,
                 isResolved: !plotPoint.isResolved,
               );
-              final points = _project.memory.plotPoints
+              final points = memory.plotPoints
                   .map((p) => p.id == plotPoint.id ? updated : p)
                   .toList();
               await widget.projectService.updateProjectMemory(
                 _project.id,
-                _project.memory.copyWith(plotPoints: points),
+                memory.copyWith(plotPoints: points),
               );
               setState(() {});
             },
@@ -877,7 +876,7 @@ class _EliteProjectMemoryEditorState extends State<EliteProjectMemoryEditor>
   // ============================================================================
 
   Widget _buildTopicsTab(bool isDark) {
-    final topics = _project.memory.topics;
+    final topics = _project.memory?.topics ?? [];
 
     return Column(
       children: [
@@ -961,7 +960,7 @@ class _EliteProjectMemoryEditorState extends State<EliteProjectMemoryEditor>
   // ============================================================================
 
   Widget _buildFactsTab(bool isDark) {
-    final facts = _project.memory.facts;
+    final facts = _project.memory?.facts ?? [];
 
     return Column(
       children: [
@@ -1101,7 +1100,7 @@ class _EliteProjectMemoryEditorState extends State<EliteProjectMemoryEditor>
   // ============================================================================
 
   Widget _buildStyleTab(bool isDark) {
-    final style = _project.memory.style;
+    final style = _project.memory?.style ?? const StyleMemory();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -1182,15 +1181,16 @@ class _EliteProjectMemoryEditorState extends State<EliteProjectMemoryEditor>
             final isSelected = currentValue == option;
             return GestureDetector(
               onTap: () async {
+                final currentStyle = _project.memory?.style ?? const StyleMemory();
                 final newStyle = StyleMemory(
-                  tone: label == 'Tone' ? option : _project.memory.style.tone,
+                  tone: label == 'Tone' ? option : currentStyle.tone,
                   pointOfView: label == 'Point of View'
                       ? option
-                      : _project.memory.style.pointOfView,
-                  tense: label == 'Tense' ? option : _project.memory.style.tense,
-                  avoidWords: _project.memory.style.avoidWords,
-                  preferWords: _project.memory.style.preferWords,
-                  customInstructions: _project.memory.style.customInstructions,
+                      : currentStyle.pointOfView,
+                  tense: label == 'Tense' ? option : currentStyle.tense,
+                  avoidWords: currentStyle.avoidWords,
+                  preferWords: currentStyle.preferWords,
+                  customInstructions: currentStyle.customInstructions,
                 );
                 await widget.projectService.updateStyle(_project.id, newStyle);
                 setState(() {});
@@ -1269,8 +1269,9 @@ class _EliteProjectMemoryEditorState extends State<EliteProjectMemoryEditor>
   }
 
   void _editCustomInstructions() {
+    final currentStyle = _project.memory?.style ?? const StyleMemory();
     final controller = TextEditingController(
-      text: _project.memory.style.customInstructions ?? '',
+      text: currentStyle.customInstructions ?? '',
     );
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -1311,12 +1312,13 @@ class _EliteProjectMemoryEditorState extends State<EliteProjectMemoryEditor>
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () async {
+                      final existingStyle = _project.memory?.style ?? const StyleMemory();
                       final newStyle = StyleMemory(
-                        tone: _project.memory.style.tone,
-                        pointOfView: _project.memory.style.pointOfView,
-                        tense: _project.memory.style.tense,
-                        avoidWords: _project.memory.style.avoidWords,
-                        preferWords: _project.memory.style.preferWords,
+                        tone: existingStyle.tone,
+                        pointOfView: existingStyle.pointOfView,
+                        tense: existingStyle.tense,
+                        avoidWords: existingStyle.avoidWords,
+                        preferWords: existingStyle.preferWords,
                         customInstructions: controller.text.trim().isEmpty
                             ? null
                             : controller.text.trim(),

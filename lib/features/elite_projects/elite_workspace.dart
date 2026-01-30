@@ -1068,9 +1068,9 @@ class _EliteWorkspaceState extends State<EliteWorkspace> with TickerProviderStat
 
   Widget _buildMemorySummary(bool isDark) {
     final memory = widget.project.memory;
-    final hasMemory = memory.characters.isNotEmpty ||
+    final hasMemory = memory != null && (memory.characters.isNotEmpty ||
         memory.facts.isNotEmpty ||
-        memory.locations.isNotEmpty;
+        memory.locations.isNotEmpty);
     
     if (!hasMemory) {
       return Container(
@@ -1130,7 +1130,7 @@ class _EliteWorkspaceState extends State<EliteWorkspace> with TickerProviderStat
           spacing: 6,
           runSpacing: 6,
           children: [
-            if (memory.characters.isNotEmpty)
+            if (memory!.characters.isNotEmpty)
               _buildMemoryChip('${memory.characters.length} characters', Icons.person, isDark),
             if (memory.locations.isNotEmpty)
               _buildMemoryChip('${memory.locations.length} locations', Icons.place, isDark),
@@ -1486,12 +1486,12 @@ class _EliteWorkspaceState extends State<EliteWorkspace> with TickerProviderStat
                   child: ElevatedButton(
                     onPressed: () async {
                       if (controller.text.trim().isEmpty) return;
-                      
-                      await widget.projectService.addSection(
+
+                      await widget.projectService.addSectionByTitle(
                         widget.project.id,
                         controller.text.trim(),
                       );
-                      
+
                       Navigator.pop(context);
                       setState(() {});
                     },

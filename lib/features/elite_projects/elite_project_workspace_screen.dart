@@ -873,7 +873,7 @@ class _EliteProjectWorkspaceScreenState extends State<EliteProjectWorkspaceScree
 
   Widget _buildMemoryContent(bool isDark) {
     final memory = _project.memory;
-    
+
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       children: [
@@ -883,25 +883,25 @@ class _EliteProjectWorkspaceScreenState extends State<EliteProjectWorkspaceScree
           _buildMemorySection(
             'Characters',
             Icons.person,
-            memory.characters.map((c) => c.name).toList(),
+            memory?.characters.values.map((c) => c.name).toList() ?? [],
             isDark,
             onAdd: _addCharacter,
           ),
           const SizedBox(height: 16),
         ],
-        
+
         // Locations
         if (_project.type == EliteProjectType.novel) ...[
           _buildMemorySection(
             'Locations',
             Icons.place,
-            memory.locations.map((l) => l.name).toList(),
+            memory?.locations.values.map((l) => l.name).toList() ?? [],
             isDark,
             onAdd: _addLocation,
           ),
           const SizedBox(height: 16),
         ],
-        
+
         // Topics (for courses, blogs)
         if (_project.type == EliteProjectType.course ||
             _project.type == EliteProjectType.blog ||
@@ -909,23 +909,23 @@ class _EliteProjectWorkspaceScreenState extends State<EliteProjectWorkspaceScree
           _buildMemorySection(
             'Topics',
             Icons.topic,
-            memory.topics.map((t) => t.name).toList(),
+            memory?.topics.map((t) => t.name).toList() ?? [],
             isDark,
             onAdd: _addTopic,
           ),
           const SizedBox(height: 16),
         ],
-        
+
         // Key Facts
         _buildMemorySection(
           'Key Facts',
           Icons.lightbulb_outline,
-          memory.facts.map((f) => f.fact).toList(),
+          memory?.facts.map((f) => f.fact).toList() ?? [],
           isDark,
           onAdd: _addFact,
         ),
         const SizedBox(height: 16),
-        
+
         // Style
         _buildStyleSection(isDark),
       ],
@@ -1000,7 +1000,7 @@ class _EliteProjectWorkspaceScreenState extends State<EliteProjectWorkspaceScree
   }
 
   Widget _buildStyleSection(bool isDark) {
-    final style = _project.memory.style;
+    final style = _project.memory?.style ?? const StyleMemory();
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

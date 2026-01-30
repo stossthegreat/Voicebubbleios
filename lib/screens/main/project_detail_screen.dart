@@ -89,7 +89,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
       final eliteProject = ProjectBridge.fromLegacyProject(legacyProject, items);
       
       // Save to Elite Projects system
-      await _eliteProjectService.createProject(eliteProject);
+      await _eliteProjectService.updateProject(eliteProject);
       
       setState(() {
         _eliteProject = eliteProject;
@@ -130,12 +130,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
           // Navigate to recording screen
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => RecordingScreen(
-                projectId: _eliteProject!.id,
-                projectName: _eliteProject!.name,
-              ),
-            ),
+            MaterialPageRoute(builder: (context) => const RecordingScreen()),
           );
         },
         onAIPresetPressed: (presetId, systemPrompt) {
