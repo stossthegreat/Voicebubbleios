@@ -9,7 +9,6 @@ import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
 import 'elite_project_models.dart';
-import 'elite_project_templates.dart';
 
 const _uuid = Uuid();
 
@@ -35,10 +34,11 @@ class EliteProjectService extends ChangeNotifier {
   
   EliteProject? get activeProject {
     if (_activeProjectId == null) return null;
-    return _projects.firstWhere(
-      (p) => p.id == _activeProjectId,
-      orElse: () => _projects.first,
-    );
+    try {
+      return _projects.firstWhere((p) => p.id == _activeProjectId);
+    } catch (e) {
+      return _projects.isNotEmpty ? _projects.first : null;
+    }
   }
 
   // ============================================================================
@@ -97,13 +97,15 @@ class EliteProjectService extends ChangeNotifier {
         ? EliteProjectTemplateRegistry.getTemplate(templateId)
         : null;
     
+    final now = DateTime.now();
+    
     final project = EliteProject(
       id: _uuid.v4(),
       name: name,
       subtitle: subtitle,
       type: type,
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
+      createdAt: now,
+      updatedAt: now,
       colorIndex: colorIndex,
       structure: template?.generateStructure() ?? ProjectStructure(sections: [
         ProjectSection(
@@ -112,11 +114,12 @@ class EliteProjectService extends ChangeNotifier {
           description: 'Your first section',
         ),
       ]),
-      goals: template?.suggestedGoals ?? ProjectGoals(),
+      projectGoals: template?.suggestedGoals ?? const ProjectGoals(),
       progress: ProjectProgress(
         totalSections: template?.sections.length ?? 1,
       ),
       memory: ProjectMemory(
+        lastUpdated: now,  // FIX: Added required lastUpdated
         style: template?.suggestedStyle ?? const StyleMemory(),
       ),
     );
@@ -151,10 +154,11 @@ class EliteProjectService extends ChangeNotifier {
   // ============================================================================
 
   EliteProject? getProject(String id) {
-    return _projects.firstWhere(
-      (p) => p.id == id,
-      orElse: () => throw Exception('Project not found: $id'),
-    );
+    try {
+      return _projects.firstWhere((p) => p.id == id);
+    } catch (e) {
+      return null;
+    }
   }
 
   List<EliteProject> getProjectsByType(EliteProjectType type) {
@@ -203,7 +207,7 @@ class EliteProjectService extends ChangeNotifier {
     final project = getProject(projectId);
     if (project == null) return;
     
-    await updateProject(project.copyWith(goals: goals));
+    await updateProject(project.copyWith(projectGoals: goals));
   }
 
   Future<void> updateProjectMemory(String projectId, ProjectMemory memory) async {
@@ -262,6 +266,28 @@ class EliteProjectService extends ChangeNotifier {
     ));
   }
 
+  Future<void> updateSectionContent(
+    String projectId,
+    String sectionId,
+    String content,
+  ) async {
+    final project = getProject(projectId);
+    if (project == null) return;
+    
+    final section = _findSection(project.structure.sections, sectionId);
+    if (section == null) return;
+    
+    final wordCount = content.split(RegExp(r'\s+')).where((s) => s.isNotEmpty).length;
+    
+    final updatedSection = section.copyWith(
+      content: content,
+      wordCount: wordCount,
+      updatedAt: DateTime.now(),
+    );
+    
+    await updateSection(projectId, updatedSection);
+  }
+
   Future<void> deleteSection(String projectId, String sectionId) async {
     final project = getProject(projectId);
     if (project == null) return;
@@ -283,7 +309,7 @@ class EliteProjectService extends ChangeNotifier {
   Future<void> reorderSections(
     String projectId,
     List<String> sectionIds, {
-    String? parentSectionId,
+    String? parentId,
   }) async {
     final project = getProject(projectId);
     if (project == null) return;
@@ -291,191 +317,132 @@ class EliteProjectService extends ChangeNotifier {
     final newStructure = _reorderSectionsInStructure(
       project.structure,
       sectionIds,
-      parentSectionId,
+      parentId,
     );
     
     await updateProject(project.copyWith(structure: newStructure));
   }
 
   // ============================================================================
-  // PROGRESS TRACKING
+  // PROGRESS OPERATIONS
   // ============================================================================
 
-  Future<void> recordProgress(
-    String projectId, {
-    int wordsWritten = 0,
-    int minutesWorked = 0,
-    int sectionsCompleted = 0,
+  Future<void> updateProgress(String projectId, {
+    int? wordsAdded,
+    int? minutesWorked,
+    bool? sectionCompleted,
   }) async {
     final project = getProject(projectId);
     if (project == null) return;
     
-    final today = DateTime.now();
-    final todayDate = DateTime(today.year, today.month, today.day);
+    final now = DateTime.now();
+    final dateKey = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
     
-    // Update daily history
-    final history = List<DailyProgress>.from(project.progress.dailyHistory);
-    final todayIndex = history.indexWhere((d) => 
-      d.date.year == todayDate.year &&
-      d.date.month == todayDate.month &&
-      d.date.day == todayDate.day
-    );
-    
-    if (todayIndex >= 0) {
-      history[todayIndex] = DailyProgress(
-        date: todayDate,
-        wordsWritten: history[todayIndex].wordsWritten + wordsWritten,
-        minutesWorked: history[todayIndex].minutesWorked + minutesWorked,
-        sectionsCompleted: history[todayIndex].sectionsCompleted + sectionsCompleted,
-      );
-    } else {
-      history.add(DailyProgress(
-        date: todayDate,
-        wordsWritten: wordsWritten,
-        minutesWorked: minutesWorked,
-        sectionsCompleted: sectionsCompleted,
-      ));
-    }
-    
-    // Calculate streak
-    final streak = _calculateStreak(history);
+    final dailyProgress = Map<String, int>.from(project.progress.dailyProgress);
+    dailyProgress[dateKey] = (dailyProgress[dateKey] ?? 0) + (wordsAdded ?? 0);
     
     await updateProject(project.copyWith(
       progress: project.progress.copyWith(
-        totalWordCount: project.progress.totalWordCount + wordsWritten,
-        sectionsComplete: project.progress.sectionsComplete + sectionsCompleted,
-        lastWorkedOn: DateTime.now(),
-        dailyHistory: history,
-        currentStreak: streak,
-        longestStreak: streak > project.progress.longestStreak 
-            ? streak 
-            : project.progress.longestStreak,
+        totalWordCount: project.progress.totalWordCount + (wordsAdded ?? 0),
+        lastWorkedOn: now,
+        dailyProgress: dailyProgress,
+        totalTimeMinutes: project.progress.totalTimeMinutes + (minutesWorked ?? 0),
+        lastSessionAt: now,
       ),
     ));
   }
 
-  int _calculateStreak(List<DailyProgress> history) {
-    if (history.isEmpty) return 0;
-    
-    // Sort by date descending
-    final sorted = List<DailyProgress>.from(history)
-      ..sort((a, b) => b.date.compareTo(a.date));
-    
-    int streak = 0;
-    DateTime? lastDate;
-    
-    for (final progress in sorted) {
-      if (progress.wordsWritten > 0 || progress.minutesWorked > 0) {
-        if (lastDate == null) {
-          // First day with progress
-          final today = DateTime.now();
-          final todayDate = DateTime(today.year, today.month, today.day);
-          final progressDate = DateTime(
-            progress.date.year,
-            progress.date.month,
-            progress.date.day,
-          );
-          
-          // Only count if it's today or yesterday
-          final diff = todayDate.difference(progressDate).inDays;
-          if (diff > 1) break;
-          
-          streak = 1;
-          lastDate = progressDate;
-        } else {
-          // Check if consecutive
-          final progressDate = DateTime(
-            progress.date.year,
-            progress.date.month,
-            progress.date.day,
-          );
-          final diff = lastDate.difference(progressDate).inDays;
-          
-          if (diff == 1) {
-            streak++;
-            lastDate = progressDate;
-          } else {
-            break;
-          }
-        }
-      }
-    }
-    
-    return streak;
-  }
-
   // ============================================================================
-  // MEMORY OPERATIONS
+  // AI MEMORY OPERATIONS
   // ============================================================================
 
   Future<void> addCharacter(String projectId, CharacterMemory character) async {
     final project = getProject(projectId);
-    if (project == null) return;
+    if (project == null || project.memory == null) return;
     
-    final characters = List<CharacterMemory>.from(project.memory.characters)
-      ..add(character);
+    final characters = Map<String, CharacterMemory>.from(project.memory!.characters);
+    characters[character.id] = character;
     
     await updateProject(project.copyWith(
-      memory: project.memory.copyWith(characters: characters),
+      memory: project.memory!.copyWith(
+        characters: characters,
+        lastUpdated: DateTime.now(),
+      ),
     ));
   }
 
   Future<void> updateCharacter(String projectId, CharacterMemory character) async {
-    final project = getProject(projectId);
-    if (project == null) return;
-    
-    final characters = List<CharacterMemory>.from(project.memory.characters);
-    final index = characters.indexWhere((c) => c.id == character.id);
-    if (index >= 0) {
-      characters[index] = character;
-      await updateProject(project.copyWith(
-        memory: project.memory.copyWith(characters: characters),
-      ));
-    }
+    await addCharacter(projectId, character); // Same operation for maps
   }
 
   Future<void> deleteCharacter(String projectId, String characterId) async {
     final project = getProject(projectId);
-    if (project == null) return;
+    if (project == null || project.memory == null) return;
     
-    final characters = project.memory.characters
-        .where((c) => c.id != characterId)
-        .toList();
+    final characters = Map<String, CharacterMemory>.from(project.memory!.characters);
+    characters.remove(characterId);
     
     await updateProject(project.copyWith(
-      memory: project.memory.copyWith(characters: characters),
+      memory: project.memory!.copyWith(
+        characters: characters,
+        lastUpdated: DateTime.now(),
+      ),
+    ));
+  }
+
+  Future<void> addLocation(String projectId, LocationMemory location) async {
+    final project = getProject(projectId);
+    if (project == null || project.memory == null) return;
+    
+    final locations = Map<String, LocationMemory>.from(project.memory!.locations);
+    locations[location.id] = location;
+    
+    await updateProject(project.copyWith(
+      memory: project.memory!.copyWith(
+        locations: locations,
+        lastUpdated: DateTime.now(),
+      ),
     ));
   }
 
   Future<void> addFact(String projectId, FactMemory fact) async {
     final project = getProject(projectId);
-    if (project == null) return;
+    if (project == null || project.memory == null) return;
     
-    final facts = List<FactMemory>.from(project.memory.facts)..add(fact);
+    final facts = List<FactMemory>.from(project.memory!.facts)..add(fact);
     
     await updateProject(project.copyWith(
-      memory: project.memory.copyWith(facts: facts),
+      memory: project.memory!.copyWith(
+        facts: facts,
+        lastUpdated: DateTime.now(),
+      ),
     ));
   }
 
   Future<void> addPlotPoint(String projectId, PlotPoint plotPoint) async {
     final project = getProject(projectId);
-    if (project == null) return;
+    if (project == null || project.memory == null) return;
     
-    final plotPoints = List<PlotPoint>.from(project.memory.plotPoints)
+    final plotPoints = List<PlotPoint>.from(project.memory!.plotPoints)
       ..add(plotPoint);
     
     await updateProject(project.copyWith(
-      memory: project.memory.copyWith(plotPoints: plotPoints),
+      memory: project.memory!.copyWith(
+        plotPoints: plotPoints,
+        lastUpdated: DateTime.now(),
+      ),
     ));
   }
 
   Future<void> updateStyle(String projectId, StyleMemory style) async {
     final project = getProject(projectId);
-    if (project == null) return;
+    if (project == null || project.memory == null) return;
     
     await updateProject(project.copyWith(
-      memory: project.memory.copyWith(style: style),
+      memory: project.memory!.copyWith(
+        style: style,
+        lastUpdated: DateTime.now(),
+      ),
     ));
   }
 
@@ -577,10 +544,22 @@ class EliteProjectService extends ChangeNotifier {
   int _countCompletedSections(List<ProjectSection> sections) {
     int count = 0;
     for (final section in sections) {
-      if (section.status == SectionStatus.complete) count++;
+      if (section.status == SectionStatus.completed || 
+          section.status == SectionStatus.complete) {
+        count++;
+      }
       count += _countCompletedSections(section.children);
     }
     return count;
+  }
+
+  ProjectSection? _findSection(List<ProjectSection> sections, String id) {
+    for (final section in sections) {
+      if (section.id == id) return section;
+      final found = _findSection(section.children, id);
+      if (found != null) return found;
+    }
+    return null;
   }
 
   ProjectStructure _addSectionToStructure(
@@ -667,14 +646,11 @@ class EliteProjectService extends ChangeNotifier {
   ) {
     if (parentId == null) {
       // Reorder top-level sections
-      final reordered = <ProjectSection>[];
-      for (final id in sectionIds) {
-        final section = structure.sections.firstWhere(
-          (s) => s.id == id,
-          orElse: () => throw Exception('Section not found: $id'),
-        );
-        reordered.add(section.copyWith(order: reordered.length));
-      }
+      final sectionMap = {for (var s in structure.sections) s.id: s};
+      final reordered = sectionIds
+          .where((id) => sectionMap.containsKey(id))
+          .map((id) => sectionMap[id]!)
+          .toList();
       return structure.copyWith(sections: reordered);
     }
     
@@ -690,14 +666,11 @@ class EliteProjectService extends ChangeNotifier {
   ) {
     return sections.map((section) {
       if (section.id == parentId) {
-        final reordered = <ProjectSection>[];
-        for (final id in sectionIds) {
-          final child = section.children.firstWhere(
-            (s) => s.id == id,
-            orElse: () => throw Exception('Section not found: $id'),
-          );
-          reordered.add(child.copyWith(order: reordered.length));
-        }
+        final childMap = {for (var c in section.children) c.id: c};
+        final reordered = sectionIds
+            .where((id) => childMap.containsKey(id))
+            .map((id) => childMap[id]!)
+            .toList();
         return section.copyWith(children: reordered);
       }
       return section.copyWith(
@@ -712,11 +685,7 @@ class EliteProjectService extends ChangeNotifier {
     String recordingId,
   ) {
     return structure.copyWith(
-      sections: _addRecordingToSectionList(
-        structure.sections,
-        sectionId,
-        recordingId,
-      ),
+      sections: _addRecordingToSectionList(structure.sections, sectionId, recordingId),
     );
   }
 
@@ -727,18 +696,14 @@ class EliteProjectService extends ChangeNotifier {
   ) {
     return sections.map((section) {
       if (section.id == sectionId) {
-        final itemIds = List<String>.from(section.itemIds);
-        if (!itemIds.contains(recordingId)) {
-          itemIds.add(recordingId);
+        final recordingIds = List<String>.from(section.recordingIds);
+        if (!recordingIds.contains(recordingId)) {
+          recordingIds.add(recordingId);
         }
-        return section.copyWith(itemIds: itemIds);
+        return section.copyWith(recordingIds: recordingIds);
       }
       return section.copyWith(
-        children: _addRecordingToSectionList(
-          section.children,
-          sectionId,
-          recordingId,
-        ),
+        children: _addRecordingToSectionList(section.children, sectionId, recordingId),
       );
     }).toList();
   }
@@ -748,95 +713,19 @@ class EliteProjectService extends ChangeNotifier {
     String recordingId,
   ) {
     return structure.copyWith(
-      sections: _removeRecordingFromList(structure.sections, recordingId),
+      sections: _removeRecordingFromSectionList(structure.sections, recordingId),
     );
   }
 
-  List<ProjectSection> _removeRecordingFromList(
+  List<ProjectSection> _removeRecordingFromSectionList(
     List<ProjectSection> sections,
     String recordingId,
   ) {
     return sections.map((section) {
-      final itemIds = List<String>.from(section.itemIds)..remove(recordingId);
       return section.copyWith(
-        itemIds: itemIds,
-        children: _removeRecordingFromList(section.children, recordingId),
+        recordingIds: section.recordingIds.where((id) => id != recordingId).toList(),
+        children: _removeRecordingFromSectionList(section.children, recordingId),
       );
     }).toList();
-  }
-}
-
-// ============================================================================
-// STATISTICS AND ANALYTICS
-// ============================================================================
-
-class ProjectStatistics {
-  final int totalProjects;
-  final int totalWords;
-  final int totalSections;
-  final int completedSections;
-  final Duration totalTimeWorked;
-  final int currentStreak;
-  final int longestStreak;
-  final Map<EliteProjectType, int> projectsByType;
-
-  ProjectStatistics({
-    required this.totalProjects,
-    required this.totalWords,
-    required this.totalSections,
-    required this.completedSections,
-    required this.totalTimeWorked,
-    required this.currentStreak,
-    required this.longestStreak,
-    required this.projectsByType,
-  });
-
-  double get completionRate {
-    if (totalSections == 0) return 0;
-    return completedSections / totalSections;
-  }
-
-  static ProjectStatistics fromProjects(List<EliteProject> projects) {
-    int totalWords = 0;
-    int totalSections = 0;
-    int completedSections = 0;
-    int totalMinutes = 0;
-    int maxStreak = 0;
-    final projectsByType = <EliteProjectType, int>{};
-
-    for (final project in projects) {
-      totalWords += project.progress.totalWordCount;
-      totalSections += project.progress.totalSections;
-      completedSections += project.progress.sectionsComplete;
-      
-      for (final daily in project.progress.dailyHistory) {
-        totalMinutes += daily.minutesWorked;
-      }
-      
-      if (project.progress.longestStreak > maxStreak) {
-        maxStreak = project.progress.longestStreak;
-      }
-      
-      projectsByType[project.type] = (projectsByType[project.type] ?? 0) + 1;
-    }
-
-    // Calculate current streak across all projects
-    int currentStreak = 0;
-    if (projects.isNotEmpty) {
-      currentStreak = projects
-          .map((p) => p.progress.currentStreak)
-          .reduce((a, b) => a > b ? a : b);
-    }
-
-    return ProjectStatistics(
-      totalProjects: projects.length,
-      totalWords: totalWords,
-      totalSections: totalSections,
-      completedSections: completedSections,
-      totalTimeWorked: Duration(minutes: totalMinutes),
-      currentStreak: currentStreak,
-      longestStreak: maxStreak,
-      projectsByType: projectsByType,
-    );
   }
 }
