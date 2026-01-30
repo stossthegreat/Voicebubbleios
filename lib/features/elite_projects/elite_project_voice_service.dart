@@ -57,7 +57,6 @@ class EliteProjectVoiceService {
       aiContext: EliteProjectAIContextService.generateFullContext(
         project,
         sectionId: sectionId,
-        currentSectionContent: section.content,
       ),
       suggestedPresets: _getSuggestedPresetsForSection(project, section),
     );
@@ -155,7 +154,6 @@ class EliteProjectVoiceService {
     // For now, return empty list - implement based on your AI backend
     final extractionPrompt = EliteProjectAIContextService.generateFullContext(
       project,
-      content,
     );
     
     // TODO: Call AI service with extractionPrompt
