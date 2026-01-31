@@ -305,6 +305,7 @@ class _ResultScreenState extends State<ResultScreen> {
         editHistory: List.from(_textHistory),
         presetId: appState.selectedPreset?.id ?? '',
         continuedFromId: continueContext?.singleItemId, // 🔥 LINK TO ORIGINAL CARD
+        contentType: 'voice',
       );
 
       debugPrint('💾 Created item: ${item.id}');

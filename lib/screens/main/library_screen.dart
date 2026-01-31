@@ -11,11 +11,13 @@ import '../../widgets/create_project_dialog.dart';
 import '../../widgets/tag_filter_chips.dart';
 import '../../widgets/tag_chip.dart';
 import '../../widgets/tag_management_dialog.dart';
+import '../../widgets/multi_option_fab.dart';
 import '../../constants/presets.dart';
 import '../../services/continue_service.dart';
 import 'project_detail_screen.dart';
 import 'recording_detail_screen.dart';
 import 'recording_screen.dart';
+import 'text_creation_screen.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -259,25 +261,45 @@ class _LibraryScreenState extends State<LibraryScreen> {
           },
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          if (_showProjects) {
-            _showCreateProjectDialog(context);
-          } else {
-            // Navigate to recording screen for new recording
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const RecordingScreen(),
-              ),
-            );
-          }
+      floatingActionButton: MultiOptionFab(
+        showProjectOption: _showProjects,
+        onVoicePressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const RecordingScreen(),
+            ),
+          );
         },
-        backgroundColor: const Color(0xFF3B82F6),
-        child: Icon(
-          _showProjects ? Icons.add : Icons.mic,
-          color: Colors.white,
-        ),
+        onTextPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const TextCreationScreen(),
+            ),
+          );
+        },
+        onNotePressed: () {
+          // Quick note creation - goes directly to text creation screen
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const TextCreationScreen(isQuickNote: true),
+            ),
+          );
+        },
+        onImagePressed: () {
+          // TODO: Implement image creation
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Image creation coming soon!'),
+              backgroundColor: Color(0xFF10B981),
+            ),
+          );
+        },
+        onProjectPressed: () {
+          _showCreateProjectDialog(context);
+        },
       ),
     );
   }
@@ -302,12 +324,29 @@ class _LibraryScreenState extends State<LibraryScreen> {
     Color textColor,
     Color secondaryTextColor,
   ) {
+    final contentTypeColor = _getContentTypeColor(item.contentType);
+    final contentTypeIcon = _getContentTypeIcon(item.contentType);
+    
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => RecordingDetailScreen(recordingId: item.id)),
-        );
+        if (item.contentType == 'text') {
+          // Navigate to text editor for text documents
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => TextCreationScreen(
+                itemId: item.id,
+                initialText: item.finalText,
+              ),
+            ),
+          );
+        } else {
+          // Navigate to recording detail for voice recordings
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => RecordingDetailScreen(recordingId: item.id)),
+          );
+        }
       },
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -322,19 +361,54 @@ class _LibraryScreenState extends State<LibraryScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Date/time at top
-            Text(
-              item.formattedDate,
-              style: TextStyle(
-                fontSize: 11,
-                color: secondaryTextColor,
-              ),
+            // Header row with content type indicator and date
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Content type indicator
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: contentTypeColor.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        contentTypeIcon,
+                        size: 12,
+                        color: contentTypeColor,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        item.contentType.toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: contentTypeColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Date/time
+                Text(
+                  item.formattedDate,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: secondaryTextColor,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 12),
             
-            // Title (first line of content, bold)
+            // Title (custom title if available, otherwise first line of content)
             Text(
-              item.finalText.split('\n').first,
+              item.customTitle?.isNotEmpty == true 
+                  ? item.customTitle! 
+                  : item.finalText.split('\n').first,
               style: TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.bold,
@@ -345,9 +419,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
             ),
             const SizedBox(height: 8),
             
-            // Preview text (remaining content)
+            // Preview text (show content, but skip first line if we used it as title and no custom title)
             Text(
-              item.finalText,
+              item.customTitle?.isNotEmpty == true 
+                  ? item.finalText
+                  : _getPreviewText(item.finalText),
               style: TextStyle(
                 fontSize: 14,
                 color: secondaryTextColor,
@@ -387,5 +463,37 @@ class _LibraryScreenState extends State<LibraryScreen> {
         ),
       ),
     );
+  }
+
+  String _getPreviewText(String fullText) {
+    final lines = fullText.split('\n');
+    if (lines.length <= 1) {
+      return ''; // No preview if only one line
+    }
+    return lines.skip(1).join('\n');
+  }
+
+  IconData _getContentTypeIcon(String contentType) {
+    switch (contentType) {
+      case 'text':
+        return Icons.text_fields;
+      case 'image':
+        return Icons.image;
+      case 'voice':
+      default:
+        return Icons.mic;
+    }
+  }
+
+  Color _getContentTypeColor(String contentType) {
+    switch (contentType) {
+      case 'text':
+        return const Color(0xFFF59E0B);
+      case 'image':
+        return const Color(0xFF10B981);
+      case 'voice':
+      default:
+        return const Color(0xFFEF4444);
+    }
   }
 }

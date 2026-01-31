@@ -61,6 +61,9 @@ class RecordingItem {
   
   @HiveField(18)
   String? customTitle; // User-defined custom title
+  
+  @HiveField(19)
+  String contentType; // 'voice', 'text', 'image', etc.
 
   RecordingItem({
     required this.id,
@@ -82,6 +85,7 @@ class RecordingItem {
     this.reminderNotificationId,
     this.formattedContent,
     this.customTitle,
+    this.contentType = 'voice', // Default to voice for backward compatibility
   }) : continuedInIds = continuedInIds ?? [],
        tags = tags ?? [];
 
@@ -156,6 +160,7 @@ class RecordingItem {
       reminderNotificationId: clearReminder ? null : (reminderNotificationId ?? this.reminderNotificationId),
       formattedContent: formattedContent ?? this.formattedContent,
       customTitle: customTitle ?? this.customTitle,
+      contentType: contentType ?? this.contentType,
     );
   }
 }

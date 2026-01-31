@@ -35,6 +35,8 @@ class RecordingItemAdapter extends TypeAdapter<RecordingItem> {
       reminderDateTime: fields[15] as DateTime?,
       reminderNotificationId: fields[16] as int?,
       formattedContent: fields[17] as String?,
+      customTitle: fields[18] as String?,
+      contentType: fields[19] as String? ?? 'voice',
     );
   }
 
@@ -79,7 +81,9 @@ class RecordingItemAdapter extends TypeAdapter<RecordingItem> {
       ..writeByte(17)
       ..write(obj.formattedContent)
       ..writeByte(18)
-      ..write(obj.customTitle);
+      ..write(obj.customTitle)
+      ..writeByte(19)
+      ..write(obj.contentType);
   }
 
   @override

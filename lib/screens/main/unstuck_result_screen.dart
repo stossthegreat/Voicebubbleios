@@ -104,6 +104,7 @@ class _UnstuckResultScreenState extends State<UnstuckResultScreen> {
         createdAt: DateTime.now(),
         editHistory: [_unstuckData!.action],
         continuedFromId: continueContext?.singleItemId,
+        contentType: 'voice',
       );
 
       await appState.saveRecording(item);

@@ -108,6 +108,7 @@ class _OutcomesResultScreenState extends State<OutcomesResultScreen> {
           createdAt: DateTime.now(),
           editHistory: [outcome.text],
           continuedFromId: continueContext?.singleItemId,
+          contentType: 'voice',
         );
 
         await appState.saveRecording(item);

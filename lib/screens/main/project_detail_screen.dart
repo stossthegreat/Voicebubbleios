@@ -8,8 +8,10 @@ import '../../models/recording_item.dart';
 import '../../services/project_service.dart';
 import '../../services/continue_service.dart';
 import '../../widgets/outcome_chip.dart';
+import '../../widgets/multi_option_fab.dart';
 import 'recording_screen.dart';
 import 'recording_detail_screen.dart';
+import 'text_creation_screen.dart';
 
 class ProjectDetailScreen extends StatefulWidget {
   final String projectId;
@@ -262,8 +264,8 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
         ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
+      floatingActionButton: MultiOptionFab(
+        onVoicePressed: () {
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -271,8 +273,35 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
             ),
           );
         },
-        backgroundColor: const Color(0xFF3B82F6),
-        child: const Icon(Icons.add, color: Colors.white),
+        onTextPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => TextCreationScreen(projectId: widget.projectId),
+            ),
+          );
+        },
+        onNotePressed: () {
+          // Quick note creation within project
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => TextCreationScreen(
+                projectId: widget.projectId,
+                isQuickNote: true,
+              ),
+            ),
+          );
+        },
+        onImagePressed: () {
+          // TODO: Implement image creation
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Image creation coming soon!'),
+              backgroundColor: Color(0xFF10B981),
+            ),
+          );
+        },
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
@@ -562,6 +591,30 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
           ),
         );
       }
+    }
+  }
+
+  IconData _getContentTypeIcon(String contentType) {
+    switch (contentType) {
+      case 'text':
+        return Icons.text_fields;
+      case 'image':
+        return Icons.image;
+      case 'voice':
+      default:
+        return Icons.mic;
+    }
+  }
+
+  Color _getContentTypeColor(String contentType) {
+    switch (contentType) {
+      case 'text':
+        return const Color(0xFFF59E0B);
+      case 'image':
+        return const Color(0xFF10B981);
+      case 'voice':
+      default:
+        return const Color(0xFFEF4444);
     }
   }
 }
