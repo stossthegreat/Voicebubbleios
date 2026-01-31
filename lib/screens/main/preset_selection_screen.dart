@@ -72,9 +72,14 @@ class _PresetSelectionScreenState extends State<PresetSelectionScreen>
   
   void _handlePresetSelection(BuildContext context, Preset preset) {
     final appState = context.read<AppStateProvider>();
+    print('🎯 PresetSelection - transcription: "${appState.transcription}"');
+    print('🎯 PresetSelection - fromRecording: ${widget.fromRecording}');
+    print('🎯 PresetSelection - isEmpty: ${appState.transcription.isEmpty}');
+
     appState.setSelectedPreset(preset);
-    
+
     if (widget.fromRecording && appState.transcription.isNotEmpty) {
+      print('🎯 Going to ResultScreen');
       // Coming from recording with transcription, go to result
       Navigator.pushReplacement(
         context,
@@ -83,6 +88,7 @@ class _PresetSelectionScreenState extends State<PresetSelectionScreen>
         ),
       );
     } else {
+      print('🎯 Going to RecordingScreen (transcription empty!)');
       // Go to recording
       Navigator.pushReplacement(
         context,

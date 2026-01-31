@@ -282,8 +282,10 @@ class _RecordingScreenState extends State<RecordingScreen>
         // Update app state with Whisper result
         if (!mounted) return;
         context.read<AppStateProvider>().setTranscription(transcription);
-        
+
         print('Final transcription: $transcription');
+        print('✅ SET transcription: "${transcription.substring(0, transcription.length > 50 ? 50 : transcription.length)}..."');
+        print('✅ VERIFY transcription in state: "${context.read<AppStateProvider>().transcription.substring(0, context.read<AppStateProvider>().transcription.length > 50 ? 50 : context.read<AppStateProvider>().transcription.length)}..."');
         
         // If in instructions mode, return transcription directly
         if (widget.isInstructionsMode) {
