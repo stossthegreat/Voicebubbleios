@@ -153,59 +153,68 @@ class _RecordingScreenState extends State<RecordingScreen>
   
   Future<void> _startRecording() async {
     try {
-      // Start audio recording for Whisper
-      if (await _audioRecorder.hasPermission()) {
-        final directory = await getTemporaryDirectory();
-        _audioPath = '${directory.path}/recording_${DateTime.now().millisecondsSinceEpoch}.m4a';
-
-        await _audioRecorder.start(
-          const RecordConfig(
-            encoder: AudioEncoder.aacLc,
-            bitRate: 128000,
-            sampleRate: 44100,
-          ),
-          path: _audioPath!,
-        );
+      // Check permission FIRST
+      if (!await _audioRecorder.hasPermission()) {
+        print('❌ No microphone permission');
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Microphone permission required'),
+              backgroundColor: Color(0xFFEF4444),
+            ),
+          );
+        }
+        return; // EXIT EARLY
       }
 
-      // Start live speech-to-text for recording (no display needed)
+      // Start audio recording
+      final directory = await getTemporaryDirectory();
+      _audioPath = '${directory.path}/recording_${DateTime.now().millisecondsSinceEpoch}.m4a';
+
+      await _audioRecorder.start(
+        const RecordConfig(
+          encoder: AudioEncoder.aacLc,
+          bitRate: 128000,
+          sampleRate: 44100,
+        ),
+        path: _audioPath!,
+      );
+
+      // Optional: Start speech for waveform levels
       try {
         if (_speech.isAvailable) {
           await _speech.listen(
-            onResult: (result) {
-              // We don't need to show the transcription anymore
-              print('STT result: ${result.recognizedWords}');
-            },
-            listenMode: stt.ListenMode.dictation, // Continuous dictation mode
-            pauseFor: const Duration(seconds: 30), // Don't auto-stop
+            onResult: (result) {},
+            listenMode: stt.ListenMode.dictation,
+            pauseFor: const Duration(seconds: 30),
             partialResults: true,
             onSoundLevelChange: (level) {
-              // Update target sound level - the wave animation timer will smoothly animate toward this
-              // Sound levels typically range from -2 (silence) to 10 (loud)
-              // Normalize to 0.3 (minimum wave) to 1.0 (maximum wave) for better visual feedback
               final normalizedLevel = ((level.clamp(-2, 10) + 2) / 12).clamp(0.3, 1.0);
               _targetSoundLevel = normalizedLevel;
             },
-        cancelOnError: false,
-        listenFor: const Duration(minutes: 5), // Max 5 minutes
-      );
-        } else {
-          print('Speech recognition not available for listening');
+            cancelOnError: false,
+            listenFor: const Duration(minutes: 5),
+          );
         }
-      } catch (speechError) {
-        print('Error starting speech recognition: $speechError');
+      } catch (e) {
+        print('Speech error (non-fatal): $e');
       }
 
+      // NOW set recording state
       setState(() {
         _isRecording = true;
       });
-      
+
       _startTimer();
       _startWaveAnimation();
-
       print('Recording started: $_audioPath');
+
     } catch (e) {
       print('Error starting recording: $e');
+      if (mounted) {
+        Navigator.pop(context);
+      }
     }
   }
   
