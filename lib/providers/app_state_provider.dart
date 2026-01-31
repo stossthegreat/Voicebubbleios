@@ -148,7 +148,9 @@ ContinueContext? get continueContext => _continueContext;
   }
   
   void setTranscription(String text) {
+    debugPrint('📝 setTranscription called with: "${text.length > 50 ? text.substring(0, 50) : text}..." (${text.length} chars)');
     _transcription = text;
+    debugPrint('📝 _transcription is now: "${_transcription.length > 50 ? _transcription.substring(0, 50) : _transcription}..."');
     notifyListeners();
   }
   
@@ -403,6 +405,8 @@ ContinueContext? get continueContext => _continueContext;
   }
   
   void reset() {
+    debugPrint('🔄 RESET called! Clearing transcription: "${_transcription.length > 30 ? _transcription.substring(0, 30) : _transcription}..."');
+    debugPrint('🔄 Stack trace: ${StackTrace.current.toString().split('\n').take(5).join('\n')}');
     _transcription = '';
     _rewrittenText = '';
     _selectedPreset = null;
