@@ -19,6 +19,7 @@ import 'recording_detail_screen.dart';
 import 'recording_screen.dart';
 import 'text_creation_screen.dart';
 import 'image_creation_screen.dart';
+import 'todo_creation_screen.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});
@@ -280,12 +281,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
             ),
           );
         },
-        onNotePressed: () {
-          // Quick note creation - goes directly to text creation screen
+        onTodoPressed: () {
+          // Create todo list
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => const TextCreationScreen(isQuickNote: true),
+              builder: (context) => const TodoCreationScreen(),
             ),
           );
         },
@@ -330,26 +331,21 @@ class _LibraryScreenState extends State<LibraryScreen> {
     return GestureDetector(
       onTap: () {
         if (item.contentType == 'text') {
-          // Check if it's a quick note or full document
-          if (item.presetUsed == 'Quick Note') {
-            // Use simple text editor for notes
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => TextCreationScreen(
-                  itemId: item.id,
-                  initialText: item.finalText,
-                  isQuickNote: true,
-                ),
+          // Always use rich text editor for text documents
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => RecordingDetailScreen(recordingId: item.id)),
+          );
+        } else if (item.contentType == 'todo') {
+          // Use todo editor for todos
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => TodoCreationScreen(
+                itemId: item.id,
               ),
-            );
-          } else {
-            // Use rich text editor for full documents
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => RecordingDetailScreen(recordingId: item.id)),
-            );
-          }
+            ),
+          );
         } else if (item.contentType == 'image') {
           // Navigate to image editor for images
           Navigator.push(
@@ -499,6 +495,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
         return Icons.text_fields;
       case 'image':
         return Icons.image;
+      case 'todo':
+        return Icons.checklist;
       case 'voice':
       default:
         return Icons.mic;
@@ -511,6 +509,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
         return const Color(0xFFF59E0B);
       case 'image':
         return const Color(0xFF10B981);
+      case 'todo':
+        return const Color(0xFF8B5CF6);
       case 'voice':
       default:
         return const Color(0xFFEF4444);

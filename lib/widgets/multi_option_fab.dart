@@ -5,7 +5,7 @@ class MultiOptionFab extends StatefulWidget {
   final VoidCallback? onTextPressed;
   final VoidCallback? onImagePressed;
   final VoidCallback? onProjectPressed;
-  final VoidCallback? onNotePressed;
+  final VoidCallback? onTodoPressed;
   final bool showProjectOption;
 
   const MultiOptionFab({
@@ -108,12 +108,12 @@ class _MultiOptionFabState extends State<MultiOptionFab>
                   delay: widget.showProjectOption ? 0.1 : 0.0,
                 ),
 
-                // Note option (quick text document)
+                // Todo option
                 _buildOption(
-                  icon: Icons.note_add_outlined,
-                  label: 'Note',
+                  icon: Icons.checklist,
+                  label: 'Todo',
                   color: const Color(0xFF8B5CF6),
-                  onPressed: () => _onOptionPressed(widget.onNotePressed ?? widget.onTextPressed),
+                  onPressed: () => _onOptionPressed(widget.onTodoPressed),
                   delay: widget.showProjectOption ? 0.2 : 0.1,
                 ),
 

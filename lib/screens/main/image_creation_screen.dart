@@ -252,7 +252,8 @@ class _ImageCreationScreenState extends State<ImageCreationScreen> {
             finalText: _captionController.text.trim(),
             customTitle: _titleController.text.trim().isEmpty ? null : _titleController.text.trim(),
             tags: _selectedTags,
-            // TODO: Update image path in item
+            rawTranscript: _savedImagePath ?? existingItem.rawTranscript,
+            formattedContent: _savedImagePath ?? existingItem.formattedContent,
           );
           await appState.updateRecording(updatedItem);
         }
@@ -271,6 +272,7 @@ class _ImageCreationScreenState extends State<ImageCreationScreen> {
           tags: _selectedTags,
           customTitle: _titleController.text.trim().isEmpty ? null : _titleController.text.trim(),
           contentType: 'image',
+          formattedContent: _savedImagePath, // Also store in formattedContent for display
         );
 
         await appState.saveRecording(newItem);

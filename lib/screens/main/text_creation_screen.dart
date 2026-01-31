@@ -150,7 +150,7 @@ class _TextCreationScreenState extends State<TextCreationScreen> {
         // Create new item
         final newItem = RecordingItem(
           id: const Uuid().v4(),
-          rawTranscript: '', // Empty for text documents
+          rawTranscript: _contentController.text.trim(), // Store content so it opens in main editor
           finalText: _contentController.text.trim(),
           presetUsed: widget.isQuickNote ? 'Quick Note' : 'Text Document',
           outcomes: [],

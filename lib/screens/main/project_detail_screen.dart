@@ -13,6 +13,7 @@ import 'recording_screen.dart';
 import 'recording_detail_screen.dart';
 import 'text_creation_screen.dart';
 import 'image_creation_screen.dart';
+import 'todo_creation_screen.dart';
 
 class ProjectDetailScreen extends StatefulWidget {
   final String projectId;
@@ -282,14 +283,13 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
             ),
           );
         },
-        onNotePressed: () {
-          // Quick note creation within project
+        onTodoPressed: () {
+          // Create todo list within project
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => TextCreationScreen(
+              builder: (context) => TodoCreationScreen(
                 projectId: widget.projectId,
-                isQuickNote: true,
               ),
             ),
           );
@@ -600,6 +600,8 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
         return Icons.text_fields;
       case 'image':
         return Icons.image;
+      case 'todo':
+        return Icons.checklist;
       case 'voice':
       default:
         return Icons.mic;
@@ -612,6 +614,8 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
         return const Color(0xFFF59E0B);
       case 'image':
         return const Color(0xFF10B981);
+      case 'todo':
+        return const Color(0xFF8B5CF6);
       case 'voice':
       default:
         return const Color(0xFFEF4444);
