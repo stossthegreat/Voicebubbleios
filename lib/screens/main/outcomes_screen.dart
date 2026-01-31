@@ -4,7 +4,10 @@ import '../../providers/app_state_provider.dart';
 import '../../models/outcome_type.dart';
 import '../../models/recording_item.dart';
 import '../../widgets/outcome_card.dart';
+import '../../widgets/multi_option_fab.dart';
 import 'outcome_detail_screen.dart';
+import 'recording_screen.dart';
+import 'todo_creation_screen.dart';
 
 class OutcomesScreen extends StatefulWidget {
   const OutcomesScreen({super.key});
@@ -180,6 +183,27 @@ class _OutcomesScreenState extends State<OutcomesScreen> {
                   );
                 },
               ),
+      ),
+      floatingActionButton: MultiOptionFab(
+        onVoicePressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const RecordingScreen(),
+            ),
+          );
+        },
+        onTodoPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const TodoCreationScreen(),
+            ),
+          );
+        },
+        onTextPressed: null, // Hide text option in outcomes
+        onImagePressed: null, // Hide image option in outcomes
+        onProjectPressed: null, // Hide project option in outcomes
       ),
     );
   }

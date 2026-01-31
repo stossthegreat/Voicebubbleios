@@ -522,31 +522,29 @@ class _ImageCreationScreenState extends State<ImageCreationScreen> {
                 const SizedBox(height: 16),
 
                 // Caption field
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: surfaceColor,
-                      borderRadius: BorderRadius.circular(12),
+                Container(
+                  height: 200,
+                  decoration: BoxDecoration(
+                    color: surfaceColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: TextField(
+                    controller: _captionController,
+                    focusNode: _captionFocusNode,
+                    style: const TextStyle(
+                      color: textColor,
+                      fontSize: 16,
+                      height: 1.5,
                     ),
-                    child: TextField(
-                      controller: _captionController,
-                      focusNode: _captionFocusNode,
-                      style: const TextStyle(
-                        color: textColor,
-                        fontSize: 16,
-                        height: 1.5,
-                      ),
-                      decoration: const InputDecoration(
-                        hintText: 'Add a caption or description...',
-                        hintStyle: TextStyle(color: secondaryTextColor),
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.all(16),
-                      ),
-                      maxLines: null,
-                      expands: true,
-                      textAlignVertical: TextAlignVertical.top,
-                      textCapitalization: TextCapitalization.sentences,
+                    decoration: const InputDecoration(
+                      hintText: 'Add a caption or description...',
+                      hintStyle: TextStyle(color: secondaryTextColor),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.all(16),
                     ),
+                    maxLines: null,
+                    textAlignVertical: TextAlignVertical.top,
+                    textCapitalization: TextCapitalization.sentences,
                   ),
                 ),
 

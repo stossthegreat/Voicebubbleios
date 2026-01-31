@@ -337,7 +337,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             MaterialPageRoute(builder: (context) => RecordingDetailScreen(recordingId: item.id)),
           );
         } else if (item.contentType == 'todo') {
-          // Use todo editor for todos
+          // Use todo editor for todos, but also make them appear in outcomes
           Navigator.push(
             context,
             MaterialPageRoute(

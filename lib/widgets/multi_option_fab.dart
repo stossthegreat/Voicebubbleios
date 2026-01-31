@@ -67,6 +67,34 @@ class _MultiOptionFabState extends State<MultiOptionFab>
     }
   }
 
+  double _getDelay(int index) {
+    // Calculate delay based on visible options
+    final visibleOptions = [
+      widget.onImagePressed,
+      widget.onTodoPressed, 
+      widget.onTextPressed,
+      widget.onVoicePressed,
+    ].where((callback) => callback != null).length;
+    
+    int visibleIndex = 0;
+    final callbacks = [
+      widget.onImagePressed,
+      widget.onTodoPressed,
+      widget.onTextPressed, 
+      widget.onVoicePressed,
+    ];
+    
+    for (int i = 0; i <= index; i++) {
+      if (callbacks[i] != null) {
+        if (i == index) break;
+        visibleIndex++;
+      }
+    }
+    
+    final baseDelay = widget.showProjectOption ? 0.1 : 0.0;
+    return baseDelay + (visibleIndex * 0.1);
+  }
+
   @override
   Widget build(BuildContext context) {
     const primaryColor = Color(0xFF3B82F6);

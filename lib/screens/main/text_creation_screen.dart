@@ -339,31 +339,29 @@ class _TextCreationScreenState extends State<TextCreationScreen> {
                 const SizedBox(height: 16),
 
                 // Content field
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: surfaceColor,
-                      borderRadius: BorderRadius.circular(12),
+                Container(
+                  height: 400,
+                  decoration: BoxDecoration(
+                    color: surfaceColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: TextField(
+                    controller: _contentController,
+                    focusNode: _contentFocusNode,
+                    style: const TextStyle(
+                      color: textColor,
+                      fontSize: 16,
+                      height: 1.5,
                     ),
-                    child: TextField(
-                      controller: _contentController,
-                      focusNode: _contentFocusNode,
-                      style: const TextStyle(
-                        color: textColor,
-                        fontSize: 16,
-                        height: 1.5,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: widget.isQuickNote ? 'What\'s on your mind?' : 'Start writing your document...',
-                        hintStyle: const TextStyle(color: secondaryTextColor),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.all(16),
-                      ),
-                      maxLines: null,
-                      expands: true,
-                      textAlignVertical: TextAlignVertical.top,
-                      textCapitalization: TextCapitalization.sentences,
+                    decoration: InputDecoration(
+                      hintText: widget.isQuickNote ? 'What\'s on your mind?' : 'Start writing your document...',
+                      hintStyle: const TextStyle(color: secondaryTextColor),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.all(16),
                     ),
+                    maxLines: null,
+                    textAlignVertical: TextAlignVertical.top,
+                    textCapitalization: TextCapitalization.sentences,
                   ),
                 ),
 

@@ -276,7 +276,7 @@ class _TodoCreationScreenState extends State<TodoCreationScreen> {
           rawTranscript: todoText,
           finalText: todoText,
           presetUsed: 'Todo List',
-          outcomes: [],
+          outcomes: ['task'], // Add to task outcomes for alarm/completion system
           projectId: widget.projectId,
           createdAt: DateTime.now(),
           editHistory: [],
@@ -284,6 +284,7 @@ class _TodoCreationScreenState extends State<TodoCreationScreen> {
           tags: _selectedTags,
           customTitle: _titleController.text.trim().isEmpty ? null : _titleController.text.trim(),
           contentType: 'todo',
+          isCompleted: false, // Initialize as not completed
         );
 
         await appState.saveRecording(newItem);
@@ -459,19 +460,23 @@ class _TodoCreationScreenState extends State<TodoCreationScreen> {
                 const SizedBox(height: 16),
 
                 // Todo items list
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: surfaceColor,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        Expanded(
-                          child: ListView.builder(
-                            itemCount: _todoItems.length,
-                            itemBuilder: (context, index) {
+                Container(
+                  constraints: BoxConstraints(
+                    minHeight: 400,
+                    maxHeight: MediaQuery.of(context).size.height * 0.6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: surfaceColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: _todoItems.length,
+                          itemBuilder: (context, index) {
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 8),
                                 child: Row(
@@ -573,9 +578,8 @@ class _TodoCreationScreenState extends State<TodoCreationScreen> {
                               ),
                             ],
                           ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
 
