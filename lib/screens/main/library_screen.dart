@@ -18,6 +18,7 @@ import 'project_detail_screen.dart';
 import 'recording_detail_screen.dart';
 import 'recording_screen.dart';
 import 'text_creation_screen.dart';
+import 'image_creation_screen.dart';
 
 class LibraryScreen extends StatefulWidget {
   const LibraryScreen({super.key});

@@ -12,6 +12,7 @@ import '../../widgets/multi_option_fab.dart';
 import 'recording_screen.dart';
 import 'recording_detail_screen.dart';
 import 'text_creation_screen.dart';
+import 'image_creation_screen.dart';
 
 class ProjectDetailScreen extends StatefulWidget {
   final String projectId;
