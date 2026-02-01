@@ -15,6 +15,9 @@ import '../../widgets/tag_management_dialog.dart';
 import '../../widgets/multi_option_fab.dart';
 import '../../constants/presets.dart';
 import '../../services/continue_service.dart';
+import '../templates/template_models.dart';
+import '../templates/template_registry.dart';
+import '../templates/template_fill_screen.dart';
 import 'project_detail_screen.dart';
 import 'recording_detail_screen.dart';
 import 'recording_screen.dart';
@@ -35,6 +38,10 @@ class _LibraryScreenState extends State<LibraryScreen> {
   int _viewMode = 0;
   String _searchQuery = '';
   String? _selectedTagId;
+  
+  // Template search/filter state
+  TemplateCategory? _selectedTemplateCategory;
+  String _templateSearchQuery = '';
 
   Future<void> _showCreateProjectDialog(BuildContext context) async {
     await showDialog(
@@ -79,96 +86,83 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   padding: const EdgeInsets.all(24),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
-                      // Header with All/Projects buttons on same line
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.library_books, color: textColor, size: 28),
-                              const SizedBox(width: 12),
-                              Text(
-                                'Library',
-                                style: TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.bold,
-                                  color: primaryColor,
+                      // Full-width tabs spanning from edge to edge
+                      Container(
+                        decoration: BoxDecoration(
+                          color: surfaceColor,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.all(3),
+                        child: Row(
+                          children: [
+                            // Library button - takes 1/3 width
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () => setState(() => _viewMode = 0),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: _viewMode == 0 ? primaryColor : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    'Library',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: _viewMode == 0 ? textColor : secondaryTextColor,
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ],
-                          ),
-                          
-                          // Compact Library/Projects/Templates control
-                          Container(
-                            decoration: BoxDecoration(
-                              color: surfaceColor,
-                              borderRadius: BorderRadius.circular(8),
                             ),
-                            padding: const EdgeInsets.all(3),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                // Library button
-                                GestureDetector(
-                                  onTap: () => setState(() => _viewMode = 0),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                    decoration: BoxDecoration(
-                                      color: _viewMode == 0 ? primaryColor : Colors.transparent,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      'Library',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: _viewMode == 0 ? textColor : secondaryTextColor,
-                                      ),
+                            // Projects button - takes 1/3 width
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () => setState(() => _viewMode = 1),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: _viewMode == 1 ? primaryColor : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    'Projects',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: _viewMode == 1 ? textColor : secondaryTextColor,
                                     ),
                                   ),
                                 ),
-                                // Projects button
-                                GestureDetector(
-                                  onTap: () => setState(() => _viewMode = 1),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                    decoration: BoxDecoration(
-                                      color: _viewMode == 1 ? primaryColor : Colors.transparent,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      'Projects',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: _viewMode == 1 ? textColor : secondaryTextColor,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                // Templates button
-                                GestureDetector(
-                                  onTap: () => setState(() => _viewMode = 2),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                    decoration: BoxDecoration(
-                                      color: _viewMode == 2 ? primaryColor : Colors.transparent,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      'Templates',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: _viewMode == 2 ? textColor : secondaryTextColor,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
-                          ),
-                        ],
+                            // Templates button - takes 1/3 width
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () => setState(() => _viewMode = 2),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: _viewMode == 2 ? primaryColor : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    'Templates',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: _viewMode == 2 ? textColor : secondaryTextColor,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 16),
 
@@ -625,5 +619,276 @@ class _LibraryScreenState extends State<LibraryScreen> {
       default:
         return const Color(0xFFEF4444);
     }
+  }
+
+  // Build templates view (embedded template selection)
+  Widget _buildTemplatesView(Color surfaceColor, Color textColor, Color secondaryTextColor) {
+    // Get filtered templates
+    List<AppTemplate> filteredTemplates;
+    if (_templateSearchQuery.isNotEmpty) {
+      filteredTemplates = searchTemplates(_templateSearchQuery);
+    } else if (_selectedTemplateCategory != null) {
+      filteredTemplates = getTemplatesByCategory(_selectedTemplateCategory!);
+    } else {
+      filteredTemplates = allTemplates;
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Category pills
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              _buildTemplateCategoryPill(null, 'All', Icons.apps, surfaceColor, textColor, secondaryTextColor),
+              ...TemplateCategory.values.map((cat) => 
+                _buildTemplateCategoryPill(cat, cat.displayName, cat.icon, surfaceColor, textColor, secondaryTextColor)
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Featured section (when no filter)
+        if (_selectedTemplateCategory == null && _templateSearchQuery.isEmpty) ...[
+          Row(
+            children: [
+              Icon(Icons.star, color: const Color(0xFFF59E0B), size: 18),
+              const SizedBox(width: 8),
+              Text(
+                'Featured',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 140,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: getFeaturedTemplates().length,
+              itemBuilder: (context, index) {
+                final template = getFeaturedTemplates()[index];
+                return _buildFeaturedTemplateCard(template, surfaceColor, textColor, secondaryTextColor);
+              },
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'All Templates',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: textColor,
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+        
+        // Templates grid
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            childAspectRatio: 0.85,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+          ),
+          itemCount: filteredTemplates.length,
+          itemBuilder: (context, index) {
+            final template = filteredTemplates[index];
+            return _buildTemplateCard(template, surfaceColor, textColor, secondaryTextColor);
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTemplateCategoryPill(TemplateCategory? category, String label, IconData icon, 
+      Color surfaceColor, Color textColor, Color secondaryTextColor) {
+    final isSelected = _selectedTemplateCategory == category;
+    final color = category?.color ?? const Color(0xFF8B5CF6);
+    
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: GestureDetector(
+        onTap: () => setState(() => _selectedTemplateCategory = category),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected ? color.withOpacity(0.2) : surfaceColor,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isSelected ? color : Colors.white.withOpacity(0.1),
+              width: isSelected ? 2 : 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 16, color: isSelected ? color : secondaryTextColor),
+              const SizedBox(width: 6),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  color: isSelected ? color : secondaryTextColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFeaturedTemplateCard(AppTemplate template, Color surfaceColor, Color textColor, Color secondaryTextColor) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => TemplateFillScreen(template: template)),
+        );
+      },
+      child: Container(
+        width: 200,
+        margin: const EdgeInsets.only(right: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [template.category.color.withOpacity(0.2), template.category.color.withOpacity(0.05)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: template.category.color.withOpacity(0.3), width: 1.5),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: template.category.color.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(template.category.icon, color: template.category.color, size: 20),
+                ),
+                const Spacer(),
+                if (template.isPro)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF59E0B),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Text('PRO', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white)),
+                  ),
+              ],
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  template.title,
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: textColor),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  template.description,
+                  style: TextStyle(fontSize: 11, color: secondaryTextColor),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTemplateCard(AppTemplate template, Color surfaceColor, Color textColor, Color secondaryTextColor) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => TemplateFillScreen(template: template)),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: surfaceColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: template.category.color.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(template.category.icon, color: template.category.color, size: 18),
+                ),
+                if (template.isPro)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF59E0B),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Text('PRO', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white)),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              template.title,
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: textColor),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              template.description,
+              style: TextStyle(fontSize: 11, color: secondaryTextColor),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const Spacer(),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: template.category.color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                template.category.displayName,
+                style: TextStyle(fontSize: 10, color: template.category.color, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
