@@ -1076,7 +1076,7 @@ class _AIMenuSheetState extends State<_AIMenuSheet> {
     final index = _controller.selection.baseOffset;
     // Use Quill's built-in checkbox attribute
     _controller.document.insert(index, '\n');
-    _controller.formatText(index, 1, const quill.Attribute.unchecked);
+    _controller.formatText(index, 1, quill.Attribute.unchecked);
     _controller.updateSelection(
       TextSelection.collapsed(offset: index + 1),
       ChangeSource.local,
