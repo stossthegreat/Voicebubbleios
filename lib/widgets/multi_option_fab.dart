@@ -6,6 +6,7 @@ class MultiOptionFab extends StatefulWidget {
   final VoidCallback? onImagePressed;
   final VoidCallback? onProjectPressed;
   final VoidCallback? onTodoPressed;
+  final VoidCallback? onNotePressed;
   final bool showProjectOption;
 
   const MultiOptionFab({
@@ -15,6 +16,7 @@ class MultiOptionFab extends StatefulWidget {
     this.onImagePressed,
     this.onProjectPressed,
     this.onTodoPressed,
+    this.onNotePressed,
     this.showProjectOption = false,
   });
 

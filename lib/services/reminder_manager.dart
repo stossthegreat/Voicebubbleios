@@ -21,6 +21,18 @@ class ReminderManager {
     return await _notificationService.requestPermission();
   }
 
+  /// Schedule a reminder for an item (used by creation screens)
+  Future<void> scheduleReminder(RecordingItem item) async {
+    if (item.reminderDateTime == null) return;
+
+    await _notificationService.scheduleReminder(
+      itemId: item.id,
+      title: 'VoiceBubble Reminder',
+      body: _getNotificationBody(item),
+      scheduledTime: item.reminderDateTime!,
+    );
+  }
+
   /// Show reminder picker and handle the result
   Future<void> showReminderPicker({
     required BuildContext context,

@@ -69,7 +69,7 @@ class UserAnalyticsService {
     final longestStreak = _calculateLongestStreak(allNotes);
 
     // Average note length
-    final averageNoteLength = totalNotes > 0 ? totalWords / totalNotes : 0;
+    final averageNoteLength = totalNotes > 0 ? totalWords / totalNotes : 0.0;
 
     // Daily activity (last 30 days)
     final dailyActivity = _calculateDailyActivity(allNotes, 30);

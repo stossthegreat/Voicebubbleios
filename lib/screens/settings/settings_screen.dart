@@ -12,7 +12,7 @@ import 'help_screen.dart';
 // ✨ NEW IMPORTS ✨
 import '../analytics_dashboard.dart';
 import '../templates_gallery.dart';
-import 'recording_detail_screen.dart';
+import '../main/recording_detail_screen.dart';
 // ✨ END NEW IMPORTS ✨
 
 class SettingsScreen extends StatelessWidget {

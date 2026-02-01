@@ -185,8 +185,8 @@ class _BackgroundPickerDialogState extends State<BackgroundPickerDialog>
                   ),
                   
                   // Overlay for better text visibility
-                  if (type == BackgroundType.solidColor && 
-                      background.primaryColor?.computeLuminance() ?? 0 < 0.5)
+                  if (type == BackgroundType.solidColor &&
+                      (background.primaryColor?.computeLuminance() ?? 0) < 0.5)
                     Positioned.fill(
                       child: Container(
                         color: Colors.black.withOpacity(0.3),
