@@ -196,6 +196,7 @@ class _OutcomesScreenState extends State<OutcomesScreen> {
           );
         },
         onTextPressed: () {
+          // Document - leads to outcome-specific document creation
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -203,7 +204,8 @@ class _OutcomesScreenState extends State<OutcomesScreen> {
             ),
           );
         },
-        onNotePressed: () {
+        onTodoPressed: () {
+          // Todo - leads to outcome-specific todo creation
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -212,6 +214,7 @@ class _OutcomesScreenState extends State<OutcomesScreen> {
           );
         },
         onImagePressed: () {
+          // Pictures - leads to outcome-specific image creation
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -219,14 +222,7 @@ class _OutcomesScreenState extends State<OutcomesScreen> {
             ),
           );
         },
-        onTodoPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const OutcomeCreationScreen(contentType: 'text'),
-            ),
-          );
-        },
+        onNotePressed: null, // Remove note option
         onProjectPressed: null, // Hide project option in outcomes
       ),
     );

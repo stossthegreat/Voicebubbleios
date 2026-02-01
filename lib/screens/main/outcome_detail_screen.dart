@@ -8,6 +8,8 @@ import '../../providers/app_state_provider.dart';
 import '../../widgets/reminder_button.dart';
 import '../../services/reminder_manager.dart';
 import 'recording_detail_screen.dart';
+import 'outcome_creation_screen.dart';
+import 'outcome_image_creation_screen.dart';
 
 class OutcomeDetailScreen extends StatefulWidget {
   final OutcomeType outcomeType;
@@ -276,15 +278,38 @@ class _OutcomeDetailScreenState extends State<OutcomeDetailScreen> {
       padding: const EdgeInsets.only(bottom: 12),
       child: GestureDetector(
         onTap: () {
-          // Navigate to detail screen
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => RecordingDetailScreen(
-                recordingId: item.id,
+          // Navigate to appropriate editor based on content type
+          if (item.contentType == 'image') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => OutcomeImageCreationScreen(
+                  itemId: item.id,
+                ),
               ),
-            ),
-          );
+            );
+          } else if (item.contentType == 'text' && item.hiddenInLibrary) {
+            // This is an outcome-specific item, use outcome creation screen
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => OutcomeCreationScreen(
+                  contentType: 'text',
+                  itemId: item.id,
+                ),
+              ),
+            );
+          } else {
+            // Regular voice recording or library item, use recording detail screen
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => RecordingDetailScreen(
+                  recordingId: item.id,
+                ),
+              ),
+            );
+          }
         },
         child: Container(
           padding: const EdgeInsets.all(16),

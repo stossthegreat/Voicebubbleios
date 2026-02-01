@@ -284,7 +284,15 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
             ),
           );
         },
-        onTodoPressed: null, // Hide todo option in projects
+        onTodoPressed: () {
+          // Todo - leads to checklist page within project
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => TodoCreationScreen(projectId: widget.projectId),
+            ),
+          );
+        },
         onImagePressed: () {
           Navigator.push(
             context,

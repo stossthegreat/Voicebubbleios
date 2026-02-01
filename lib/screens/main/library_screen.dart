@@ -315,7 +315,15 @@ class _LibraryScreenState extends State<LibraryScreen> {
             ),
           );
         },
-        onTodoPressed: null, // Hide todo option in library
+        onTodoPressed: () {
+          // Todo - leads to checklist page
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const TodoCreationScreen(),
+            ),
+          );
+        },
         onImagePressed: () {
           Navigator.push(
             context,

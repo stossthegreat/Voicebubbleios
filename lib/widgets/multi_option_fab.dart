@@ -70,13 +70,12 @@ class _MultiOptionFabState extends State<MultiOptionFab>
   }
 
   double _getDelay(int index) {
-    // Calculate delay based on visible options
+    // Calculate delay based on visible options (4 main options)
     final callbacks = [
-      widget.onImagePressed,
-      widget.onTodoPressed,
-      widget.onNotePressed,
-      widget.onTextPressed, 
-      widget.onVoicePressed,
+      widget.onImagePressed,    // 0 - Pictures
+      widget.onTodoPressed,     // 1 - Todo  
+      widget.onTextPressed,     // 2 - Document
+      widget.onVoicePressed,    // 3 - Voice
     ];
     
     int visibleIndex = 0;
@@ -143,24 +142,14 @@ class _MultiOptionFabState extends State<MultiOptionFab>
                     delay: _getDelay(1),
                   ),
 
-                // Note option (quick text document)
-                if (widget.onNotePressed != null)
-                  _buildOption(
-                    icon: Icons.note_add_outlined,
-                    label: 'Note',
-                    color: const Color(0xFF8B5CF6),
-                    onPressed: () => _onOptionPressed(widget.onNotePressed),
-                    delay: _getDelay(2),
-                  ),
-
-                // Text option (full document)
+                // Text option (Document)
                 if (widget.onTextPressed != null)
                   _buildOption(
                     icon: Icons.article_outlined,
                     label: 'Document',
                     color: const Color(0xFFF59E0B),
                     onPressed: () => _onOptionPressed(widget.onTextPressed),
-                    delay: _getDelay(3),
+                    delay: _getDelay(2),
                   ),
 
                 // Voice option
@@ -170,7 +159,7 @@ class _MultiOptionFabState extends State<MultiOptionFab>
                     label: 'Voice',
                     color: const Color(0xFFEF4444),
                     onPressed: () => _onOptionPressed(widget.onVoicePressed),
-                    delay: _getDelay(4),
+                    delay: _getDelay(3),
                   ),
 
                     const SizedBox(height: 16),
