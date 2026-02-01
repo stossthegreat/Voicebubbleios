@@ -283,23 +283,6 @@ class _LibraryScreenState extends State<LibraryScreen> {
                               )),
                       ] else if (_viewMode == 2) ...[
                         // Templates view - show the full template UI
-                        // Add back gesture/button for navigation
-                        GestureDetector(
-                          onTap: () => setState(() => _viewMode = 0), // Go back to library
-                          child: Padding(
-                            padding: const EdgeInsets.only(bottom: 16),
-                            child: Row(
-                              children: [
-                                Icon(Icons.arrow_back, color: primaryColor, size: 20),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Back to Library',
-                                  style: TextStyle(color: primaryColor, fontSize: 14, fontWeight: FontWeight.w600),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
                         _buildTemplatesView(surfaceColor, textColor, secondaryTextColor),
                       ] else ...[
                         // Library - Recordings grid
