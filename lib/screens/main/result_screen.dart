@@ -18,6 +18,7 @@ import '../../widgets/refinement_buttons.dart';
 import '../../widgets/add_to_project_dialog.dart';
 import '../../widgets/reminder_button.dart';
 import 'preset_selection_screen.dart';
+import 'recording_detail_screen.dart';
 import 'recording_screen.dart';
 import 'outcomes_result_screen.dart';
 import 'unstuck_result_screen.dart';
@@ -292,40 +293,67 @@ class _ResultScreenState extends State<ResultScreen> {
       // Get continue context if exists
       final continueContext = appState.continueContext;
 
-      // Create new RecordingItem with generated ID
-      final itemId = const Uuid().v4();
-      final item = RecordingItem(
-        id: itemId,
-        rawTranscript: appState.transcription,
-        finalText: _rewrittenText,
-        presetUsed: appState.selectedPreset?.name ?? 'Unknown',
-        outcomes: _selectedOutcomes.map((o) => o.toStorageString()).toList(),
-        projectId: continueContext?.projectId, // Link to project if continuing from project
-        createdAt: DateTime.now(),
-        editHistory: List.from(_textHistory),
-        presetId: appState.selectedPreset?.id ?? '',
-        continuedFromId: continueContext?.singleItemId, // 🔥 LINK TO ORIGINAL CARD
-        contentType: 'voice',
-      );
-
-      debugPrint('💾 Created item: ${item.id}');
-      debugPrint('💾 Item outcomes: ${item.outcomes}');
-      debugPrint('💾 Continued from: ${item.continuedFromId}');
-      
-      await appState.saveRecording(item);
-      
-      // 🔥 Link the continuation chain
+      // Check if we're continuing from a single item - if so, append to original instead of creating new
       if (continueContext?.singleItemId != null) {
-        final continueService = ContinueService();
-        await continueService.linkContinuationChain(
-          newItemId: itemId,
-          continuedFromId: continueContext!.singleItemId,
+        // APPEND TO ORIGINAL DOCUMENT
+        final originalItemId = continueContext!.singleItemId!;
+        final originalItem = appState.recordingItems.firstWhere(
+          (item) => item.id == originalItemId,
+          orElse: () => appState.recordingItems.first,
         );
-        debugPrint('🔗 Linked: ${continueContext.singleItemId} → $itemId');
+        
+        if (originalItem.id == originalItemId) {
+          // Append new content to original document with separator
+          final appendedText = '${originalItem.finalText}\n\n$_rewrittenText';
+          final updatedItem = originalItem.copyWith(
+            finalText: appendedText,
+            editHistory: [...originalItem.editHistory, _rewrittenText],
+          );
+          
+          await appState.updateRecording(updatedItem);
+          debugPrint('✅ APPENDED to original document: $originalItemId');
+          debugPrint('📝 Original length: ${originalItem.finalText.length} chars');
+          debugPrint('📝 New content length: ${_rewrittenText.length} chars');
+          debugPrint('📝 Total length: ${appendedText.length} chars');
+          
+          // Store the original item ID to prevent duplicate saves
+          _savedItemId = originalItemId;
+        }
+      } else {
+        // CREATE NEW DOCUMENT (for project continuations or new items)
+        final itemId = const Uuid().v4();
+        final item = RecordingItem(
+          id: itemId,
+          rawTranscript: appState.transcription,
+          finalText: _rewrittenText,
+          presetUsed: appState.selectedPreset?.name ?? 'Unknown',
+          outcomes: _selectedOutcomes.map((o) => o.toStorageString()).toList(),
+          projectId: continueContext?.projectId, // Link to project if continuing from project
+          createdAt: DateTime.now(),
+          editHistory: List.from(_textHistory),
+          presetId: appState.selectedPreset?.id ?? '',
+          continuedFromId: continueContext?.singleItemId,
+          contentType: 'voice',
+        );
+
+        debugPrint('💾 Created NEW item: ${item.id}');
+        debugPrint('💾 Item outcomes: ${item.outcomes}');
+        
+        await appState.saveRecording(item);
+        
+        // Link the continuation chain for project continuations
+        if (continueContext?.projectId != null && continueContext?.singleItemId != null) {
+          final continueService = ContinueService();
+          await continueService.linkContinuationChain(
+            newItemId: itemId,
+            continuedFromId: continueContext!.singleItemId,
+          );
+          debugPrint('🔗 Linked: ${continueContext.singleItemId} → $itemId');
+        }
+        
+        // Store the ID to prevent duplicate saves
+        _savedItemId = itemId;
       }
-      
-      // Store the ID to prevent duplicate saves
-      _savedItemId = itemId;
       
       debugPrint('✅ Recording saved successfully!');
       debugPrint('✅ Total recordings now: ${appState.recordingItems.length}');
@@ -418,7 +446,27 @@ class _ResultScreenState extends State<ResultScreen> {
     await Future.delayed(const Duration(milliseconds: 1500));
 
     if (mounted) {
-      Navigator.of(context).popUntil((route) => route.isFirst);
+      final continueContext = context.read<AppStateProvider>().continueContext;
+      
+      // If we continued from a single item, navigate back to that document
+      if (continueContext?.singleItemId != null) {
+        // Clear continue context first
+        context.read<AppStateProvider>().clearContinueContext();
+        
+        // Navigate back to the original document
+        Navigator.of(context).popUntil((route) => route.isFirst);
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => RecordingDetailScreen(
+              recordingId: continueContext!.singleItemId!,
+            ),
+          ),
+        );
+      } else {
+        // Regular flow - go to main screen
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
     }
   }
   
@@ -604,7 +652,27 @@ class _ResultScreenState extends State<ResultScreen> {
                         child: IconButton(
                           padding: EdgeInsets.zero,
                           onPressed: () {
-                            Navigator.of(context).popUntil((route) => route.isFirst);
+                            final continueContext = context.read<AppStateProvider>().continueContext;
+                            
+                            // If we continued from a single item, navigate back to that document
+                            if (continueContext?.singleItemId != null) {
+                              // Clear continue context first
+                              context.read<AppStateProvider>().clearContinueContext();
+                              
+                              // Navigate back to the original document
+                              Navigator.of(context).popUntil((route) => route.isFirst);
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => RecordingDetailScreen(
+                                    recordingId: continueContext!.singleItemId!,
+                                  ),
+                                ),
+                              );
+                            } else {
+                              // Regular flow - go to main screen
+                              Navigator.of(context).popUntil((route) => route.isFirst);
+                            }
                           },
                           icon: Icon(Icons.close, color: textColor, size: 20),
                         ),
