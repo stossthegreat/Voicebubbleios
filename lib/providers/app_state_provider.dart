@@ -37,7 +37,8 @@ class AppStateProvider extends ChangeNotifier {
   bool get isProcessing => _isProcessing;
   List<ArchivedItem> get archivedItems => _archivedItems;
   List<RecordingItem> get recordingItems => _recordingItems.where((item) => !item.hiddenInLibrary).toList();
-  
+  List<RecordingItem> get allRecordingItems => _recordingItems;
+
   List<RecordingItem> get outcomesItems => _recordingItems.where((item) => !item.hiddenInOutcomes).toList();
 List<Project> get projects => _projects;
 List<Tag> get tags => _tags;

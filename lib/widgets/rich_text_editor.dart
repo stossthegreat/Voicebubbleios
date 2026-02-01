@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:uuid/uuid.dart';
+import 'package:record/record.dart';
 import '../services/refinement_service.dart';
 import '../models/outcome_type.dart';
 import './outcome_chip.dart';
@@ -106,6 +107,12 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
   String? _imagePath;
   final ImagePicker _picker = ImagePicker();
 
+  // Top toolbar state (Google Keep style)
+  bool _isPinned = false;
+  bool _isRecordingVoiceNote = false;
+  String? _currentRecordingPath;
+  final AudioRecorder _audioRecorder = AudioRecorder();
+
   @override
   void initState() {
     super.initState();
@@ -158,6 +165,7 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
     _controller.dispose();
     _focusNode.dispose();
     _saveIndicatorController.dispose();
+    _audioRecorder.dispose();
     super.dispose();
   }
 
@@ -451,6 +459,114 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
         widget.onReminderChanged?.call(newReminder);
       }
     }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // TOP TOOLBAR HELPER METHODS (Google Keep style)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  void _togglePin() {
+    setState(() {
+      _isPinned = !_isPinned;
+    });
+    widget.onPinChanged?.call(_isPinned);
+  }
+
+  Future<void> _insertImageAtCursor() async {
+    try {
+      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+      if (image != null) {
+        // Save image permanently
+        final appDir = await getApplicationDocumentsDirectory();
+        final String fileName = '${const Uuid().v4()}.jpg';
+        final String permanentPath = '${appDir.path}/images/$fileName';
+
+        await Directory('${appDir.path}/images').create(recursive: true);
+        await File(image.path).copy(permanentPath);
+
+        // Insert image reference at cursor position
+        final index = _controller.selection.baseOffset;
+        _controller.document.insert(index, '\n[Image: $permanentPath]\n');
+        _controller.updateSelection(
+          TextSelection.collapsed(offset: index + permanentPath.length + 12),
+          quill.ChangeSource.local,
+        );
+      }
+    } catch (e) {
+      // Silent fail
+    }
+  }
+
+  Future<void> _takePhotoAtCursor() async {
+    try {
+      final XFile? image = await _picker.pickImage(source: ImageSource.camera);
+      if (image != null) {
+        // Save image permanently
+        final appDir = await getApplicationDocumentsDirectory();
+        final String fileName = '${const Uuid().v4()}.jpg';
+        final String permanentPath = '${appDir.path}/images/$fileName';
+
+        await Directory('${appDir.path}/images').create(recursive: true);
+        await File(image.path).copy(permanentPath);
+
+        // Insert image reference at cursor position
+        final index = _controller.selection.baseOffset;
+        _controller.document.insert(index, '\n[Image: $permanentPath]\n');
+        _controller.updateSelection(
+          TextSelection.collapsed(offset: index + permanentPath.length + 12),
+          quill.ChangeSource.local,
+        );
+      }
+    } catch (e) {
+      // Silent fail
+    }
+  }
+
+  Future<void> _toggleVoiceNoteRecording() async {
+    if (_isRecordingVoiceNote) {
+      // Stop recording
+      final recordingPath = await _audioRecorder.stop();
+      if (recordingPath != null && mounted) {
+        // Insert voice note reference at cursor
+        final index = _controller.selection.baseOffset;
+        _controller.document.insert(index, '\n🎤 [Voice Note: $recordingPath]\n');
+        _controller.updateSelection(
+          TextSelection.collapsed(offset: index + recordingPath.length + 18),
+          quill.ChangeSource.local,
+        );
+        widget.onVoiceNoteAdded?.call(recordingPath);
+      }
+      setState(() {
+        _isRecordingVoiceNote = false;
+        _currentRecordingPath = null;
+      });
+    } else {
+      // Start recording
+      if (await _audioRecorder.hasPermission()) {
+        final appDir = await getApplicationDocumentsDirectory();
+        final String fileName = '${const Uuid().v4()}.m4a';
+        final String recordPath = '${appDir.path}/voice_notes/$fileName';
+
+        await Directory('${appDir.path}/voice_notes').create(recursive: true);
+
+        await _audioRecorder.start(RecordConfig(), path: recordPath);
+        setState(() {
+          _isRecordingVoiceNote = true;
+          _currentRecordingPath = recordPath;
+        });
+      }
+    }
+  }
+
+  void _insertCheckboxAtCursor() {
+    final index = _controller.selection.baseOffset;
+    // Use Quill's built-in checkbox attribute
+    _controller.document.insert(index, '\n');
+    _controller.formatText(index, 1, quill.Attribute.unchecked);
+    _controller.updateSelection(
+      TextSelection.collapsed(offset: index + 1),
+      quill.ChangeSource.local,
+    );
   }
 
   @override
@@ -980,114 +1096,6 @@ class _AIMenuSheetState extends State<_AIMenuSheet> {
         ),
       ),
     );
-  }
-  
-  // ═══════════════════════════════════════════════════════════════════════════
-  // TOP TOOLBAR HELPER METHODS (Google Keep style)
-  // ═══════════════════════════════════════════════════════════════════════════
-  
-  Future<void> _insertImageAtCursor() async {
-    try {
-      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-      if (image != null) {
-        // Save image permanently
-        final appDir = await getApplicationDocumentsDirectory();
-        final String fileName = '${const Uuid().v4()}.jpg';
-        final String permanentPath = '${appDir.path}/images/$fileName';
-        
-        await Directory('${appDir.path}/images').create(recursive: true);
-        await File(image.path).copy(permanentPath);
-        
-        // Insert image reference at cursor position
-        final index = _controller.selection.baseOffset;
-        _controller.document.insert(index, '\n[Image: $permanentPath]\n');
-        _controller.updateSelection(
-          TextSelection.collapsed(offset: index + permanentPath.length + 12),
-          ChangeSource.local,
-        );
-      }
-    } catch (e) {
-      // Silent fail
-    }
-  }
-  
-  Future<void> _takePhotoAtCursor() async {
-    try {
-      final XFile? image = await _picker.pickImage(source: ImageSource.camera);
-      if (image != null) {
-        // Save image permanently
-        final appDir = await getApplicationDocumentsDirectory();
-        final String fileName = '${const Uuid().v4()}.jpg';
-        final String permanentPath = '${appDir.path}/images/$fileName';
-        
-        await Directory('${appDir.path}/images').create(recursive: true);
-        await File(image.path).copy(permanentPath);
-        
-        // Insert image reference at cursor position
-        final index = _controller.selection.baseOffset;
-        _controller.document.insert(index, '\n[Image: $permanentPath]\n');
-        _controller.updateSelection(
-          TextSelection.collapsed(offset: index + permanentPath.length + 12),
-          ChangeSource.local,
-        );
-      }
-    } catch (e) {
-      // Silent fail
-    }
-  }
-  
-  Future<void> _toggleVoiceNoteRecording() async {
-    if (_isRecordingVoiceNote) {
-      // Stop recording
-      final path = await _audioRecorder.stop();
-      if (path != null && mounted) {
-        // Insert voice note reference at cursor
-        final index = _controller.selection.baseOffset;
-        _controller.document.insert(index, '\n🎤 [Voice Note: $path]\n');
-        _controller.updateSelection(
-          TextSelection.collapsed(offset: index + path.length + 18),
-          ChangeSource.local,
-        );
-        widget.onVoiceNoteAdded?.call(path);
-      }
-      setState(() {
-        _isRecordingVoiceNote = false;
-        _currentRecordingPath = null;
-      });
-    } else {
-      // Start recording
-      if (await _audioRecorder.hasPermission()) {
-        final appDir = await getApplicationDocumentsDirectory();
-        final String fileName = '${const Uuid().v4()}.m4a';
-        final String recordPath = '${appDir.path}/voice_notes/$fileName';
-        
-        await Directory('${appDir.path}/voice_notes').create(recursive: true);
-        
-        await _audioRecorder.start(const RecordConfig(), path: recordPath);
-        setState(() {
-          _isRecordingVoiceNote = true;
-          _currentRecordingPath = recordPath;
-        });
-      }
-    }
-  }
-  
-  void _insertCheckboxAtCursor() {
-    final index = _controller.selection.baseOffset;
-    // Use Quill's built-in checkbox attribute
-    _controller.document.insert(index, '\n');
-    _controller.formatText(index, 1, quill.Attribute.unchecked);
-    _controller.updateSelection(
-      TextSelection.collapsed(offset: index + 1),
-      ChangeSource.local,
-    );
-  }
-  
-  void _togglePin() {
-    setState(() {
-      _isPinned = !_isPinned;
-    });
-    widget.onPinChanged?.call(_isPinned);
   }
 }
 
