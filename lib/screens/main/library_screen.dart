@@ -18,7 +18,6 @@ import '../../services/continue_service.dart';
 import 'project_detail_screen.dart';
 import 'recording_detail_screen.dart';
 import 'recording_screen.dart';
-import 'todo_creation_screen.dart';
 // ✨ NEW IMPORT ✨
 import '../batch_operations_screen.dart';
 import '../templates/template_selection_screen.dart';
@@ -469,53 +468,11 @@ class _LibraryScreenState extends State<LibraryScreen> {
     
     return GestureDetector(
       onTap: () {
-        if (item.contentType == 'text') {
-          // Check document type to use appropriate editor
-          if (item.presetUsed == 'Document') {
-            // Use document creation screen for documents created via Document button
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => DocumentCreationScreen(
-                  itemId: item.id,
-                  initialText: item.finalText,
-                ),
-              ),
-            );
-          } else {
-            // Use rich text editor for voice-generated text content
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => RecordingDetailScreen(recordingId: item.id)),
-            );
-          }
-        } else if (item.contentType == 'todo') {
-          // Use todo editor for todos, but also make them appear in outcomes
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => TodoCreationScreen(
-                itemId: item.id,
-              ),
-            ),
-          );
-        } else if (item.contentType == 'image') {
-          // Navigate to image editor for images
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ImageCreationScreen(
-                itemId: item.id,
-              ),
-            ),
-          );
-        } else {
-          // Navigate to recording detail for voice recordings
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => RecordingDetailScreen(recordingId: item.id)),
-          );
-        }
+        // All content types now use the unified RecordingDetailScreen with RichTextEditor
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => RecordingDetailScreen(recordingId: item.id)),
+        );
       },
       child: Container(
         padding: const EdgeInsets.all(16),

@@ -125,6 +125,16 @@ class ReminderManager {
     }
   }
 
+  /// Cancel a reminder for an item
+  Future<void> cancelReminder(RecordingItem item) async {
+    if (item.reminderNotificationId != null) {
+      await _notificationService.cancelReminder(item.reminderNotificationId!);
+    } else {
+      await _notificationService.cancelReminderByItemId(item.id);
+    }
+    debugPrint('🔕 Cancelled reminder for item: ${item.id}');
+  }
+
   /// Cancel reminder when item is deleted
   Future<void> cancelReminderForDeletedItem(RecordingItem item) async {
     if (item.reminderDateTime == null) return;
