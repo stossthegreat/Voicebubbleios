@@ -689,9 +689,7 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
                     ),
                   ),
                 
-                // Context-aware header sections (for outcomes only)
-                
-                // Outcome chips section (for outcomes tab)
+                // Outcome chips section (for outcomes tab) - FIXED
                 if (widget.showOutcomeChips)
                   Container(
                     color: surfaceColor,
@@ -732,7 +730,7 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
                     ),
                   ),
                 
-                // Reminder and completion controls (for outcomes/todos)
+                // Reminder and completion controls (for outcomes/todos) - FIXED
                 if (widget.showReminderButton || widget.showCompletionCheckbox)
                   Container(
                     color: surfaceColor,
@@ -835,7 +833,7 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
                     ),
                   ),
                 
-                // Image section (for image content types)
+                // Image section (for image content types) - FIXED
                 if (widget.showImageSection)
                   Container(
                     color: surfaceColor,
@@ -900,7 +898,7 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
                     ),
                   ),
                 
-                // Quill formatting toolbar (Row 2) - scrollable
+                // Quill formatting toolbar (Row 2) - FIXED, scrollable horizontally
                 if (!widget.readOnly)
                   Container(
                     color: surfaceColor,
@@ -937,34 +935,50 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
                     ),
                   ),
 
-                // Editor content (Row 3+)
+                // Scrollable content area with background (title + editor)
                 Expanded(
-                  child: Container(
-                    color: Colors.black,
-                    padding: const EdgeInsets.all(16),
-                    child: quill.QuillEditor.basic(
-                      focusNode: _focusNode,
-                      configurations: quill.QuillEditorConfigurations(
-                        controller: _controller,
-                        padding: EdgeInsets.zero,
-                        autoFocus: !widget.readOnly,
-                        expands: true,
-                        placeholder: 'Start typing...',
-                        readOnly: widget.readOnly,
-                        customStyles: quill.DefaultStyles(
-                          paragraph: quill.DefaultTextBlockStyle(
-                            const TextStyle(color: Colors.white, fontSize: 16, height: 1.6),
-                            const quill.VerticalSpacing(0, 0),
-                            const quill.VerticalSpacing(0, 0),
-                            null,
+                  child: SingleChildScrollView(
+                    child: Container(
+                      // This is where background color/image will go (not black!)
+                      color: const Color(0xFF1E1E1E), // Default paper color (will be replaced by background)
+                      padding: const EdgeInsets.all(16),
+                      constraints: BoxConstraints(
+                        minHeight: MediaQuery.of(context).size.height - 200, // Ensure full height
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Title field (if needed) - can add later
+                          // For now, just the editor
+                          SizedBox(
+                            height: MediaQuery.of(context).size.height - 250,
+                            child: quill.QuillEditor.basic(
+                              focusNode: _focusNode,
+                              configurations: quill.QuillEditorConfigurations(
+                                controller: _controller,
+                                padding: EdgeInsets.zero,
+                                autoFocus: !widget.readOnly,
+                                expands: false,
+                                placeholder: 'Start typing...',
+                                readOnly: widget.readOnly,
+                                customStyles: quill.DefaultStyles(
+                                  paragraph: quill.DefaultTextBlockStyle(
+                                    const TextStyle(color: Colors.white, fontSize: 16, height: 1.6),
+                                    const quill.VerticalSpacing(0, 0),
+                                    const quill.VerticalSpacing(0, 0),
+                                    null,
+                                  ),
+                                  placeHolder: quill.DefaultTextBlockStyle(
+                                    TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 16),
+                                    const quill.VerticalSpacing(0, 0),
+                                    const quill.VerticalSpacing(0, 0),
+                                    null,
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
-                          placeHolder: quill.DefaultTextBlockStyle(
-                            TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 16),
-                            const quill.VerticalSpacing(0, 0),
-                            const quill.VerticalSpacing(0, 0),
-                            null,
-                          ),
-                        ),
+                        ],
                       ),
                     ),
                   ),
