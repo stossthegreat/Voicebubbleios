@@ -675,15 +675,14 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
       return Container(color: const Color(0xFF1E1E1E));
     }
 
-    // For paper types (PDFs), show fallback color for now
-    // TODO: Implement PDF rendering if needed
+    // For paper types (PDFs) - show FULL BRIGHT paper color (no overlay!)
     if (background.isPaper) {
       return Container(
         color: background.fallbackColor ?? const Color(0xFFF5F5F5),
       );
     }
 
-    // For image backgrounds - show at higher opacity with dark overlay for readability
+    // For image backgrounds - show ACTUAL IMAGE at FULL brightness with LIGHT overlay
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -691,13 +690,12 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
           background.assetPath!,
           fit: BoxFit.cover,
           errorBuilder: (context, error, stackTrace) {
-            // Fallback if image fails to load
             return Container(color: background.fallbackColor);
           },
         ),
-        // Dark overlay for text readability
+        // MUCH lighter overlay - only 40% black so image shows at 60% brightness
         Container(
-          color: Colors.black.withOpacity(0.65), // 65% black overlay so image is 35% visible
+          color: Colors.black.withOpacity(0.40),
         ),
       ],
     );
