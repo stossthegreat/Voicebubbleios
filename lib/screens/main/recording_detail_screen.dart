@@ -411,6 +411,9 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
       isPinned: item.isPinned ?? false,
       onPinChanged: (pinned) => _updateItemPin(appState, item, pinned),
       onVoiceNoteAdded: (path) => _handleVoiceNoteAdded(appState, item, path),
+      // Background support
+      backgroundId: item.background,
+      onBackgroundChanged: (backgroundId) => _updateItemBackground(appState, item, backgroundId),
     );
   }
 
@@ -652,5 +655,15 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _updateItemBackground(AppStateProvider appState, RecordingItem item, String? backgroundId) async {
+    try {
+      final updatedItem = item.copyWith(background: backgroundId);
+      await appState.updateRecording(updatedItem);
+      debugPrint('✅ Updated background for item: ${item.id}');
+    } catch (e) {
+      debugPrint('❌ Error updating background: $e');
+    }
   }
 }

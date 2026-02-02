@@ -11,7 +11,9 @@ import 'package:uuid/uuid.dart';
 import 'package:record/record.dart';
 import '../services/refinement_service.dart';
 import '../models/outcome_type.dart';
+import '../constants/background_assets.dart';
 import './outcome_chip.dart';
+import './background_picker.dart';
 
 // ============================================================
 //        RICH TEXT EDITOR WIDGET — WITH AI SELECTION MENU
@@ -52,6 +54,10 @@ class RichTextEditor extends StatefulWidget {
   final bool isPinned;
   final Function(bool)? onPinChanged;
   final Function(String)? onVoiceNoteAdded;
+  
+  // Background support
+  final String? backgroundId;
+  final Function(String?)? onBackgroundChanged;
 
   const RichTextEditor({
     super.key,
@@ -71,6 +77,8 @@ class RichTextEditor extends StatefulWidget {
     this.showImageSection = false,
     this.initialImagePath,
     this.onImageChanged,
+    this.backgroundId,
+    this.onBackgroundChanged,
     this.showTopToolbar = true,
     this.isPinned = false,
     this.onPinChanged,
@@ -627,6 +635,54 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
     );
   }
 
+  void _showBackgroundPicker() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return BackgroundPicker(
+          currentBackgroundId: widget.backgroundId,
+          onBackgroundSelected: (id) {
+            widget.onBackgroundChanged?.call(id);
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildBackgroundWidget() {
+    if (widget.backgroundId == null) {
+      return const SizedBox.shrink();
+    }
+
+    final background = BackgroundAssets.findById(widget.backgroundId!);
+    if (background == null) {
+      return Container(color: const Color(0xFF1E1E1E));
+    }
+
+    // For paper types (PDFs), show fallback color for now
+    // TODO: Implement PDF rendering if needed
+    if (background.isPaper) {
+      return Container(
+        color: background.fallbackColor ?? const Color(0xFFF5F5F5),
+      );
+    }
+
+    // For image backgrounds
+    return Opacity(
+      opacity: 0.15, // 15% opacity for readability
+      child: Image.asset(
+        background.assetPath!,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          // Fallback if image fails to load
+          return Container(color: background.fallbackColor);
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     const surfaceColor = Color(0xFF1A1A1A);
@@ -677,6 +733,12 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
                           tooltip: 'Add content',
                         ),
                         const Spacer(),
+                        // Background button
+                        IconButton(
+                          icon: const Icon(Icons.palette_outlined, color: Colors.white70, size: 20),
+                          onPressed: _showBackgroundPicker,
+                          tooltip: 'Change background',
+                        ),
                         // More options menu (existing)
                         IconButton(
                           icon: const Icon(Icons.more_vert, color: Colors.white70, size: 20),
@@ -937,50 +999,59 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
 
                 // Scrollable content area with background (title + editor)
                 Expanded(
-                  child: SingleChildScrollView(
-                    child: Container(
-                      // This is where background color/image will go (not black!)
-                      color: const Color(0xFF1E1E1E), // Default paper color (will be replaced by background)
-                      padding: const EdgeInsets.all(16),
-                      constraints: BoxConstraints(
-                        minHeight: MediaQuery.of(context).size.height - 200, // Ensure full height
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Title field (if needed) - can add later
-                          // For now, just the editor
-                          SizedBox(
-                            height: MediaQuery.of(context).size.height - 250,
-                            child: quill.QuillEditor.basic(
-                              focusNode: _focusNode,
-                              configurations: quill.QuillEditorConfigurations(
-                                controller: _controller,
-                                padding: EdgeInsets.zero,
-                                autoFocus: !widget.readOnly,
-                                expands: false,
-                                placeholder: 'Start typing...',
-                                readOnly: widget.readOnly,
-                                customStyles: quill.DefaultStyles(
-                                  paragraph: quill.DefaultTextBlockStyle(
-                                    const TextStyle(color: Colors.white, fontSize: 16, height: 1.6),
-                                    const quill.VerticalSpacing(0, 0),
-                                    const quill.VerticalSpacing(0, 0),
-                                    null,
-                                  ),
-                                  placeHolder: quill.DefaultTextBlockStyle(
-                                    TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 16),
-                                    const quill.VerticalSpacing(0, 0),
-                                    const quill.VerticalSpacing(0, 0),
-                                    null,
+                  child: Stack(
+                    children: [
+                      // Background layer - FULL SCREEN below header/toolbar
+                      if (widget.backgroundId != null)
+                        Positioned.fill(
+                          child: _buildBackgroundWidget(),
+                        ),
+                      
+                      // Content layer (scrollable)
+                      SingleChildScrollView(
+                        child: Container(
+                          // Transparent so background shows through
+                          color: widget.backgroundId == null ? const Color(0xFF1E1E1E) : Colors.transparent,
+                          padding: const EdgeInsets.all(16),
+                          constraints: BoxConstraints(
+                            minHeight: MediaQuery.of(context).size.height - 200,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SizedBox(
+                                height: MediaQuery.of(context).size.height - 250,
+                                child: quill.QuillEditor.basic(
+                                  focusNode: _focusNode,
+                                  configurations: quill.QuillEditorConfigurations(
+                                    controller: _controller,
+                                    padding: EdgeInsets.zero,
+                                    autoFocus: !widget.readOnly,
+                                    expands: false,
+                                    placeholder: 'Start typing...',
+                                    readOnly: widget.readOnly,
+                                    customStyles: quill.DefaultStyles(
+                                      paragraph: quill.DefaultTextBlockStyle(
+                                        const TextStyle(color: Colors.white, fontSize: 16, height: 1.6),
+                                        const quill.VerticalSpacing(0, 0),
+                                        const quill.VerticalSpacing(0, 0),
+                                        null,
+                                      ),
+                                      placeHolder: quill.DefaultTextBlockStyle(
+                                        TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 16),
+                                        const quill.VerticalSpacing(0, 0),
+                                        const quill.VerticalSpacing(0, 0),
+                                        null,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
 

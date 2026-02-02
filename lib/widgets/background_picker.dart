@@ -1,256 +1,209 @@
+// ============================================================
+//        BACKGROUND PICKER WIDGET
+// ============================================================
+
 import 'package:flutter/material.dart';
-import '../constants/visual_constants.dart';
+import '../constants/background_assets.dart';
 
-class BackgroundPickerDialog extends StatefulWidget {
-  final String currentBackground;
-  final Function(String) onSelect;
+class BackgroundPicker extends StatelessWidget {
+  final String? currentBackgroundId;
+  final Function(String?) onBackgroundSelected;
 
-  const BackgroundPickerDialog({
+  const BackgroundPicker({
     super.key,
-    required this.currentBackground,
-    required this.onSelect,
+    this.currentBackgroundId,
+    required this.onBackgroundSelected,
   });
 
   @override
-  State<BackgroundPickerDialog> createState() => _BackgroundPickerDialogState();
-}
-
-class _BackgroundPickerDialogState extends State<BackgroundPickerDialog>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  String? _selectedId;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 4, vsync: this);
-    _selectedId = widget.currentBackground;
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final backgroundColor = const Color(0xFF000000);
     final surfaceColor = const Color(0xFF1A1A1A);
     final textColor = Colors.white;
-    final primaryColor = const Color(0xFF3B82F6);
+    final secondaryTextColor = const Color(0xFF94A3B8);
 
-    return Dialog(
-      backgroundColor: surfaceColor,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.7,
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      child: SizedBox(
-        height: MediaQuery.of(context).size.height * 0.7,
-        child: Column(
-          children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Choose Background',
-                          style: TextStyle(
-                            color: textColor,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.close, color: textColor),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ],
-                  ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  // Tabs
-                  TabBar(
-                    controller: _tabController,
-                    indicatorColor: primaryColor,
-                    labelColor: primaryColor,
-                    unselectedLabelColor: textColor.withOpacity(0.5),
-                    labelStyle: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    tabs: const [
-                      Tab(text: 'Colors'),
-                      Tab(text: 'Gradients'),
-                      Tab(text: 'Textures'),
-                      Tab(text: 'Images'),
-                    ],
-                  ),
-                ],
+      child: Column(
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: Colors.white.withOpacity(0.1)),
               ),
             ),
-            
-            // Tab content
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildBackgroundGrid(BackgroundType.solidColor),
-                  _buildBackgroundGrid(BackgroundType.gradient),
-                  _buildBackgroundGrid(BackgroundType.texture),
-                  _buildBackgroundGrid(BackgroundType.illustrated),
-                ],
-              ),
-            ),
-            
-            // Apply button
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _selectedId != null
-                      ? () => widget.onSelect(_selectedId!)
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    disabledBackgroundColor: primaryColor.withOpacity(0.3),
-                  ),
-                  child: const Text(
-                    'Apply Background',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+            child: Row(
+              children: [
+                Text(
+                  'Choose Background',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
                   ),
                 ),
-              ),
+                const Spacer(),
+                IconButton(
+                  icon: Icon(Icons.close, color: secondaryTextColor),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(20),
+              children: [
+                // None option
+                _buildBackgroundOption(
+                  context,
+                  id: null,
+                  name: 'None',
+                  subtitle: 'Default dark background',
+                  icon: Icons.block,
+                  color: const Color(0xFF1E1E1E),
+                  surfaceColor: surfaceColor,
+                  textColor: textColor,
+                  secondaryTextColor: secondaryTextColor,
+                ),
+                const SizedBox(height: 24),
+
+                // Paper section
+                Text(
+                  'Paper Types',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ...BackgroundAssets.allPapers.map((paper) {
+                  return _buildBackgroundOption(
+                    context,
+                    id: paper.id,
+                    name: paper.name,
+                    subtitle: 'PDF paper texture',
+                    icon: Icons.description,
+                    color: paper.fallbackColor ?? const Color(0xFFE0E0E0),
+                    surfaceColor: surfaceColor,
+                    textColor: textColor,
+                    secondaryTextColor: secondaryTextColor,
+                  );
+                }),
+                const SizedBox(height: 24),
+
+                // Backgrounds section
+                Text(
+                  'Background Images',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ...BackgroundAssets.allBackgrounds.map((bg) {
+                  return _buildBackgroundOption(
+                    context,
+                    id: bg.id,
+                    name: bg.name,
+                    subtitle: 'Image background',
+                    icon: Icons.image,
+                    color: bg.fallbackColor ?? const Color(0xFF2196F3),
+                    surfaceColor: surfaceColor,
+                    textColor: textColor,
+                    secondaryTextColor: secondaryTextColor,
+                  );
+                }),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildBackgroundGrid(BackgroundType type) {
-    final backgrounds = VisualConstants.getByType(type);
-    
-    return GridView.builder(
-      padding: const EdgeInsets.all(20),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 1,
-      ),
-      itemCount: backgrounds.length,
-      itemBuilder: (context, index) {
-        final background = backgrounds[index];
-        final isSelected = _selectedId == background.id;
-        
-        return GestureDetector(
-          onTap: () {
-            setState(() {
-              _selectedId = background.id;
-            });
-          },
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: isSelected
-                    ? const Color(0xFF3B82F6)
-                    : Colors.white.withOpacity(0.2),
-                width: isSelected ? 3 : 1,
+  Widget _buildBackgroundOption(
+    BuildContext context, {
+    required String? id,
+    required String name,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required Color surfaceColor,
+    required Color textColor,
+    required Color secondaryTextColor,
+  }) {
+    final isSelected = currentBackgroundId == id;
+
+    return GestureDetector(
+      onTap: () {
+        onBackgroundSelected(id);
+        Navigator.pop(context);
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: surfaceColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF3B82F6) : Colors.white.withOpacity(0.1),
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            // Preview circle
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.white.withOpacity(0.2)),
               ),
+              child: Icon(icon, color: Colors.white.withOpacity(0.7), size: 24),
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(11),
-              child: Stack(
+            const SizedBox(width: 16),
+            // Name and subtitle
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Background preview
-                  Positioned.fill(
-                    child: background.buildBackground(context),
-                  ),
-                  
-                  // Overlay for better text visibility
-                  if (type == BackgroundType.solidColor &&
-                      (background.primaryColor?.computeLuminance() ?? 0) < 0.5)
-                    Positioned.fill(
-                      child: Container(
-                        color: Colors.black.withOpacity(0.3),
-                      ),
-                    ),
-                  
-                  // Name label
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.transparent,
-                            Colors.black.withOpacity(0.7),
-                          ],
-                        ),
-                      ),
-                      child: Text(
-                        background.name,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                  Text(
+                    name,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: textColor,
                     ),
                   ),
-                  
-                  // Selected checkmark
-                  if (isSelected)
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF3B82F6),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.check,
-                          color: Colors.white,
-                          size: 16,
-                        ),
-                      ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: secondaryTextColor,
                     ),
+                  ),
                 ],
               ),
             ),
-          ),
-        );
-      },
+            // Selected indicator
+            if (isSelected)
+              const Icon(Icons.check_circle, color: Color(0xFF3B82F6), size: 24),
+          ],
+        ),
+      ),
     );
   }
 }
