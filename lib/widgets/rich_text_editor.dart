@@ -16,6 +16,115 @@ import './outcome_chip.dart';
 import './background_picker.dart';
 
 // ============================================================
+//        CUSTOM EMBED BUILDERS FOR IMAGES AND AUDIO
+// ============================================================
+
+/// Custom embed builder for displaying images in the Quill editor
+class CustomImageEmbedBuilder extends quill.EmbedBuilder {
+  @override
+  String get key => 'image';
+
+  @override
+  Widget build(
+    BuildContext context,
+    quill.QuillController controller,
+    quill.Embed node,
+    bool readOnly,
+    bool inline,
+    TextStyle textStyle,
+  ) {
+    final imageUrl = node.value.data as String;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Image.file(
+        File(imageUrl),
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.grey.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.broken_image, color: Colors.red),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Image not found: ${imageUrl.split('/').last}',
+                    style: const TextStyle(color: Colors.red, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// Custom embed builder for displaying audio/voice notes in the Quill editor
+class CustomAudioEmbedBuilder extends quill.EmbedBuilder {
+  @override
+  String get key => 'audio';
+
+  @override
+  Widget build(
+    BuildContext context,
+    quill.QuillController controller,
+    quill.Embed node,
+    bool readOnly,
+    bool inline,
+    TextStyle textStyle,
+  ) {
+    final audioPath = node.value.data as String;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A1A1A),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.white.withOpacity(0.1)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF59E0B).withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.play_arrow, color: Color(0xFFF59E0B), size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Voice Note',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                  ),
+                  Text(
+                    audioPath.split('/').last,
+                    style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 11),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.more_vert, color: Colors.white54, size: 20),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================
 //        RICH TEXT EDITOR WIDGET — WITH AI SELECTION MENU
 // ============================================================
 
@@ -1049,89 +1158,8 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
                                     placeholder: 'Start typing...',
                                     readOnly: widget.readOnly,
                                     embedBuilders: [
-                                      // Image embed builder
-                                      quill.EmbedBuilder(
-                                        key: 'image',
-                                        builder: (context, node, readOnly, inline, textStyle, embedContext) {
-                                          final imageUrl = node.value.data as String;
-                                          return Padding(
-                                            padding: const EdgeInsets.symmetric(vertical: 8.0),
-                                            child: Image.file(
-                                              File(imageUrl),
-                                              errorBuilder: (context, error, stackTrace) {
-                                                return Container(
-                                                  padding: const EdgeInsets.all(16),
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.grey.withOpacity(0.2),
-                                                    borderRadius: BorderRadius.circular(8),
-                                                  ),
-                                                  child: Row(
-                                                    children: [
-                                                      const Icon(Icons.broken_image, color: Colors.red),
-                                                      const SizedBox(width: 8),
-                                                      Expanded(
-                                                        child: Text(
-                                                          'Image not found: ${imageUrl.split('/').last}',
-                                                          style: const TextStyle(color: Colors.red, fontSize: 12),
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                );
-                                              },
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                      // Audio embed builder
-                                      quill.EmbedBuilder(
-                                        key: 'audio',
-                                        builder: (context, node, readOnly, inline, textStyle, embedContext) {
-                                          final audioPath = node.value.data as String;
-                                          return Padding(
-                                            padding: const EdgeInsets.symmetric(vertical: 8.0),
-                                            child: Container(
-                                              padding: const EdgeInsets.all(12),
-                                              decoration: BoxDecoration(
-                                                color: const Color(0xFF1A1A1A),
-                                                borderRadius: BorderRadius.circular(12),
-                                                border: Border.all(color: Colors.white.withOpacity(0.1)),
-                                              ),
-                                              child: Row(
-                                                children: [
-                                                  Container(
-                                                    padding: const EdgeInsets.all(8),
-                                                    decoration: BoxDecoration(
-                                                      color: const Color(0xFFF59E0B).withOpacity(0.2),
-                                                      shape: BoxShape.circle,
-                                                    ),
-                                                    child: const Icon(Icons.play_arrow, color: Color(0xFFF59E0B), size: 20),
-                                                  ),
-                                                  const SizedBox(width: 12),
-                                                  Expanded(
-                                                    child: Column(
-                                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                                      children: [
-                                                        const Text(
-                                                          'Voice Note',
-                                                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-                                                        ),
-                                                        Text(
-                                                          audioPath.split('/').last,
-                                                          style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 11),
-                                                          maxLines: 1,
-                                                          overflow: TextOverflow.ellipsis,
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                  const Icon(Icons.more_vert, color: Colors.white54, size: 20),
-                                                ],
-                                              ),
-                                            ),
-                                          );
-                                        },
-                                      ),
+                                      CustomImageEmbedBuilder(),
+                                      CustomAudioEmbedBuilder(),
                                     ],
                                     customStyles: quill.DefaultStyles(
                                       paragraph: quill.DefaultTextBlockStyle(
