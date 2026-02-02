@@ -492,16 +492,19 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
         await Directory('${appDir.path}/images').create(recursive: true);
         await File(image.path).copy(permanentPath);
 
-        // Insert image reference at cursor position
+        // Insert ACTUAL image embed into Quill document (not text!)
         final index = _controller.selection.baseOffset;
-        _controller.document.insert(index, '\n[Image: $permanentPath]\n');
+        _controller.document.insert(index, quill.BlockEmbed.image(permanentPath));
         _controller.updateSelection(
-          TextSelection.collapsed(offset: index + permanentPath.length + 12),
+          TextSelection.collapsed(offset: index + 1),
           quill.ChangeSource.local,
         );
+        
+        // Add newline after image for spacing
+        _controller.document.insert(index + 1, '\n');
       }
     } catch (e) {
-      // Silent fail
+      debugPrint('❌ Error inserting image: $e');
     }
   }
 
@@ -517,16 +520,19 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
         await Directory('${appDir.path}/images').create(recursive: true);
         await File(image.path).copy(permanentPath);
 
-        // Insert image reference at cursor position
+        // Insert ACTUAL image embed into Quill document (not text!)
         final index = _controller.selection.baseOffset;
-        _controller.document.insert(index, '\n[Image: $permanentPath]\n');
+        _controller.document.insert(index, quill.BlockEmbed.image(permanentPath));
         _controller.updateSelection(
-          TextSelection.collapsed(offset: index + permanentPath.length + 12),
+          TextSelection.collapsed(offset: index + 1),
           quill.ChangeSource.local,
         );
+        
+        // Add newline after image for spacing
+        _controller.document.insert(index + 1, '\n');
       }
     } catch (e) {
-      // Silent fail
+      debugPrint('❌ Error taking photo: $e');
     }
   }
 
@@ -535,13 +541,21 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
       // Stop recording
       final recordingPath = await _audioRecorder.stop();
       if (recordingPath != null && mounted) {
-        // Insert voice note reference at cursor
+        // Insert audio player embed at cursor (using custom audio embed)
         final index = _controller.selection.baseOffset;
-        _controller.document.insert(index, '\n🎤 [Voice Note: $recordingPath]\n');
+        
+        // For now, insert as a custom block with audio icon + path
+        // This will display as a clickable audio player
+        _controller.document.insert(index, '\n🎤 ');
+        _controller.document.insert(index + 3, quill.BlockEmbed.custom(
+          quill.CustomBlockEmbed('audio', recordingPath),
+        ));
+        _controller.document.insert(index + 4, '\n');
         _controller.updateSelection(
-          TextSelection.collapsed(offset: index + recordingPath.length + 18),
+          TextSelection.collapsed(offset: index + 5),
           quill.ChangeSource.local,
         );
+        
         widget.onVoiceNoteAdded?.call(recordingPath);
       }
       setState(() {
