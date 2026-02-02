@@ -17,6 +17,7 @@ import '../../widgets/tag_chip.dart';
 import '../../widgets/tag_management_dialog.dart';
 import '../../widgets/multi_option_fab.dart';
 import '../../constants/presets.dart';
+import '../../constants/background_assets.dart';
 import '../../services/continue_service.dart';
 import '../templates/template_models.dart';
 import '../templates/template_registry.dart';
@@ -535,11 +536,8 @@ class _LibraryScreenState extends State<LibraryScreen> {
               ? DecorationImage(
                   image: AssetImage(_getBackgroundAssetPath(item.background!)),
                   fit: BoxFit.cover,
-                  opacity: 0.15, // Light so text is readable
-                  colorFilter: const ColorFilter.mode(
-                    Colors.black54,
-                    BlendMode.darken,
-                  ),
+                  opacity: 0.3, // 30% opacity - brighter than before!
+                  // NO ColorFilter - let image show naturally
                 )
               : null,
         ),
@@ -688,17 +686,9 @@ class _LibraryScreenState extends State<LibraryScreen> {
   }
 
   String _getBackgroundAssetPath(String backgroundId) {
-    // Map background ID to asset path
-    final backgrounds = {
-      'bg_abstract_waves': 'assets/backgrounds/abstract_waves.jpg',
-      'bg_beach_aerial': 'assets/backgrounds/beach_aerial.jpg',
-      'bg_desert_dunes': 'assets/backgrounds/desert_dunes.jpg',
-      'bg_forest_path': 'assets/backgrounds/forest_path.jpg',
-      'bg_galaxy_stars': 'assets/backgrounds/galaxy_stars.jpg',
-      'bg_mountain_sunset': 'assets/backgrounds/9580989_37119.jpg',
-      'bg_ocean_waves': 'assets/backgrounds/vertical-aerial-shot-sea-waves-hitting-rocks-shore.jpg',
-    };
-    return backgrounds[backgroundId] ?? 'assets/backgrounds/abstract_waves.jpg';
+    // Use BackgroundAssets registry to get correct path
+    final background = BackgroundAssets.findById(backgroundId);
+    return background?.assetPath ?? 'assets/backgrounds/abstract_waves.jpg';
   }
 
   Color _getContentTypeColor(String contentType) {
