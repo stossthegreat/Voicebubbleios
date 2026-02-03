@@ -297,9 +297,9 @@ class _ResultScreenState extends State<ResultScreen> {
       if (continueContext?.singleItemId != null) {
         // APPEND TO ORIGINAL DOCUMENT
         final originalItemId = continueContext!.singleItemId!;
-        final originalItem = appState.recordingItems.firstWhere(
+        final originalItem = appState.allRecordingItems.firstWhere(
           (item) => item.id == originalItemId,
-          orElse: () => appState.recordingItems.first,
+          orElse: () => appState.allRecordingItems.first,
         );
         
         if (originalItem.id == originalItemId) {
@@ -356,7 +356,7 @@ class _ResultScreenState extends State<ResultScreen> {
       }
       
       debugPrint('✅ Recording saved successfully!');
-      debugPrint('✅ Total recordings now: ${appState.recordingItems.length}');
+      debugPrint('✅ Total recordings now: ${appState.allRecordingItems.length}');
     } catch (e, stackTrace) {
       debugPrint('❌ ERROR in _saveRecording: $e');
       debugPrint('❌ Stack trace: $stackTrace');
@@ -370,7 +370,7 @@ class _ResultScreenState extends State<ResultScreen> {
       final appState = context.read<AppStateProvider>();
       
       // Find the existing item
-      final existingItem = appState.recordingItems.firstWhere(
+      final existingItem = appState.allRecordingItems.firstWhere(
         (item) => item.id == _savedItemId,
         orElse: () => throw Exception('Item not found'),
       );
@@ -397,7 +397,7 @@ class _ResultScreenState extends State<ResultScreen> {
       final appState = context.read<AppStateProvider>();
       
       // Find the original item
-      final originalItem = appState.recordingItems.firstWhere(
+      final originalItem = appState.allRecordingItems.firstWhere(
         (item) => item.id == originalItemId,
         orElse: () => throw Exception('Original item not found'),
       );
@@ -578,9 +578,9 @@ class _ResultScreenState extends State<ResultScreen> {
     if (_savedItemId == null) return;
     
     final appState = context.read<AppStateProvider>();
-    final item = appState.recordingItems.firstWhere(
+    final item = appState.allRecordingItems.firstWhere(
       (i) => i.id == _savedItemId,
-      orElse: () => appState.recordingItems.first,
+      orElse: () => appState.allRecordingItems.first,
     );
     
     await ReminderManager().showReminderPicker(
@@ -937,9 +937,9 @@ class _ResultScreenState extends State<ResultScreen> {
                           if (_savedItemId != null)
                             Consumer<AppStateProvider>(
                               builder: (context, appState, _) {
-                                final item = appState.recordingItems.firstWhere(
+                                final item = appState.allRecordingItems.firstWhere(
                                   (i) => i.id == _savedItemId,
-                                  orElse: () => appState.recordingItems.first,
+                                  orElse: () => appState.allRecordingItems.first,
                                 );
                                 return ReminderButton(
                                   reminderDateTime: item.reminderDateTime,
@@ -957,7 +957,7 @@ class _ResultScreenState extends State<ResultScreen> {
                               
                               // Get the item ID
                               final appState = context.read<AppStateProvider>();
-                              final items = appState.recordingItems;
+                              final items = appState.allRecordingItems;
                               if (items.isNotEmpty) {
                                 final latestItem = items.first;
                                 showModalBottomSheet(

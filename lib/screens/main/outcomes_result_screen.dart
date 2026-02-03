@@ -133,9 +133,9 @@ class _OutcomesResultScreenState extends State<OutcomesResultScreen> {
     if (itemId == null) return;
     
     final appState = context.read<AppStateProvider>();
-    final item = appState.recordingItems.firstWhere(
+    final item = appState.allRecordingItems.firstWhere(
       (i) => i.id == itemId,
-      orElse: () => appState.recordingItems.first,
+      orElse: () => appState.allRecordingItems.first,
     );
     
     await ReminderManager().showReminderPicker(
@@ -155,7 +155,7 @@ class _OutcomesResultScreenState extends State<OutcomesResultScreen> {
     
     // Find the saved item for this outcome
     final appState = context.read<AppStateProvider>();
-    final items = appState.recordingItems;
+    final items = appState.allRecordingItems;
     
     // Find item by matching text (since we just saved it)
     final matchingItem = items.firstWhere(
@@ -324,9 +324,9 @@ class _OutcomesResultScreenState extends State<OutcomesResultScreen> {
                                 final itemId = _outcomeToItemId[index];
                                 final appState = context.read<AppStateProvider>();
                                 final savedItem = itemId != null 
-                                    ? appState.recordingItems.firstWhere(
+                                    ? appState.allRecordingItems.firstWhere(
                                         (i) => i.id == itemId,
-                                        orElse: () => appState.recordingItems.first,
+                                        orElse: () => appState.allRecordingItems.first,
                                       )
                                     : null;
                                 
