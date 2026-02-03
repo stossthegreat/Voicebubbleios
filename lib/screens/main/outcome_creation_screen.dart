@@ -22,6 +22,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
+import 'package:flutter_quill/flutter_quill.dart' as quill;
 import '../../providers/app_state_provider.dart';
 import '../../models/recording_item.dart';
 import '../../models/outcome_type.dart';
@@ -49,7 +50,7 @@ class OutcomeCreationScreen extends StatefulWidget {
 
 class _OutcomeCreationScreenState extends State<OutcomeCreationScreen> {
   late TextEditingController _titleController;
-  late TextEditingController _contentController;
+  late quill.QuillController _quillController;
   final FocusNode _titleFocusNode = FocusNode();
   final FocusNode _contentFocusNode = FocusNode();
   
@@ -96,7 +97,8 @@ class _OutcomeCreationScreenState extends State<OutcomeCreationScreen> {
     if (item != null) {
       setState(() {
         _titleController.text = item.customTitle ?? '';
-        _contentController.text = item.finalText;
+        // Load Quill document
+        _quillController.document = quill.Document()..insert(0, item.finalText);
         _selectedTags = List.from(item.tags);
         _reminderDateTime = item.reminderDateTime;
         _isCompleted = item.isCompleted;
@@ -111,7 +113,7 @@ class _OutcomeCreationScreenState extends State<OutcomeCreationScreen> {
   @override
   void dispose() {
     _titleController.dispose();
-    _contentController.dispose();
+    _quillController.dispose();
     _titleFocusNode.dispose();
     _contentFocusNode.dispose();
     super.dispose();
@@ -213,7 +215,8 @@ class _OutcomeCreationScreenState extends State<OutcomeCreationScreen> {
       return;
     }
 
-    if (_contentController.text.trim().isEmpty) {
+    final plainText = _quillController.document.toPlainText().trim();
+    if (plainText.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please add some content'),
@@ -235,7 +238,7 @@ class _OutcomeCreationScreenState extends State<OutcomeCreationScreen> {
         final existingItem = appState.recordingItems.where((i) => i.id == widget.itemId).firstOrNull;
         if (existingItem != null) {
           final updatedItem = existingItem.copyWith(
-            finalText: _contentController.text.trim(),
+            finalText: plainText,
             customTitle: _titleController.text.trim().isEmpty ? null : _titleController.text.trim(),
             tags: _selectedTags,
             outcomes: [_selectedOutcomeType!.toStorageString()],
@@ -248,13 +251,13 @@ class _OutcomeCreationScreenState extends State<OutcomeCreationScreen> {
         // Create new item
         final newItem = RecordingItem(
           id: const Uuid().v4(),
-          rawTranscript: widget.contentType == 'voice' ? '' : _contentController.text.trim(),
-          finalText: _contentController.text.trim(),
+          rawTranscript: widget.contentType == 'voice' ? '' : plainText,
+          finalText: plainText,
           presetUsed: '${_selectedOutcomeType!.displayName} (${widget.contentType})',
           outcomes: [_selectedOutcomeType!.toStorageString()],
           projectId: null, // Outcomes don't belong to projects
           createdAt: DateTime.now(),
-          editHistory: [_contentController.text.trim()],
+          editHistory: [plainText],
           presetId: '${_selectedOutcomeType!.toStorageString()}_${widget.contentType}',
           tags: _selectedTags,
           customTitle: _titleController.text.trim().isEmpty ? null : _titleController.text.trim(),

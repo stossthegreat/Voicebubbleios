@@ -170,7 +170,7 @@ class _OutcomesScreenCleanState extends State<OutcomesScreenClean> {
             ),
           );
         },
-        backgroundColor: const Color(0xFF10B981),
+        backgroundColor: const Color(0xFF3B82F6), // Blue - same as across app
         child: const Icon(Icons.check_box, color: Colors.white),
       ),
     );

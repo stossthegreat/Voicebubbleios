@@ -381,6 +381,8 @@ class _ResultScreenState extends State<ResultScreen> {
         outcomes: _selectedOutcomes.map((o) => o.toStorageString()).toList(),
         finalText: _rewrittenText, // In case text was edited
         editHistory: List.from(_textHistory),
+        // CRITICAL: If user selects outcomes, mark as hiddenInLibrary so it shows in outcomes tab
+        hiddenInLibrary: _selectedOutcomes.isNotEmpty ? true : existingItem.hiddenInLibrary,
       );
       
       await appState.updateRecording(updatedItem);
