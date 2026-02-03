@@ -69,8 +69,25 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
             // Search in ALL items, not just recordingItems (which filters out outcome items)
             final item = appState.allRecordingItems.firstWhere(
               (r) => r.id == widget.recordingId,
-              orElse: () => throw Exception('Recording not found'),
+              orElse: () => RecordingItem(
+                id: widget.recordingId,
+                rawTranscript: '',
+                finalText: '',
+                presetUsed: '',
+                outcomes: [],
+                projectId: null,
+                createdAt: DateTime.now(),
+                editHistory: [],
+                presetId: '',
+                tags: [],
+                contentType: 'text',
+              ),
             );
+
+            // If item wasn't found in state yet, show loading
+            if (!appState.allRecordingItems.any((r) => r.id == widget.recordingId)) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
             // ✨ BUILD BACKGROUND IF SET ✨
             Widget? backgroundWidget;
@@ -309,9 +326,11 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
       // Floating Continue Button (bottom right)
       floatingActionButton: Consumer<AppStateProvider>(
         builder: (context, appState, _) {
-          final item = appState.recordingItems.firstWhere(
+          final item = appState.allRecordingItems.firstWhere(
             (r) => r.id == widget.recordingId,
-            orElse: () => throw Exception('Recording not found'),
+            orElse: () => appState.allRecordingItems.isNotEmpty
+                ? appState.allRecordingItems.first
+                : throw Exception('Recording not found'),
           );
           
           return FloatingActionButton.small(
