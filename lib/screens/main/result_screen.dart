@@ -307,7 +307,7 @@ class _ResultScreenState extends State<ResultScreen> {
           final appendedText = '${originalItem.finalText}\n\n$_rewrittenText';
           final updatedItem = originalItem.copyWith(
             finalText: appendedText,
-            formattedContent: null,  // CLEAR THIS so editor uses finalText
+            formattedContent: '',  // Empty string clears it (null keeps old value)
             editHistory: [...originalItem.editHistory, _rewrittenText],
           );
           
@@ -411,7 +411,7 @@ class _ResultScreenState extends State<ResultScreen> {
       // Create updated item
       final updatedItem = originalItem.copyWith(
         finalText: combinedText,
-        formattedContent: null,  // CLEAR THIS so editor uses finalText
+        formattedContent: '',  // Empty string clears it (null keeps old value)
         rawTranscript: '${originalItem.rawTranscript}\n\n${appState.transcription}',
         editHistory: [...originalItem.editHistory, combinedText],
       );
