@@ -382,6 +382,46 @@ class _EliteInterviewScreenState extends State<EliteInterviewScreen>
               height: 1.3,
             ),
           ),
+          const SizedBox(height: 12),
+          
+          // EXAMPLE ALWAYS VISIBLE ABOVE VOICE BOX
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: primaryColor.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: primaryColor.withOpacity(0.2)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.auto_awesome, color: primaryColor, size: 16),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Perfect Example:',
+                      style: TextStyle(
+                        color: primaryColor,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  _currentQuestion.exampleAnswer,
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.7),
+                    fontSize: 13,
+                    height: 1.5,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 20),
           
           // Recording/Transcript Area
