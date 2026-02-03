@@ -1,23 +1,8 @@
-import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:uuid/uuid.dart';
-import '../../providers/app_state_provider.dart';
-import '../../models/outcome_type.dart';
-import '../../models/recording_item.dart';
-import '../../widgets/outcome_card.dart';
-import '../../widgets/multi_option_fab.dart';
-import 'outcome_detail_screen.dart';
-import 'recording_screen.dart';
-import 'recording_detail_screen.dart';
-import 'outcome_creation_screen.dart';
-import 'outcome_image_creation_screen.dart';
+// 🔥 REDIRECTING TO ELITE VERSION 🔥
+export 'outcomes_screen_elite.dart';
 
-class OutcomesScreen extends StatefulWidget {
-  const OutcomesScreen({super.key});
-
-  @override
-  State<OutcomesScreen> createState() => _OutcomesScreenState();
-}
+// Re-export with same name for compatibility
+typedef OutcomesScreen = OutcomesScreenElite;
 
 class _OutcomesScreenState extends State<OutcomesScreen> {
   final ScrollController _scrollController = ScrollController();
