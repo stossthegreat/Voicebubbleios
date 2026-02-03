@@ -244,21 +244,28 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                         ],
                       ),
                     )
-                : Column(
-                    children: [
-                      const SizedBox(height: 8),
-                      ..._items.map((item) => Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                        child: _buildItemCard(
-                          item,
+                : Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        childAspectRatio: 0.75,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                      ),
+                      itemCount: _items.length,
+                      itemBuilder: (context, index) {
+                        return _buildItemCard(
+                          _items[index],
                           surfaceColor,
                           textColor,
                           secondaryTextColor,
                           gradientColors,
-                        ),
-                      )).toList(),
-                      const SizedBox(height: 100), // Extra space at bottom
-                    ],
+                        );
+                      },
+                    ),
                   ),
           ],
         ),
@@ -393,72 +400,98 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     Color secondaryTextColor,
     List<Color> gradientColors,
   ) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: GestureDetector(
-        onTap: () {
-          // Navigate to detail screen
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => RecordingDetailScreen(recordingId: item.id),
+    final contentTypeColor = _getContentTypeColor(item.contentType);
+    final contentTypeIcon = _getContentTypeIcon(item.contentType);
+    
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => RecordingDetailScreen(recordingId: item.id)),
+        );
+      },
+      child: Stack(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: surfaceColor,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.1),
+                width: 1,
+              ),
+              // Show background image if selected
+              image: item.background != null && !_isBackgroundPaper(item.background!)
+                  ? DecorationImage(
+                      image: AssetImage(_getBackgroundAssetPath(item.background!)),
+                      fit: BoxFit.cover,
+                      opacity: 0.3,
+                    )
+                  : null,
             ),
-          );
-        },
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: surfaceColor,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: gradientColors[0].withOpacity(0.2),
-              width: 1,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Outcome chips
-              if (item.outcomes.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: item.outcomeTypes.map((outcome) {
-                      return OutcomeChip(
-                        outcomeType: outcome,
-                        isSelected: true,
-                        onTap: () {},
-                      );
-                    }).toList(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header row with content type indicator and date
+                Row(
+                  children: [
+                    // Content type indicator
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: contentTypeColor.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            contentTypeIcon,
+                            size: 12,
+                            color: contentTypeColor,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            item.contentType.toUpperCase(),
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: contentTypeColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Spacer(),
+                    // Date/time
+                    Text(
+                      item.formattedDate,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: secondaryTextColor,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                
+                // Title
+                Text(
+                  item.customTitle?.isNotEmpty == true 
+                      ? item.customTitle! 
+                      : item.finalText.split('\n').first,
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-
-              // Preset name
-              Text(
-                item.presetUsed,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: gradientColors[0],
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              // Content
-              Text(
-                item.finalText,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: textColor,
-                ),
-                maxLines: 4,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 12),
-
-              // Actions row
+                const SizedBox(height: 8),
+                
+                // Preview text
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -510,26 +543,6 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                       InkWell(
                         onTap: () {
                           Share.share(item.finalText);
-                        },
-                        borderRadius: BorderRadius.circular(8),
-                        child: Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: Icon(
-                            Icons.share,
-                            size: 18,
-                            color: secondaryTextColor,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   List<Color> _getGradientColors(int colorIndex) {
