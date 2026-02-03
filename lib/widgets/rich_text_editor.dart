@@ -24,8 +24,8 @@ class LinedPaperPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFFE0E0E0) // Light grey lines
-      ..strokeWidth = 1.0;
+      ..color = const Color(0xFF9E9E9E) // DARKER grey lines (more visible)
+      ..strokeWidth = 1.5; // Slightly thicker
 
     const lineSpacing = 32.0; // Space between lines
     for (double y = lineSpacing; y < size.height; y += lineSpacing) {
