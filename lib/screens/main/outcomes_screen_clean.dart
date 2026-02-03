@@ -55,7 +55,7 @@ class _OutcomesScreenCleanState extends State<OutcomesScreenClean> {
                   padding: const EdgeInsets.all(24),
                   child: Row(
                     children: [
-                      const Icon(Icons.dashboard, color: Color(0xFF3B82F6), size: 24),
+                      const Icon(Icons.dashboard, color: Colors.white, size: 24),
                       const SizedBox(width: 8),
                       const Text(
                         'Outcomes',

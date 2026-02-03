@@ -13,6 +13,7 @@ import '../../widgets/language_selector_popup.dart';
 import '../main/recording_screen.dart';
 import '../main/preset_selection_screen.dart';
 import '../settings/settings_screen.dart';
+import '../paywall/paywall_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -321,7 +322,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   Row(
                     children: [
                       Icon(
-                        Icons.fiber_manual_record,
+                        Icons.radio_button_checked,
                         color: Colors.white,
                         size: 24,
                       ),
@@ -332,7 +333,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           Text(
                             'VoiceBubble',
                             style: TextStyle(
-                              fontSize: 28,
+                              fontSize: 24,
                               fontWeight: FontWeight.bold,
                               color: const Color(0xFF3B82F6),
                             ),
@@ -350,20 +351,53 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       ),
                     ],
                   ),
-                  // Settings Button
-                  Container(
-                    margin: const EdgeInsets.only(right: 8),
-                    child: IconButton(
-                      icon: Icon(Icons.settings, color: textColor, size: 28),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const SettingsScreen(),
+                  // Premium & Settings Icons
+                  Row(
+                    children: [
+                      // Premium/Paywall Icon
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: surfaceColor,
+                          borderRadius: BorderRadius.circular(40),
+                        ),
+                        child: IconButton(
+                          padding: EdgeInsets.zero,
+                          onPressed: () {
+                            // Show paywall
+                            showDialog(
+                              context: context,
+                              barrierDismissible: false,
+                              builder: (context) => PaywallScreen(
+                                onSubscribe: () {},
+                                onRestore: () {},
+                                onClose: () => Navigator.pop(context),
+                              ),
+                            );
+                          },
+                          icon: Icon(Icons.workspace_premium, color: const Color(0xFFFFD700), size: 20),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Settings Button
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: surfaceColor,
+                          borderRadius: BorderRadius.circular(40),
+                        ),
+                        child: IconButton(
+                          padding: EdgeInsets.zero,
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const SettingsScreen()),
                           ),
-                        );
-                      },
-                    ),
+                          icon: Icon(Icons.settings, color: textColor, size: 20),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

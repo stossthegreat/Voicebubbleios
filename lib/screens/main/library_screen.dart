@@ -103,83 +103,88 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   padding: const EdgeInsets.all(24),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
-                      // Library Header with Icon
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.library_books,
-                              color: primaryColor,
-                              size: 24,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Library',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: primaryColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Full-width tabs spanning from edge to edge
-                      Container(
-                        decoration: BoxDecoration(
-                          color: surfaceColor,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        padding: const EdgeInsets.all(3),
-                        child:                           Row(
+                      // Library Header with Icon + Tabs on SAME LINE
+                      Row(
+                        children: [
+                          // Left side: Icon + Text
+                          Row(
                             children: [
-                              // All button - takes 1/2 width
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: () => setState(() => _viewMode = 0),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
-                                    decoration: BoxDecoration(
-                                      color: _viewMode == 0 ? primaryColor : Colors.transparent,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      'All',
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: _viewMode == 0 ? textColor : secondaryTextColor,
-                                      ),
-                                    ),
-                                  ),
-                                ),
+                              Icon(
+                                Icons.library_books,
+                                color: Colors.white,
+                                size: 24,
                               ),
-                              // Projects button - takes 1/2 width
-                              Expanded(
-                                child: GestureDetector(
-                                  onTap: () => setState(() => _viewMode = 1),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
-                                    decoration: BoxDecoration(
-                                      color: _viewMode == 1 ? primaryColor : Colors.transparent,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      'Projects',
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: _viewMode == 1 ? textColor : secondaryTextColor,
-                                      ),
-                                    ),
-                                  ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Library',
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: primaryColor,
                                 ),
                               ),
                             ],
                           ),
+                          const SizedBox(width: 16),
+                          // Right side: All/Projects buttons
+                          Expanded(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: surfaceColor,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              padding: const EdgeInsets.all(3),
+                              child: Row(
+                                children: [
+                                  // All button
+                                  Expanded(
+                                    child: GestureDetector(
+                                      onTap: () => setState(() => _viewMode = 0),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(vertical: 10),
+                                        decoration: BoxDecoration(
+                                          color: _viewMode == 0 ? primaryColor : Colors.transparent,
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          'All',
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color: _viewMode == 0 ? textColor : secondaryTextColor,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  // Projects button
+                                  Expanded(
+                                    child: GestureDetector(
+                                      onTap: () => setState(() => _viewMode = 1),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(vertical: 10),
+                                        decoration: BoxDecoration(
+                                          color: _viewMode == 1 ? primaryColor : Colors.transparent,
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          'Projects',
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color: _viewMode == 1 ? textColor : secondaryTextColor,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 16),
 
