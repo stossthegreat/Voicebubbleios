@@ -26,39 +26,23 @@ class BackgroundAssets {
   // ════════════════════════════════════════════════════════════════════════════
 
   static const List<BackgroundAsset> allPapers = [
-    // Plain white paper
+    // Plain white paper (CODED - no image)
     BackgroundAsset(
       id: 'paper_plain',
       name: 'Plain White',
-      assetPath: 'assets/backgrounds/plain_paper.jpg',
+      assetPath: null, // CODED
       isPaper: true,
       fallbackColor: Color(0xFFFFFFFF), // Pure white
     ),
-    // Grid paper
+    // Lined notebook (CODED - no image)
     BackgroundAsset(
-      id: 'paper_grid',
-      name: 'Grid Paper',
-      assetPath: 'assets/backgrounds/grid_paper.jpg',
+      id: 'paper_lined',
+      name: 'Lined Paper',
+      assetPath: null, // CODED
       isPaper: true,
-      fallbackColor: Color(0xFFF0F4F8), // Light blue-grey
+      fallbackColor: Color(0xFFF5F5F5), // Light grey
     ),
-    // Dotted paper
-    BackgroundAsset(
-      id: 'paper_dotted',
-      name: 'Dotted Paper',
-      assetPath: 'assets/backgrounds/dotted_paper.jpg',
-      isPaper: true,
-      fallbackColor: Color(0xFFFAF8F3), // Warm off-white
-    ),
-    // Lined notebook
-    BackgroundAsset(
-      id: 'paper_grey_notebook',
-      name: 'Lined Notebook',
-      assetPath: 'assets/backgrounds/lined_paper.jpg',
-      isPaper: true,
-      fallbackColor: Color(0xFFE5E7EB), // Light grey
-    ),
-    // Vintage paper
+    // Vintage paper (IMAGE ONLY)
     BackgroundAsset(
       id: 'paper_vintage',
       name: 'Vintage Paper',

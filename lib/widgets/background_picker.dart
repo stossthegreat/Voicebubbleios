@@ -81,13 +81,26 @@ class BackgroundPickerDialog extends StatelessWidget {
                       spacing: 12,
                       runSpacing: 12,
                       children: BackgroundAssets.allPapers.map((paper) {
-                        return _buildImagePreviewOption(
-                          context,
-                          id: paper.id,
-                          name: paper.name,
-                          assetPath: paper.assetPath!,
-                          isPaper: true,
-                        );
+                        // Check if paper has image or is coded
+                        if (paper.assetPath != null) {
+                          // Vintage - has image
+                          return _buildImagePreviewOption(
+                            context,
+                            id: paper.id,
+                            name: paper.name,
+                            assetPath: paper.assetPath!,
+                            isPaper: true,
+                          );
+                        } else {
+                          // Plain or Lined - coded, show color preview
+                          return _buildCodedPreviewOption(
+                            context,
+                            id: paper.id,
+                            name: paper.name,
+                            color: paper.fallbackColor ?? Colors.white,
+                            showLines: paper.id == 'paper_lined',
+                          );
+                        }
                       }).toList(),
                     ),
                     const SizedBox(height: 16),
@@ -239,6 +252,86 @@ class BackgroundPickerDialog extends StatelessWidget {
       ),
     );
   }
+
+  // For coded papers (plain, lined)
+  Widget _buildCodedPreviewOption(
+    BuildContext context, {
+    required String id,
+    required String name,
+    required Color color,
+    required bool showLines,
+  }) {
+    final isSelected = currentBackground == id;
+    return GestureDetector(
+      onTap: () => onSelect(id),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: color,
+              border: Border.all(
+                color: isSelected ? const Color(0xFF3B82F6) : Colors.white24,
+                width: isSelected ? 3 : 2,
+              ),
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: const Color(0xFF3B82F6).withOpacity(0.4),
+                        blurRadius: 8,
+                        spreadRadius: 2,
+                      )
+                    ]
+                  : null,
+            ),
+            child: showLines
+                ? ClipOval(
+                    child: CustomPaint(
+                      painter: _MiniLinedPaperPainter(),
+                    ),
+                  )
+                : null,
+          ),
+          const SizedBox(height: 6),
+          SizedBox(
+            width: 70,
+            child: Text(
+              name,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// Mini lined paper painter for preview circles
+class _MiniLinedPaperPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFFCCCCCC)
+      ..strokeWidth = 0.5;
+
+    const lineSpacing = 8.0;
+    for (double y = lineSpacing; y < size.height; y += lineSpacing) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -325,19 +418,34 @@ class BackgroundPicker extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                ...BackgroundAssets.allPapers.map((paper) {
-                  return _buildBackgroundOption(
-                    context,
-                    id: paper.id,
-                    name: paper.name,
-                    subtitle: 'PDF paper texture',
-                    icon: Icons.description,
-                    color: paper.fallbackColor ?? const Color(0xFFE0E0E0),
-                    surfaceColor: surfaceColor,
-                    textColor: textColor,
-                    secondaryTextColor: secondaryTextColor,
-                  );
-                }),
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 16,
+                  children: BackgroundAssets.allPapers.map((paper) {
+                    if (paper.assetPath != null) {
+                      // Vintage - image
+                      return _buildImagePreviewOption(
+                        context,
+                        id: paper.id,
+                        name: paper.name,
+                        assetPath: paper.assetPath!,
+                        textColor: textColor,
+                      );
+                    } else {
+                      // Plain or Lined - coded
+                      return _buildCodedPaperOption(
+                        context,
+                        id: paper.id,
+                        name: paper.name,
+                        color: paper.fallbackColor ?? Colors.white,
+                        textColor: textColor,
+                        customPreview: paper.id == 'paper_lined'
+                            ? CustomPaint(painter: _MiniLinedPaperPainter())
+                            : null,
+                      );
+                    }
+                  }).toList(),
+                ),
                 const SizedBox(height: 24),
 
                 // Backgrounds section
@@ -350,19 +458,19 @@ class BackgroundPicker extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 12),
-                ...BackgroundAssets.allBackgrounds.map((bg) {
-                  return _buildBackgroundOption(
-                    context,
-                    id: bg.id,
-                    name: bg.name,
-                    subtitle: 'Image background',
-                    icon: Icons.image,
-                    color: bg.fallbackColor ?? const Color(0xFF2196F3),
-                    surfaceColor: surfaceColor,
-                    textColor: textColor,
-                    secondaryTextColor: secondaryTextColor,
-                  );
-                }),
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 16,
+                  children: BackgroundAssets.allBackgrounds.map((bg) {
+                    return _buildImagePreviewOption(
+                      context,
+                      id: bg.id,
+                      name: bg.name,
+                      assetPath: bg.assetPath!,
+                      textColor: textColor,
+                    );
+                  }).toList(),
+                ),
               ],
             ),
           ),
@@ -494,6 +602,68 @@ class BackgroundPicker extends StatelessWidget {
                   );
                 },
               ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: 80,
+            child: Text(
+              name,
+              style: TextStyle(
+                color: textColor,
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // NEW: For coded papers (plain, lined)
+  Widget _buildCodedPaperOption(
+    BuildContext context, {
+    required String id,
+    required String name,
+    required Color color,
+    required Color textColor,
+    Widget? customPreview,
+  }) {
+    final isSelected = currentBackgroundId == id;
+    return GestureDetector(
+      onTap: () {
+        onBackgroundSelected(id);
+        Navigator.pop(context);
+      },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 70,
+            height: 70,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: color,
+              border: Border.all(
+                color: isSelected ? const Color(0xFF3B82F6) : Colors.white24,
+                width: isSelected ? 3 : 2,
+              ),
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: const Color(0xFF3B82F6).withOpacity(0.4),
+                        blurRadius: 8,
+                        spreadRadius: 2,
+                      )
+                    ]
+                  : null,
+            ),
+            child: ClipOval(
+              child: customPreview ?? Container(),
             ),
           ),
           const SizedBox(height: 8),

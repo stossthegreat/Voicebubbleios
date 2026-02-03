@@ -17,6 +17,27 @@ import './outcome_chip.dart';
 import './background_picker.dart';
 
 // ============================================================
+//        LINED PAPER PAINTER (for coded lined paper)
+// ============================================================
+
+class LinedPaperPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFFE0E0E0) // Light grey lines
+      ..strokeWidth = 1.0;
+
+    const lineSpacing = 32.0; // Space between lines
+    for (double y = lineSpacing; y < size.height; y += lineSpacing) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+// ============================================================
 //        CUSTOM EMBED BUILDERS FOR IMAGES AND AUDIO
 // ============================================================
 
@@ -968,27 +989,38 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
       return Container(color: const Color(0xFF1E1E1E));
     }
 
-    // For paper types - NOW SHOW AS IMAGES! (not solid colors)
+    // PAPER TYPES
     if (background.isPaper) {
-      return Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.asset(
-            background.assetPath!,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              return Container(color: background.fallbackColor);
-            },
-          ),
-          // Very light overlay for text readability
-          Container(
-            color: Colors.black.withOpacity(0.10), // Only 10% overlay - paper shows through!
-          ),
-        ],
-      );
+      if (background.id == 'paper_plain') {
+        // CODED: Plain white paper
+        return Container(color: const Color(0xFFFFFFFF));
+      } else if (background.id == 'paper_lined') {
+        // CODED: Lined paper with horizontal lines
+        return CustomPaint(
+          painter: LinedPaperPainter(),
+          child: Container(color: const Color(0xFFFAFAFA)),
+        );
+      } else if (background.assetPath != null) {
+        // IMAGE: Vintage paper only
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset(
+              background.assetPath!,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(color: background.fallbackColor);
+              },
+            ),
+            Container(color: Colors.black.withOpacity(0.05)),
+          ],
+        );
+      } else {
+        return Container(color: background.fallbackColor);
+      }
     }
 
-    // For image backgrounds - show ACTUAL IMAGE at FULL brightness with LIGHT overlay
+    // IMAGE BACKGROUNDS (nature, space, etc.)
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -999,10 +1031,7 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
             return Container(color: background.fallbackColor);
           },
         ),
-        // MUCH lighter overlay - only 40% black so image shows at 60% brightness
-        Container(
-          color: Colors.black.withOpacity(0.40),
-        ),
+        Container(color: Colors.black.withOpacity(0.40)),
       ],
     );
   }
