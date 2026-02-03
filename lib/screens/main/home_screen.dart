@@ -317,26 +317,36 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // VoiceBubble text with tagline (NO LOGO)
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  // VoiceBubble text with tagline + Record Icon
+                  Row(
                     children: [
-                      Text(
-                        'VoiceBubble',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: const Color(0xFF3B82F6),
-                        ),
+                      Icon(
+                        Icons.fiber_manual_record,
+                        color: Colors.white,
+                        size: 24,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Speak, AI Writes, Done',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: secondaryTextColor,
-                          fontWeight: FontWeight.w500,
-                        ),
+                      const SizedBox(width: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'VoiceBubble',
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF3B82F6),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Speak, AI Writes, Done',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: secondaryTextColor,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),

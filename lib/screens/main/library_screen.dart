@@ -103,6 +103,28 @@ class _LibraryScreenState extends State<LibraryScreen> {
                   padding: const EdgeInsets.all(24),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
+                      // Library Header with Icon
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.library_books,
+                              color: primaryColor,
+                              size: 24,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Library',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: primaryColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                       // Full-width tabs spanning from edge to edge
                       Container(
                         decoration: BoxDecoration(
@@ -112,7 +134,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                         padding: const EdgeInsets.all(3),
                         child:                           Row(
                             children: [
-                              // Library button - takes 1/2 width
+                              // All button - takes 1/2 width
                               Expanded(
                                 child: GestureDetector(
                                   onTap: () => setState(() => _viewMode = 0),
@@ -123,7 +145,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
-                                      'Library',
+                                      'All',
                                       textAlign: TextAlign.center,
                                       style: TextStyle(
                                         fontSize: 14,

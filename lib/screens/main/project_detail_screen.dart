@@ -284,8 +284,9 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
         onTextPressed: () async {
           // Create empty text document within project
           final appState = Provider.of<AppStateProvider>(context, listen: false);
+          final itemId = const Uuid().v4();
           final newItem = RecordingItem(
-            id: const Uuid().v4(),
+            id: itemId,
             rawTranscript: '',
             finalText: '',
             presetUsed: 'Text Document',
@@ -298,6 +299,8 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
             contentType: 'text',
           );
           await appState.saveRecording(newItem);
+          await appState.addItemToProject(widget.projectId, itemId); // Add to project
+          await _loadProject(); // Reload to show new item
           
           if (mounted) {
             Navigator.push(
@@ -356,6 +359,7 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
           );
           await appState.saveRecording(newItem);
           await appState.addItemToProject(widget.projectId, itemId); // Add to project
+          await _loadProject(); // Reload to show new item
           
           if (mounted) {
             Navigator.push(
@@ -369,8 +373,9 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
         onImagePressed: () async {
           // Create empty image document within project
           final appState = Provider.of<AppStateProvider>(context, listen: false);
+          final itemId = const Uuid().v4();
           final newItem = RecordingItem(
-            id: const Uuid().v4(),
+            id: itemId,
             rawTranscript: '', // Will store image path
             finalText: '',
             presetUsed: 'Image',
@@ -383,6 +388,8 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
             contentType: 'image',
           );
           await appState.saveRecording(newItem);
+          await appState.addItemToProject(widget.projectId, itemId); // Add to project
+          await _loadProject(); // Reload to show new item
           
           if (mounted) {
             Navigator.push(
