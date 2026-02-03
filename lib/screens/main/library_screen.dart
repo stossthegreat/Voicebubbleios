@@ -367,6 +367,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             presetId: 'text_document',
             tags: [],
             contentType: 'text',
+            background: 'paper_black', // DEFAULT: Black background
           );
           await appState.saveRecording(newItem);
           
@@ -394,6 +395,7 @@ class _LibraryScreenState extends State<LibraryScreen> {
             presetId: 'quick_note',
             tags: [],
             contentType: 'text',
+            background: 'paper_black', // DEFAULT: Black background
           );
           await appState.saveRecording(newItem);
           

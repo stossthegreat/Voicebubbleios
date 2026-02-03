@@ -409,8 +409,6 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
   final FocusNode _focusNode = FocusNode();
   Timer? _saveTimer;
   Timer? _selectionTimer;
-  bool _showSaved = false;
-  bool _hasUnsavedChanges = false;
   late AnimationController _saveIndicatorController;
   late Animation<double> _saveIndicatorAnimation;
   int _wordCount = 0;
@@ -571,17 +569,11 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
       await widget.onSave(plainText, deltaJson);
 
       if (mounted) {
-        setState(() {
-          _hasUnsavedChanges = false;
-          _showSaved = true;
-        });
-        
+        // Just save, no indicators
         _saveIndicatorController.forward().then((_) {
-          Future.delayed(const Duration(seconds: 2), () {
+          Future.delayed(const Duration(milliseconds: 500), () {
             if (mounted) {
-              _saveIndicatorController.reverse().then((_) {
-                if (mounted) setState(() => _showSaved = false);
-              });
+              _saveIndicatorController.reverse();
             }
           });
         });
@@ -1006,17 +998,39 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
 
     // PAPER TYPES
     if (background.isPaper) {
-      if (background.id == 'paper_plain') {
+      if (background.id == 'paper_black') {
+        // BLACK PAPER - pure black background, grey content area
+        return Container(color: const Color(0xFF000000));
+      } else if (background.id == 'paper_plain') {
         // CODED: Plain white paper
         return Container(color: const Color(0xFFFFFFFF));
       } else if (background.id == 'paper_lined') {
-        // CODED: Lined paper with horizontal lines
-        return CustomPaint(
-          painter: LinedPaperPainter(),
-          child: Container(color: const Color(0xFFFAFAFA)),
-        );
+        // IMAGE: Lined paper (user adds)
+        if (background.assetPath != null) {
+          return Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.asset(
+                background.assetPath!,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  // Fallback if image missing
+                  return CustomPaint(
+                    painter: LinedPaperPainter(),
+                    child: Container(color: const Color(0xFFFAFAFA)),
+                  );
+                },
+              ),
+            ],
+          );
+        } else {
+          return CustomPaint(
+            painter: LinedPaperPainter(),
+            child: Container(color: const Color(0xFFFAFAFA)),
+          );
+        }
       } else if (background.assetPath != null) {
-        // IMAGE: Vintage paper only
+        // IMAGE: Vintage or other papers
         return Stack(
           fit: StackFit.expand,
           children: [
@@ -1337,8 +1351,10 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
                       // Content layer (scrollable)
                       SingleChildScrollView(
                         child: Container(
-                          // ALWAYS transparent when background exists, so background shows through cleanly
-                          color: widget.backgroundId == null ? const Color(0xFF1E1E1E) : Colors.transparent,
+                          // Grey content area for black background, transparent for others
+                          color: widget.backgroundId == 'paper_black' 
+                              ? const Color(0xFF2A2A2A) // Grey content area on black
+                              : (widget.backgroundId == null ? const Color(0xFF1E1E1E) : Colors.transparent),
                           padding: const EdgeInsets.all(16),
                           constraints: BoxConstraints(
                             minHeight: MediaQuery.of(context).size.height - 200,
@@ -1450,29 +1466,12 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
                         const SizedBox(width: 16),
                       ],
                       
-                      // Word/character count and status at BOTTOM RIGHT
-                      if (!widget.showTopToolbar || widget.readOnly)
-                        Text(
-                          '$_wordCount words • $_characterCount characters',
-                          style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12),
-                        ),
+                      // Word/character count on LEFT SIDE
+                      Text(
+                        '$_wordCount words • $_characterCount characters',
+                        style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12),
+                      ),
                       const Spacer(),
-                      if (_hasUnsavedChanges)
-                        const Row(
-                          children: [
-                            Icon(Icons.circle, color: Color(0xFFF59E0B), size: 6),
-                            SizedBox(width: 6),
-                            Text('Unsaved', style: TextStyle(color: Color(0xFFF59E0B), fontSize: 12)),
-                          ],
-                        ),
-                      if (_showSaved)
-                        const Row(
-                          children: [
-                            Icon(Icons.check_circle, color: Color(0xFF10B981), size: 14),
-                            SizedBox(width: 6),
-                            Text('Saved', style: TextStyle(color: Color(0xFF10B981), fontSize: 12)),
-                          ],
-                        ),
                     ],
                   ),
                 ),

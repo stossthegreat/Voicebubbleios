@@ -26,6 +26,14 @@ class BackgroundAssets {
   // ════════════════════════════════════════════════════════════════════════════
 
   static const List<BackgroundAsset> allPapers = [
+    // Black paper (default)
+    BackgroundAsset(
+      id: 'paper_black',
+      name: 'Black Paper',
+      assetPath: null, // CODED - pure black
+      isPaper: true,
+      fallbackColor: Color(0xFF000000), // Pure black
+    ),
     // Plain white paper (CODED - no image)
     BackgroundAsset(
       id: 'paper_plain',
@@ -34,11 +42,11 @@ class BackgroundAssets {
       isPaper: true,
       fallbackColor: Color(0xFFFFFFFF), // Pure white
     ),
-    // Lined notebook (CODED - no image)
+    // Lined notebook (IMAGE - user will add)
     BackgroundAsset(
       id: 'paper_lined',
       name: 'Lined Paper',
-      assetPath: null, // CODED
+      assetPath: 'assets/backgrounds/lined_paper.jpg', // USER WILL ADD THIS
       isPaper: true,
       fallbackColor: Color(0xFFF5F5F5), // Light grey
     ),
