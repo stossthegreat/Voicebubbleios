@@ -983,14 +983,4 @@ class _LibraryScreenState extends State<LibraryScreen> {
       ),
     );
   }
-              child: Text(
-                template.category.displayName,
-                style: TextStyle(fontSize: 10, color: template.category.color, fontWeight: FontWeight.w600),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
