@@ -543,6 +543,27 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
                       InkWell(
                         onTap: () {
                           Share.share(item.finalText);
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.all(8),
+                          child: Icon(
+                            Icons.share,
+                            size: 18,
+                            color: secondaryTextColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   List<Color> _getGradientColors(int colorIndex) {
