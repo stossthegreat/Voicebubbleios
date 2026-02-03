@@ -10,6 +10,7 @@ import '../../services/project_service.dart';
 import '../../services/continue_service.dart';
 import '../../widgets/outcome_chip.dart';
 import '../../widgets/multi_option_fab.dart';
+import '../../constants/background_assets.dart';
 import 'recording_screen.dart';
 import 'recording_detail_screen.dart';
 
@@ -731,5 +732,16 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
       default:
         return const Color(0xFFEF4444);
     }
+  }
+
+  bool _isBackgroundPaper(String backgroundId) {
+    // Paper backgrounds start with 'paper_'
+    return backgroundId.startsWith('paper_');
+  }
+
+  String _getBackgroundAssetPath(String backgroundId) {
+    // Use BackgroundAssets registry to get correct path
+    final background = BackgroundAssets.findById(backgroundId);
+    return background?.assetPath ?? 'assets/backgrounds/abstract_waves.jpg';
   }
 }
