@@ -381,6 +381,7 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
       initialPlainText: item.finalText,
       onSave: (plainText, deltaJson) => _saveContent(appState, item, plainText, deltaJson),
       readOnly: false,
+      contentType: item.contentType, // Pass content type for auto-initialization
       // Context-aware features based on item type
       showImageSection: item.contentType == 'image',
       initialImagePath: item.contentType == 'image' ? item.rawTranscript : null,

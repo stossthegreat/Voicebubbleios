@@ -380,23 +380,13 @@ class _LibraryScreenState extends State<LibraryScreen> {
           }
         },
         onTodoPressed: () async {
-          // Create todo with pre-populated checkboxes
+          // Create todo with ACTUAL pre-populated checkboxes (not JSON string)
           final appState = Provider.of<AppStateProvider>(context, listen: false);
-          
-          // Create initial Delta with 3 empty todo checkboxes
-          final initialDelta = {
-            "ops": [
-              {"insert": ""},
-              {"insert": "\n", "attributes": {"list": "checked"}},
-              {"insert": "\n", "attributes": {"list": "checked"}},
-              {"insert": "\n", "attributes": {"list": "checked"}},
-            ]
-          };
           
           final newItem = RecordingItem(
             id: const Uuid().v4(),
             rawTranscript: '',
-            finalText: jsonEncode(initialDelta),
+            finalText: '', // Empty - will be filled by Quill editor with checkboxes
             presetUsed: 'Todo List',
             outcomes: [],
             projectId: null,

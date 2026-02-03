@@ -467,7 +467,18 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
     } else if (widget.initialPlainText != null && widget.initialPlainText!.isNotEmpty) {
       doc = quill.Document()..insert(0, widget.initialPlainText!);
     } else {
+      // Empty document - check if we need to auto-populate
       doc = quill.Document();
+      
+      // Auto-add 3 checkboxes for TODO content type
+      if (widget.contentType == 'todo') {
+        doc.insert(0, '\n');
+        doc.format(0, 1, quill.Attribute.list, quill.Attribute.unchecked);
+        doc.insert(1, '\n');
+        doc.format(1, 1, quill.Attribute.list, quill.Attribute.unchecked);
+        doc.insert(2, '\n');
+        doc.format(2, 1, quill.Attribute.list, quill.Attribute.unchecked);
+      }
     }
 
     _controller = quill.QuillController(
