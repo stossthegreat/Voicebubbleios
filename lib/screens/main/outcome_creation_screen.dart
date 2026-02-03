@@ -620,7 +620,7 @@ class _OutcomeCreationScreenState extends State<OutcomeCreationScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        '${_contentController.text.trim().split(RegExp(r'\s+')).where((word) => word.isNotEmpty).length} words',
+                        '${_quillController.document.toPlainText().trim().split(RegExp(r'\s+')).where((word) => word.isNotEmpty).length} words',
                         style: const TextStyle(
                           color: secondaryTextColor,
                           fontSize: 12,
