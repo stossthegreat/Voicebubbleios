@@ -411,22 +411,23 @@ class _OutcomesScreenCleanState extends State<OutcomesScreenClean> {
                   ),
                 ),
                 
-                // Alarm icon
-                if (hasReminder)
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: isOverdue 
-                          ? const Color(0xFFEF4444).withOpacity(0.15)
-                          : color.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.alarm,
-                      size: 18,
-                      color: isOverdue ? const Color(0xFFEF4444) : color,
-                    ),
+                // Alarm icon - ALWAYS SHOW
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: isOverdue 
+                        ? const Color(0xFFEF4444).withOpacity(0.15)
+                        : (hasReminder ? color.withOpacity(0.15) : const Color(0xFF374151).withOpacity(0.15)),
+                    borderRadius: BorderRadius.circular(8),
                   ),
+                  child: Icon(
+                    Icons.alarm,
+                    size: 18,
+                    color: isOverdue 
+                        ? const Color(0xFFEF4444) 
+                        : (hasReminder ? color : const Color(0xFF6B7280)),
+                  ),
+                ),
               ],
             ),
           ),
