@@ -691,4 +691,11 @@ class _ProjectDetailScreenState extends State<ProjectDetailScreen> {
     final background = BackgroundAssets.findById(backgroundId);
     return background?.assetPath ?? 'assets/backgrounds/abstract_waves.jpg';
   }
+
+  String _getPreviewText(String text) {
+    // Skip the first line (used as title) and return the rest
+    final lines = text.split('\n');
+    if (lines.length <= 1) return '';
+    return lines.skip(1).join('\n').trim();
+  }
 }
