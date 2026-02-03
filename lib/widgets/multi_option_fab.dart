@@ -62,7 +62,7 @@ class _MultiOptionFabState extends State<MultiOptionFab>
 
   void _onOptionPressed(VoidCallback? callback) {
     if (_isExpanded) {
-      _toggle(); // Close the menu
+      _toggle();
       Future.delayed(const Duration(milliseconds: 200), () {
         callback?.call();
       });
@@ -70,14 +70,12 @@ class _MultiOptionFabState extends State<MultiOptionFab>
   }
 
   double _getDelay(int index) {
-    // Calculate delay based on visible options (4 main options)
     final callbacks = [
-      widget.onImagePressed,    // 0 - Pictures
-      widget.onTodoPressed,     // 1 - Todo  
-      widget.onTextPressed,     // 2 - Document
-      widget.onVoicePressed,    // 3 - Voice
+      widget.onImagePressed,
+      widget.onTodoPressed,
+      widget.onTextPressed,
+      widget.onVoicePressed,
     ];
-    
     int visibleIndex = 0;
     for (int i = 0; i <= index && i < callbacks.length; i++) {
       if (callbacks[i] != null) {
@@ -85,7 +83,6 @@ class _MultiOptionFabState extends State<MultiOptionFab>
         visibleIndex++;
       }
     }
-    
     final baseDelay = widget.showProjectOption ? 0.1 : 0.0;
     return baseDelay + (visibleIndex * 0.1);
   }
@@ -93,95 +90,103 @@ class _MultiOptionFabState extends State<MultiOptionFab>
   @override
   Widget build(BuildContext context) {
     const primaryColor = Color(0xFF3B82F6);
-    const surfaceColor = Color(0xFF1A1A1A);
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.end,
+    return Stack(
+      alignment: Alignment.bottomRight,
       children: [
-
-        // Options
-        AnimatedBuilder(
-          animation: _animation,
-          builder: (context, child) {
-            return Transform.scale(
-              scale: _animation.value,
-              child: Opacity(
-                opacity: _animation.value,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                // Project option (if enabled)
-                if (widget.showProjectOption)
-                  _buildOption(
-                    icon: Icons.folder_outlined,
-                    label: 'Project',
-                    color: const Color(0xFF9333EA),
-                    onPressed: () => _onOptionPressed(widget.onProjectPressed),
-                    delay: 0.0,
-                  ),
-
-                // Image option
-                if (widget.onImagePressed != null)
-                  _buildOption(
-                    icon: Icons.image_outlined,
-                    label: 'Image',
-                    color: const Color(0xFF10B981),
-                    onPressed: () => _onOptionPressed(widget.onImagePressed),
-                    delay: _getDelay(0),
-                  ),
-
-                // Todo option
-                if (widget.onTodoPressed != null)
-                  _buildOption(
-                    icon: Icons.checklist,
-                    label: 'Todo',
-                    color: const Color(0xFF8B5CF6),
-                    onPressed: () => _onOptionPressed(widget.onTodoPressed),
-                    delay: _getDelay(1),
-                  ),
-
-                // Text option (Document)
-                if (widget.onTextPressed != null)
-                  _buildOption(
-                    icon: Icons.article_outlined,
-                    label: 'Document',
-                    color: const Color(0xFFF59E0B),
-                    onPressed: () => _onOptionPressed(widget.onTextPressed),
-                    delay: _getDelay(2),
-                  ),
-
-                // Voice option
-                if (widget.onVoicePressed != null)
-                  _buildOption(
-                    icon: Icons.mic_outlined,
-                    label: 'Voice',
-                    color: const Color(0xFFEF4444),
-                    onPressed: () => _onOptionPressed(widget.onVoicePressed),
-                    delay: _getDelay(3),
-                  ),
-
-                    const SizedBox(height: 16),
-                  ],
-                ),
+        // BACKDROP
+        if (_isExpanded)
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: _toggle,
+              behavior: HitTestBehavior.opaque,
+              child: AnimatedBuilder(
+                animation: _animation,
+                builder: (context, child) {
+                  return Container(
+                    color: Colors.black.withOpacity(_animation.value * 0.5),
+                  );
+                },
               ),
-            );
-          },
-        ),
-
-        // Main FAB
-        FloatingActionButton(
-          onPressed: _toggle,
-          backgroundColor: primaryColor,
-          child: AnimatedRotation(
-            turns: _isExpanded ? 0.125 : 0.0, // 45 degree rotation
-            duration: const Duration(milliseconds: 300),
-            child: Icon(
-              _isExpanded ? Icons.close : Icons.add,
-              color: Colors.white,
             ),
           ),
+
+        // FAB Column
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            AnimatedBuilder(
+              animation: _animation,
+              builder: (context, child) {
+                return Transform.scale(
+                  scale: _animation.value,
+                  child: Opacity(
+                    opacity: _animation.value,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        if (widget.showProjectOption)
+                          _buildOption(
+                            icon: Icons.folder_outlined,
+                            label: 'Project',
+                            color: const Color(0xFF9333EA),
+                            onPressed: () => _onOptionPressed(widget.onProjectPressed),
+                            delay: 0.0,
+                          ),
+                        if (widget.onImagePressed != null)
+                          _buildOption(
+                            icon: Icons.image_outlined,
+                            label: 'Image',
+                            color: const Color(0xFF10B981),
+                            onPressed: () => _onOptionPressed(widget.onImagePressed),
+                            delay: _getDelay(0),
+                          ),
+                        if (widget.onTodoPressed != null)
+                          _buildOption(
+                            icon: Icons.checklist,
+                            label: 'Todo',
+                            color: const Color(0xFF8B5CF6),
+                            onPressed: () => _onOptionPressed(widget.onTodoPressed),
+                            delay: _getDelay(1),
+                          ),
+                        if (widget.onTextPressed != null)
+                          _buildOption(
+                            icon: Icons.article_outlined,
+                            label: 'Document',
+                            color: const Color(0xFFF59E0B),
+                            onPressed: () => _onOptionPressed(widget.onTextPressed),
+                            delay: _getDelay(2),
+                          ),
+                        if (widget.onVoicePressed != null)
+                          _buildOption(
+                            icon: Icons.mic_outlined,
+                            label: 'Voice',
+                            color: const Color(0xFFEF4444),
+                            onPressed: () => _onOptionPressed(widget.onVoicePressed),
+                            delay: _getDelay(3),
+                          ),
+                        const SizedBox(height: 16),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+            FloatingActionButton(
+              onPressed: _toggle,
+              backgroundColor: primaryColor,
+              child: AnimatedRotation(
+                turns: _isExpanded ? 0.125 : 0.0,
+                duration: const Duration(milliseconds: 300),
+                child: Icon(
+                  _isExpanded ? Icons.close : Icons.add,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );
@@ -203,10 +208,7 @@ class _MultiOptionFabState extends State<MultiOptionFab>
         curve: Interval(delay, delay + 0.3, curve: Curves.easeOut),
       )),
       child: FadeTransition(
-        opacity: Tween<double>(
-          begin: 0.0,
-          end: 1.0,
-        ).animate(CurvedAnimation(
+        opacity: Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(
           parent: _animationController,
           curve: Interval(delay, delay + 0.3, curve: Curves.easeOut),
         )),
@@ -215,7 +217,6 @@ class _MultiOptionFabState extends State<MultiOptionFab>
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Label
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
@@ -239,17 +240,11 @@ class _MultiOptionFabState extends State<MultiOptionFab>
                 ),
               ),
               const SizedBox(width: 12),
-              
-              // FAB
               FloatingActionButton.small(
                 onPressed: onPressed,
                 backgroundColor: color,
-                heroTag: label, // Unique hero tag for each FAB
-                child: Icon(
-                  icon,
-                  color: Colors.white,
-                  size: 20,
-                ),
+                heroTag: label,
+                child: Icon(icon, color: Colors.white, size: 20),
               ),
             ],
           ),
