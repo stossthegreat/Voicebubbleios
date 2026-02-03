@@ -241,7 +241,11 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
                           icon: Icon(Icons.more_vert, color: textColor, size: 18),
                           color: surfaceColor,
                           onSelected: (value) => _handleMenuAction(context, appState, item, value),
-                          itemBuilder: (context) => [
+                          itemBuilder: (context) {
+                            // Check if this is an outcome item
+                            final isOutcome = item.outcomes.isNotEmpty && item.hiddenInLibrary;
+                            
+                            return [
                           PopupMenuItem(
                             value: 'continue',
                             child: Row(
@@ -272,16 +276,18 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
                               ],
                             ),
                           ),
-                          PopupMenuItem(
-                            value: 'manage_tags',
-                            child: Row(
-                              children: [
-                                Icon(Icons.local_offer, color: textColor, size: 18),
-                                const SizedBox(width: 12),
-                                Text('Manage Tags', style: TextStyle(color: textColor)),
-                              ],
+                          // ONLY SHOW "Manage Tags" IF NOT AN OUTCOME
+                          if (!isOutcome)
+                            PopupMenuItem(
+                              value: 'manage_tags',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.local_offer, color: textColor, size: 18),
+                                  const SizedBox(width: 12),
+                                  Text('Manage Tags', style: TextStyle(color: textColor)),
+                                ],
+                              ),
                             ),
-                          ),
                           // ✨ EXPORT MENU ITEM ✨
                           PopupMenuItem(
                             value: 'export',
@@ -305,10 +311,10 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
                               ],
                             ),
                           ),
-                        ],
+                        ];
+                          },
                         ),
                       ),
-                    ],
                   ),
                 ),
 

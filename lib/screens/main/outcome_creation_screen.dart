@@ -378,14 +378,6 @@ class _OutcomeCreationScreenState extends State<OutcomeCreationScreen> {
                 style: const TextStyle(color: Colors.white, fontSize: 18),
               ),
               actions: [
-                // Tag button
-                IconButton(
-                  onPressed: _showTagSelectionDialog,
-                  icon: Icon(
-                    Icons.label_outline,
-                    color: _selectedTags.isNotEmpty ? primaryColor : secondaryTextColor,
-                  ),
-                ),
                 // Reminder button
                 IconButton(
                   onPressed: _showReminderPicker,
