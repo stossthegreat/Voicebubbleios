@@ -1497,7 +1497,7 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
 
                 // Status bar with action buttons at bottom left
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  padding: const EdgeInsets.only(left: 8, right: 80, top: 8, bottom: 8),
                   decoration: BoxDecoration(
                     color: surfaceColor,
                     border: Border(top: BorderSide(color: Colors.white.withOpacity(0.1))),

@@ -309,8 +309,13 @@ class _BatchOperationsScreenState extends State<BatchOperationsScreen> {
   // TAG SELECTION
   void _showTagSelection() async {
     final appState = context.read<AppStateProvider>();
-    final availableTags = appState.tags;
 
+    // Always refresh tags first to get latest
+    await appState.refreshTags();
+
+    var availableTags = appState.tags;
+
+    // If no tags, offer to create one
     if (availableTags.isEmpty) {
       // Show create tag option instead of just error message
       final shouldCreate = await showDialog<bool>(
