@@ -164,7 +164,7 @@ class TermsScreen extends StatelessWidget {
                     
                     _buildSection(
                       '15. Contact Information',
-                      'If you have any questions about these Terms, please contact us at:\n\nEmail: support@voicebubble.app\nWebsite: www.voicebubble.app',
+                      'If you have any questions about these Terms, please contact us at:\n\nEmail: info@voice-bubble.com\nWebsite: www.voice-bubble.com',
                       textColor,
                       secondaryTextColor,
                     ),

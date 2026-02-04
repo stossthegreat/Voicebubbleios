@@ -160,7 +160,7 @@ class HelpScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'support@voicebubble.app',
+                          'info@voice-bubble.com',
                           style: TextStyle(
                             fontSize: 14,
                             color: primaryColor,

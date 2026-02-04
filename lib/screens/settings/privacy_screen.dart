@@ -118,7 +118,7 @@ class PrivacyScreen extends StatelessWidget {
                     
                     _buildSection(
                       '7. Your Privacy Rights',
-                      'You have the right to:\n• Access your personal data\n• Correct inaccurate data\n• Delete your data and account\n• Export your data\n• Opt-out of data collection for analytics\n• Withdraw consent for data processing\n• Object to certain processing activities\n\nTo exercise these rights, contact us at privacy@voicebubble.app',
+                      'You have the right to:\n• Access your personal data\n• Correct inaccurate data\n• Delete your data and account\n• Export your data\n• Opt-out of data collection for analytics\n• Withdraw consent for data processing\n• Object to certain processing activities\n\nTo exercise these rights, contact us at info@voice-bubble.com',
                       textColor,
                       secondaryTextColor,
                     ),
@@ -167,7 +167,7 @@ class PrivacyScreen extends StatelessWidget {
                     
                     _buildSection(
                       '14. Contact Us',
-                      'If you have questions about this Privacy Policy, please contact us:\n\nEmail: privacy@voicebubble.app\nWebsite: www.voicebubble.app\n\nData Protection Officer: dpo@voicebubble.app',
+                      'If you have questions about this Privacy Policy, please contact us:\n\nEmail: info@voice-bubble.com\nWebsite: www.voice-bubble.com\n\nData Protection Officer: info@voice-bubble.com',
                       textColor,
                       secondaryTextColor,
                     ),

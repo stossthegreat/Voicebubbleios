@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/app_state_provider.dart';
 import '../../services/auth_service.dart';
@@ -21,13 +22,13 @@ class SettingsScreen extends StatelessWidget {
   
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = isDark ? const Color(0xFF0F172A) : const Color(0xFFF5F5F7);
-    final surfaceColor = isDark ? const Color(0xFF1E293B) : Colors.white;
-    final textColor = isDark ? Colors.white : const Color(0xFF1F2937);
-    final secondaryTextColor = isDark ? const Color(0xFF94A3B8) : const Color(0xFF6B7280);
-    final primaryColor = isDark ? const Color(0xFFA855F7) : const Color(0xFF9333EA);
-    final dividerColor = isDark ? const Color(0xFF334155) : const Color(0xFFE5E7EB);
+    // BLUE/BLACK THEME - MATCHING OUR APP COLORS
+    const backgroundColor = Color(0xFF000000); // Pure black
+    const surfaceColor = Color(0xFF1A1A1A); // Dark gray cards
+    const textColor = Colors.white;
+    const secondaryTextColor = Color(0xFF94A3B8);
+    const primaryColor = Color(0xFF3B82F6); // Our blue
+    const dividerColor = Color(0xFF334155);
     
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -224,6 +225,106 @@ class SettingsScreen extends StatelessWidget {
                   const SizedBox(height: 24),
                   */
                   // ✨ END FEATURES SECTION ✨
+                  
+                  // Connect Section
+                  _buildSectionHeader('CONNECT', secondaryTextColor),
+                  const SizedBox(height: 12),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: surfaceColor,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildSettingsItem(
+                          icon: Icons.email_outlined,
+                          title: 'Support Email',
+                          textColor: textColor,
+                          secondaryTextColor: secondaryTextColor,
+                          onTap: () => _launchUrl('mailto:info@voice-bubble.com'),
+                        ),
+                        Divider(height: 1, color: dividerColor),
+                        _buildSettingsItem(
+                          icon: Icons.language,
+                          title: 'Website',
+                          textColor: textColor,
+                          secondaryTextColor: secondaryTextColor,
+                          onTap: () => _launchUrl('https://www.voice-bubble.com'),
+                        ),
+                        Divider(height: 1, color: dividerColor),
+                        _buildSettingsItem(
+                          icon: Icons.star_rate,
+                          title: 'Rate on Play Store',
+                          textColor: textColor,
+                          secondaryTextColor: secondaryTextColor,
+                          onTap: () => _launchUrl('https://play.google.com/store/apps/details?id=com.voicebubble.app'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Social Media Section
+                  _buildSectionHeader('FOLLOW US', secondaryTextColor),
+                  const SizedBox(height: 12),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: surfaceColor,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      children: [
+                        _buildSocialItem(
+                          icon: '𝕏', // X/Twitter icon
+                          title: 'X (Twitter)',
+                          textColor: textColor,
+                          secondaryTextColor: secondaryTextColor,
+                          onTap: () => _launchUrl('https://x.com/VoiceBubbl53136'),
+                        ),
+                        Divider(height: 1, color: dividerColor),
+                        _buildSocialItem(
+                          icon: '📷', // Instagram icon
+                          title: 'Instagram',
+                          textColor: textColor,
+                          secondaryTextColor: secondaryTextColor,
+                          onTap: () => _launchUrl('https://www.instagram.com/voicebubble1?igsh=MW81dXcyZG5iczRtbg=='),
+                        ),
+                        Divider(height: 1, color: dividerColor),
+                        _buildSocialItem(
+                          icon: '🎵', // TikTok icon
+                          title: 'TikTok',
+                          textColor: textColor,
+                          secondaryTextColor: secondaryTextColor,
+                          onTap: () => _launchUrl('https://www.tiktok.com/@voice_bubble?_r=1&_t=ZN-93STKgiHnWR'),
+                        ),
+                        Divider(height: 1, color: dividerColor),
+                        _buildSocialItem(
+                          icon: '📘', // Facebook icon
+                          title: 'Facebook',
+                          textColor: textColor,
+                          secondaryTextColor: secondaryTextColor,
+                          onTap: () => _launchUrl('https://www.facebook.com/share/1AdnQ1oodx/'),
+                        ),
+                        Divider(height: 1, color: dividerColor),
+                        _buildSocialItem(
+                          icon: '📺', // YouTube icon
+                          title: 'YouTube',
+                          textColor: textColor,
+                          secondaryTextColor: secondaryTextColor,
+                          onTap: () => _launchUrl('https://youtube.com/@voicebubble1?si=-eSwiUjQfmg1f3Qe'),
+                        ),
+                        Divider(height: 1, color: dividerColor),
+                        _buildSocialItem(
+                          icon: '💼', // LinkedIn icon
+                          title: 'LinkedIn',
+                          textColor: textColor,
+                          secondaryTextColor: secondaryTextColor,
+                          onTap: () => _launchUrl('https://www.linkedin.com/company/voice-bubble/'),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
                   
                   // About Section
                   _buildSectionHeader('ABOUT', secondaryTextColor),
@@ -812,6 +913,64 @@ class SettingsScreen extends StatelessWidget {
         );
       }
     }
+  }
+  
+  // URL Launcher helper
+  Future<void> _launchUrl(String urlString) async {
+    try {
+      final url = Uri.parse(urlString);
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        debugPrint('Could not launch $urlString');
+      }
+    } catch (e) {
+      debugPrint('Error launching URL: $e');
+    }
+  }
+  
+  // Social media item builder
+  Widget _buildSocialItem({
+    required String icon,
+    required String title,
+    Widget? trailing,
+    required Color textColor,
+    required Color secondaryTextColor,
+    VoidCallback? onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Text(
+                  icon,
+                  style: const TextStyle(fontSize: 20),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: textColor,
+                  ),
+                ),
+              ],
+            ),
+            trailing ??
+                Icon(
+                  Icons.open_in_new,
+                  size: 18,
+                  color: secondaryTextColor,
+                ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

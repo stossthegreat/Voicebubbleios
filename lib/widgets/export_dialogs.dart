@@ -51,42 +51,29 @@ class ExportDialog extends StatelessWidget {
             
             const SizedBox(height: 24),
             
-            // Export options
-            _ExportOption(
-              icon: Icons.picture_as_pdf,
-              title: 'PDF Document',
-              description: 'Professional formatted document',
-              color: const Color(0xFFEF4444),
+            // Export options - MATCHING BATCH STYLE
+            ListTile(
+              leading: const Icon(Icons.picture_as_pdf, color: Color(0xFFEF4444)),
+              title: const Text('PDF', style: TextStyle(color: Colors.white)),
+              subtitle: const Text('Professional document', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
               onTap: () => _exportAs(context, 'pdf'),
             ),
-            
-            const SizedBox(height: 12),
-            
-            _ExportOption(
-              icon: Icons.code,
-              title: 'Markdown (.md)',
-              description: 'Plain text with formatting',
-              color: primaryColor,
+            ListTile(
+              leading: const Icon(Icons.code, color: Color(0xFF3B82F6)),
+              title: const Text('Markdown', style: TextStyle(color: Colors.white)),
+              subtitle: const Text('Plain text with formatting', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
               onTap: () => _exportAs(context, 'markdown'),
             ),
-            
-            const SizedBox(height: 12),
-            
-            _ExportOption(
-              icon: Icons.language,
-              title: 'HTML (.html)',
-              description: 'Web page format',
-              color: const Color(0xFFF97316),
+            ListTile(
+              leading: const Icon(Icons.language, color: Color(0xFFF97316)),
+              title: const Text('HTML', style: TextStyle(color: Colors.white)),
+              subtitle: const Text('Web page format', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
               onTap: () => _exportAs(context, 'html'),
             ),
-            
-            const SizedBox(height: 12),
-            
-            _ExportOption(
-              icon: Icons.text_fields,
-              title: 'Plain Text (.txt)',
-              description: 'Simple text file',
-              color: const Color(0xFF10B981),
+            ListTile(
+              leading: const Icon(Icons.text_fields, color: Color(0xFF10B981)),
+              title: const Text('Plain Text', style: TextStyle(color: Colors.white)),
+              subtitle: const Text('Simple .txt file', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
               onTap: () => _exportAs(context, 'text'),
             ),
             
@@ -191,86 +178,3 @@ class ExportDialog extends StatelessWidget {
   }
 }
 
-class _ExportOption extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String description;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _ExportOption({
-    required this.icon,
-    required this.title,
-    required this.description,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: const Color(0xFF000000),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: Colors.white.withOpacity(0.1),
-            width: 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                icon,
-                color: color,
-                size: 24,
-              ),
-            ),
-            
-            const SizedBox(width: 16),
-            
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    description,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.6),
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            
-            Icon(
-              Icons.arrow_forward_ios,
-              color: Colors.white.withOpacity(0.3),
-              size: 16,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
