@@ -125,14 +125,24 @@ ${note.finalText}
   // Export as PDF
   Future<File> exportAsPdf(RecordingItem note) async {
     final pdf = pw.Document();
-    
+
     // Get text content - prefer finalText, fallback to formattedContent conversion
     String textContent = note.finalText;
     if (textContent.isEmpty && note.formattedContent != null) {
       // TODO: Convert Quill Delta to plain text if needed
       textContent = note.formattedContent!;
     }
-    
+
+    // Split content into paragraphs for proper pagination
+    final paragraphs = textContent.isEmpty
+        ? ['No content available']
+        : textContent.split('\n').where((p) => p.trim().isNotEmpty).toList();
+
+    // If no paragraphs after filtering, add placeholder
+    if (paragraphs.isEmpty) {
+      paragraphs.add('No content available');
+    }
+
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
@@ -150,9 +160,9 @@ ${note.finalText}
                 ),
               ),
             ),
-            
+
             pw.SizedBox(height: 10),
-            
+
             // Metadata
             pw.Text(
               'Created: ${note.formattedDate}',
@@ -161,7 +171,7 @@ ${note.finalText}
                 color: PdfColors.grey700,
               ),
             ),
-            
+
             if (note.presetUsed != 'Free Text')
               pw.Text(
                 'Type: ${note.presetUsed}',
@@ -170,22 +180,25 @@ ${note.finalText}
                   color: PdfColors.grey700,
                 ),
               ),
-            
+
             pw.SizedBox(height: 20),
-            
+
             pw.Divider(),
-            
+
             pw.SizedBox(height: 20),
-            
-            // Content
-            pw.Text(
-              textContent.isEmpty ? 'No content available' : textContent,
-              style: const pw.TextStyle(
-                fontSize: 12,
-                lineSpacing: 1.5,
+
+            // Content - split into paragraphs for proper page breaks
+            ...paragraphs.map((paragraph) => pw.Padding(
+              padding: const pw.EdgeInsets.only(bottom: 8),
+              child: pw.Text(
+                paragraph,
+                style: const pw.TextStyle(
+                  fontSize: 12,
+                  lineSpacing: 1.5,
+                ),
               ),
-            ),
-            
+            )),
+
             // Tags
             if (note.tags.isNotEmpty) ...[
               pw.SizedBox(height: 30),
@@ -219,11 +232,11 @@ ${note.finalText}
         },
       ),
     );
-    
+
     final directory = await getApplicationDocumentsDirectory();
     final fileName = _sanitizeFileName(note.customTitle ?? 'note');
     final file = File('${directory.path}/$fileName.pdf');
-    
+
     await file.writeAsBytes(await pdf.save());
     return file;
   }
