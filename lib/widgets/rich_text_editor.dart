@@ -1684,54 +1684,5 @@ class _AIMenuSheetState extends State<_AIMenuSheet> {
       ),
     );
   }
-            ],
-          ),
-          const SizedBox(height: 12), // Reduced spacing
-          // Magic button - full width but smaller
-          _btn('magic', '✨ Magic', Icons.auto_awesome, const Color(0xFF8B5CF6)),
-          const SizedBox(height: 6), // Reduced spacing
-          // Buttons in grid - 2x2 layout for compactness
-          Row(children: [
-            _btn('shorten', 'Shorten', Icons.compress, const Color(0xFFF59E0B)),
-            const SizedBox(width: 6),
-            _btn('expand', 'Expand', Icons.expand, const Color(0xFF3B82F6)),
-          ]),
-          const SizedBox(height: 6),
-          Row(children: [
-            _btn('pro', 'Pro', Icons.work, const Color(0xFF0891B2)), // Shorter label
-            const SizedBox(width: 6),
-            _btn('grammar', 'Grammar', Icons.check, const Color(0xFFEC4899)), // Shorter label
-          ]),
-        ],
-      ),
-    );
-  }
-
-  Widget _btn(String id, String label, IconData icon, Color color) {
-    final isActive = _active == id && _loading;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => _run(id),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8), // Reduced from 12
-          decoration: BoxDecoration(
-            color: isActive ? color.withOpacity(0.2) : const Color(0xFF2A2A2A),
-            borderRadius: BorderRadius.circular(6), // Smaller radius
-          ),
-          child: Column( // Changed to column for more compact layout
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (isActive)
-                SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: color))
-              else
-                Icon(icon, size: 14, color: color), // Smaller icon
-              const SizedBox(height: 4), // Small gap
-              Text(label, style: const TextStyle(color: Colors.white, fontSize: 11)), // Smaller text
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
