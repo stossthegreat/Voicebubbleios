@@ -126,7 +126,7 @@ class _ResultScreenState extends State<ResultScreen> {
       } else if (continueContext != null && continueContext.singleItemId != null) {
         // 🔥 CONTINUING FROM A SINGLE CARD — UPDATE THE ORIGINAL CARD
         await _updateOriginalCard(continueContext.singleItemId!);
-        appState.clearContinueContext();
+        // Context cleared in _copyToClipboard after navigation
       } else if (continueContext != null && continueContext.projectId != null) {
         // Continuing from PROJECT — create new card in project
         await _saveRecording();
