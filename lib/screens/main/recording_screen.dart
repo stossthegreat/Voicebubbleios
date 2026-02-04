@@ -3,7 +3,6 @@ import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../providers/app_state_provider.dart';
@@ -27,9 +26,6 @@ class RecordingScreen extends StatefulWidget {
 
 class _RecordingScreenState extends State<RecordingScreen>
     with SingleTickerProviderStateMixin {
-  // Live speech-to-text for streaming preview
-  final stt.SpeechToText _speech = stt.SpeechToText();
-  
   // Audio recorder for high-quality Whisper transcription
   final AudioRecorder _audioRecorder = AudioRecorder();
   final AIService _aiService = AIService();
@@ -65,7 +61,7 @@ class _RecordingScreenState extends State<RecordingScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat();
-    _initSpeech();
+    _startRecording();
   }
   
   @override
@@ -73,7 +69,6 @@ class _RecordingScreenState extends State<RecordingScreen>
     _pulseController.dispose();
     _timer?.cancel();
     _waveTimer?.cancel();
-    _speech.stop();
     _audioRecorder.dispose();
     super.dispose();
   }
@@ -135,77 +130,42 @@ class _RecordingScreenState extends State<RecordingScreen>
     });
   }
   
-  Future<void> _initSpeech() async {
-    try {
-      final available = await _speech.initialize();
-      print('Speech initialization: $available');
-      if (available) {
-        await _startRecording();
-      } else {
-        print('Speech recognition not available');
-        // Still start recording for audio-only mode
-        await _startRecording();
-      }
-    } catch (e) {
-      print('Error initializing speech: $e');
-      // Still start recording for audio-only mode
-      await _startRecording();
-    }
-  }
-  
   Future<void> _startRecording() async {
     try {
-      // Start audio recording for Whisper
-      if (await _audioRecorder.hasPermission()) {
-        final directory = await getTemporaryDirectory();
-        _audioPath = '${directory.path}/recording_${DateTime.now().millisecondsSinceEpoch}.m4a';
-
-        await _audioRecorder.start(
-          const RecordConfig(
-            encoder: AudioEncoder.aacLc,
-            bitRate: 128000,
-            sampleRate: 44100,
-          ),
-          path: _audioPath!,
-        );
+      if (!await _audioRecorder.hasPermission()) {
+        print('No microphone permission');
+        if (mounted) Navigator.pop(context);
+        return;
       }
 
-      // Start live speech-to-text for recording (no display needed)
-      try {
-        if (_speech.isAvailable) {
-          await _speech.listen(
-            onResult: (result) {
-              // We don't need to show the transcription anymore
-              print('STT result: ${result.recognizedWords}');
-            },
-            listenMode: stt.ListenMode.dictation, // Continuous dictation mode
-            pauseFor: const Duration(seconds: 30), // Don't auto-stop
-            partialResults: true,
-            onSoundLevelChange: (level) {
-              // Update target sound level - the wave animation timer will smoothly animate toward this
-              // Sound levels typically range from -2 (silence) to 10 (loud)
-              // Normalize to 0.3 (minimum wave) to 1.0 (maximum wave) for better visual feedback
-              final normalizedLevel = ((level.clamp(-2, 10) + 2) / 12).clamp(0.3, 1.0);
-              _targetSoundLevel = normalizedLevel;
-            },
-            cancelOnError: false,
-            listenFor: const Duration(minutes: 5), // Max 5 minutes
-          );
+      final directory = await getTemporaryDirectory();
+      _audioPath = '${directory.path}/recording_${DateTime.now().millisecondsSinceEpoch}.m4a';
+
+      await _audioRecorder.start(
+        const RecordConfig(
+          encoder: AudioEncoder.aacLc,
+          bitRate: 128000,
+          sampleRate: 44100,
+        ),
+        path: _audioPath!,
+      );
+
+      // Use AudioRecorder's amplitude for waveform (no speech_to_text conflict)
+      _audioRecorder.onAmplitudeChanged(const Duration(milliseconds: 100)).listen((amp) {
+        if (!_isPaused && mounted) {
+          // Normalize amplitude: amp.current is typically -40 to 0 dB
+          final normalized = ((amp.current + 40) / 40).clamp(0.1, 1.0);
+          _targetSoundLevel = normalized;
         }
-      } catch (e) {
-        print('Error starting live speech: $e');
-      }
-
-      setState(() {
-        _isRecording = true;
       });
-      
+
+      setState(() => _isRecording = true);
       _startTimer();
       _startWaveAnimation();
-
       print('Recording started: $_audioPath');
     } catch (e) {
       print('Error starting recording: $e');
+      if (mounted) Navigator.pop(context);
     }
   }
   
@@ -228,9 +188,8 @@ class _RecordingScreenState extends State<RecordingScreen>
   Future<void> _cancelRecording() async {
     _timer?.cancel();
     _waveTimer?.cancel();
-    await _speech.stop();
     await _audioRecorder.stop();
-    
+
     if (mounted) {
       Navigator.pop(context);
     }
@@ -247,9 +206,6 @@ class _RecordingScreenState extends State<RecordingScreen>
     _waveTimer?.cancel();
 
     try {
-      // Stop live speech
-      await _speech.stop();
-      
       // Stop audio recording
       final path = await _audioRecorder.stop();
 
