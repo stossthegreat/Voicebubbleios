@@ -637,9 +637,26 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 onTap: () async {
                   Navigator.pop(context);
 
-                  // Check if user can use STT (Pro status AND remaining time)
-                  final canUse = await FeatureGate.canUseSTT(context);
+                  // Upload Audio is Pro-only - check Pro status first
+                  final isPro = await FeatureGate.isPro();
 
+                  if (!isPro) {
+                    // Show paywall for free users
+                    if (mounted) {
+                      showDialog(
+                        context: context,
+                        builder: (context) => PaywallScreen(
+                          onSubscribe: () => Navigator.pop(context),
+                          onRestore: () => Navigator.pop(context),
+                          onClose: () => Navigator.pop(context),
+                        ),
+                      );
+                    }
+                    return;
+                  }
+
+                  // Pro user - check if they have remaining time
+                  final canUse = await FeatureGate.canUseSTT(context);
                   if (!canUse) {
                     return; // FeatureGate already showed dialog
                   }
