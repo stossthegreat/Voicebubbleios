@@ -570,12 +570,12 @@ class _LibraryScreenState extends State<LibraryScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header row with content type indicator and date
+                // Header row with content type indicator and date - BOTH LEFT ALIGNED
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
                   children: [
-                    // Content type indicator - PUSHED LEFT (removed mainAxisAlignment)
+                    // Content type indicator
                     Container(
-                      margin: const EdgeInsets.only(left: 4), // Push slightly right from edge
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: contentTypeColor.withOpacity(0.2),
@@ -601,13 +601,16 @@ class _LibraryScreenState extends State<LibraryScreen> {
                         ],
                       ),
                     ),
-                    const Spacer(),
-                    // Date/time (pin removed from here!)
-                    Text(
-                      item.formattedDate,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: secondaryTextColor,
+                    const SizedBox(width: 8),  // Small gap instead of Spacer
+                    // Date/time - now LEFT aligned next to badge
+                    Flexible(
+                      child: Text(
+                        item.formattedDate,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: secondaryTextColor,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
