@@ -96,7 +96,7 @@ class HelpScreen extends StatelessWidget {
                   
                   _buildFAQItem(
                     'What\'s the difference between Free and Pro?',
-                    'Free plan includes 5 recordings per day after your 1-day trial. Pro plan offers unlimited recordings, priority processing, and exclusive presets.',
+                    'Free plan includes 5 minutes of STT per day. Pro plan offers 90 minutes monthly, premium AI quality, and exclusive features.',
                     textColor,
                     secondaryTextColor,
                     surfaceColor,
