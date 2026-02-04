@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../models/recording_item.dart';
@@ -104,13 +105,62 @@ class ExportDialog extends StatelessWidget {
 
   Future<void> _exportAs(BuildContext context, String format) async {
     Navigator.pop(context); // Close dialog
-    
+
     final exportService = ExportService();
-    
+
     try {
-      // Debug: Check note content
-      debugPrint('🔍 Exporting note: finalText="${note.finalText}", formattedContent="${note.formattedContent}"');
-      
+      // Get content - prefer finalText, fallback to extracting from formattedContent
+      String contentToExport = note.finalText;
+
+      if (contentToExport.isEmpty && note.formattedContent != null && note.formattedContent!.isNotEmpty) {
+        // Try to extract plain text from Quill delta JSON
+        try {
+          final deltaJson = jsonDecode(note.formattedContent!);
+          if (deltaJson is List) {
+            final buffer = StringBuffer();
+            for (final op in deltaJson) {
+              if (op is Map && op.containsKey('insert')) {
+                buffer.write(op['insert']);
+              }
+            }
+            contentToExport = buffer.toString();
+          }
+        } catch (e) {
+          debugPrint('❌ Error parsing formattedContent: $e');
+        }
+      }
+
+      debugPrint('📝 Exporting content: ${contentToExport.length} chars');
+
+      if (contentToExport.isEmpty) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Nothing to export - document is empty'),
+              backgroundColor: Color(0xFFF59E0B),
+            ),
+          );
+        }
+        return;
+      }
+
+      // Create a note copy with the extracted content
+      final noteToExport = RecordingItem(
+        id: note.id,
+        rawTranscript: note.rawTranscript,
+        finalText: contentToExport,
+        presetUsed: note.presetUsed,
+        outcomes: note.outcomes,
+        projectId: note.projectId,
+        createdAt: note.createdAt,
+        editHistory: note.editHistory,
+        presetId: note.presetId,
+        customTitle: note.customTitle,
+        tags: note.tags,
+        formattedContent: note.formattedContent,
+        contentType: note.contentType,
+      );
+
       // Show loading
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -134,27 +184,27 @@ class ExportDialog extends StatelessWidget {
           ),
         );
       }
-      
+
       // Export based on format
       late final file;
       switch (format) {
         case 'pdf':
-          file = await exportService.exportAsPdf(note);
+          file = await exportService.exportAsPdf(noteToExport);
           break;
         case 'markdown':
-          file = await exportService.exportAsMarkdown(note);
+          file = await exportService.exportAsMarkdown(noteToExport);
           break;
         case 'html':
-          file = await exportService.exportAsHtml(note);
+          file = await exportService.exportAsHtml(noteToExport);
           break;
         case 'text':
-          file = await exportService.exportAsText(note);
+          file = await exportService.exportAsText(noteToExport);
           break;
       }
-      
+
       // Share the file
       await exportService.shareFile(file);
-      
+
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -165,6 +215,7 @@ class ExportDialog extends StatelessWidget {
         );
       }
     } catch (e) {
+      debugPrint('❌ Export error: $e');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

@@ -206,10 +206,10 @@ class AccountManagementScreen extends StatelessWidget {
                 if (context.mounted) {
                   Navigator.of(context).pushAndRemoveUntil(
                     MaterialPageRoute(
-                      builder: (_) => SignInScreen(
+                      builder: (ctx) => SignInScreen(
                         onSignIn: () {
                           Navigator.pushReplacement(
-                            _,
+                            ctx,
                             MaterialPageRoute(builder: (_) => const MainNavigation()),
                           );
                         },
@@ -295,10 +295,10 @@ class AccountManagementScreen extends StatelessWidget {
                 if (context.mounted) {
                   Navigator.of(context).pushAndRemoveUntil(
                     MaterialPageRoute(
-                      builder: (_) => SignInScreen(
+                      builder: (ctx) => SignInScreen(
                         onSignIn: () {
                           Navigator.pushReplacement(
-                            _,
+                            ctx,
                             MaterialPageRoute(builder: (_) => const MainNavigation()),
                           );
                         },
