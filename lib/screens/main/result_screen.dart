@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../../providers/app_state_provider.dart';
 import '../../services/ai_service.dart';
 import '../../services/refinement_service.dart';
@@ -397,41 +398,44 @@ class _ResultScreenState extends State<ResultScreen> {
 
   /// Update the original card with combined content (for Continue feature)
   Future<void> _updateOriginalCard(String originalItemId) async {
-    try {
-      final appState = context.read<AppStateProvider>();
-      
-      // Find the original item
-      final originalItem = appState.allRecordingItems.firstWhere(
-        (item) => item.id == originalItemId,
-        orElse: () => throw Exception('Original item not found'),
-      );
-      
-      // Combine the old text with new text
-      // The AI was given the original text as context, so _rewrittenText
-      // should already be a coherent continuation/combination
-      final combinedText = '${originalItem.finalText}\n\n---\n\n$_rewrittenText';
-      
-      // Create updated item
+    final appState = context.read<AppStateProvider>();
+
+    // ✅ READ DIRECTLY FROM HIVE to ensure we have the LATEST content
+    final recordingBox = await Hive.openBox<RecordingItem>('recording_items');
+    RecordingItem? originalItem;
+    dynamic originalKey;
+
+    for (final key in recordingBox.keys) {
+      final item = recordingBox.get(key);
+      if (item?.id == originalItemId) {
+        originalItem = item;
+        originalKey = key;
+        break;
+      }
+    }
+
+    if (originalItem != null) {
+      // Append new content to original document with separator
+      final appendedText = '${originalItem.finalText}\n\n---\n\n$_rewrittenText';
       final updatedItem = originalItem.copyWith(
-        finalText: combinedText,
-        formattedContent: '',  // Empty string clears it (null keeps old value)
-        rawTranscript: '${originalItem.rawTranscript}\n\n${appState.transcription}',
-        editHistory: [...originalItem.editHistory, combinedText],
+        finalText: appendedText,
+        formattedContent: '',  // Clear formatted content so editor uses plain text
+        editHistory: [...originalItem.editHistory, _rewrittenText],
       );
-      
-      // Save the update
+
+      // Save back to Hive
+      await recordingBox.put(originalKey, updatedItem);
+
+      // Update appState to reflect changes
       await appState.updateRecording(updatedItem);
-      
-      // Set savedItemId to the original so further edits update it
+
+      debugPrint('✅ APPENDED to original document: $originalItemId');
+      debugPrint('📝 Original length: ${originalItem.finalText.length} chars');
+      debugPrint('📝 New content length: ${_rewrittenText.length} chars');
+      debugPrint('📝 Total length: ${appendedText.length} chars');
+
+      // Store the original item ID to prevent duplicate saves
       _savedItemId = originalItemId;
-      
-      debugPrint('✅ Updated original card: $originalItemId with continued content');
-    } catch (e, stackTrace) {
-      debugPrint('❌ ERROR updating original card: $e');
-      debugPrint('❌ Stack trace: $stackTrace');
-      
-      // Fallback: save as new item if update fails
-      await _saveRecording();
     }
   }
 
