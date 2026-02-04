@@ -308,16 +308,6 @@ class _PaywallScreenState extends State<PaywallScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                
-                // Free trial text
-                Text(
-                  'Free for 1 day, cancel anytime',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.white.withOpacity(0.7),
-                  ),
-                ),
                 const SizedBox(height: 18),
 
                 // ERROR
@@ -339,14 +329,6 @@ class _PaywallScreenState extends State<PaywallScreen> {
                   label: _isPurchasing ? 'Processing…' : 'Subscribe',
                   filled: true,
                   onTap: _isLoading || _isPurchasing ? null : _handlePurchase,
-                ),
-                const SizedBox(height: 10),
-
-                // CONTINUE FREE
-                _button(
-                  label: 'Continue Free for 1 Day',
-                  filled: false,
-                  onTap: _isPurchasing ? null : widget.onClose,
                 ),
                 const SizedBox(height: 10),
 
