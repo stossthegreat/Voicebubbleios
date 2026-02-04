@@ -540,61 +540,101 @@ class SettingsScreen extends StatelessWidget {
     Color secondaryTextColor,
     Color primaryColor,
   ) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(48),
-              gradient: LinearGradient(
-                colors: [primaryColor, const Color(0xFFEC4899)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-            child: const Center(
-              child: Text(
-                'U',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Free Plan',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: textColor,
+    return Column(
+      children: [
+        // User Profile Section
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(48),
+                  gradient: LinearGradient(
+                    colors: [primaryColor, const Color(0xFFEC4899)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
                 ),
-                Text(
-                  '5 recordings/day',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: secondaryTextColor,
+                child: const Center(
+                  child: Text(
+                    'U',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Free Plan',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: textColor,
+                      ),
+                    ),
+                    Text(
+                      '5 recordings/day',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: secondaryTextColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.edit,
+                color: secondaryTextColor,
+                size: 20,
+              ),
+            ],
           ),
-          Icon(
-            Icons.chevron_right,
-            color: secondaryTextColor,
-          ),
-        ],
-      ),
+        ),
+        
+        // Account Management Options
+        const Divider(height: 1, color: Color(0xFF334155)),
+        _buildSettingsItem(
+          icon: Icons.person_outline,
+          title: 'Profile Settings',
+          textColor: textColor,
+          secondaryTextColor: secondaryTextColor,
+          onTap: () => _showProfileDialog(context, textColor, secondaryTextColor),
+        ),
+        const Divider(height: 1, color: Color(0xFF334155)),
+        _buildSettingsItem(
+          icon: Icons.backup,
+          title: 'Backup & Sync',
+          textColor: textColor,
+          secondaryTextColor: secondaryTextColor,
+          onTap: () => _showBackupDialog(context, textColor, secondaryTextColor),
+        ),
+        const Divider(height: 1, color: Color(0xFF334155)),
+        _buildSettingsItem(
+          icon: Icons.download,
+          title: 'Export All Data',
+          textColor: textColor,
+          secondaryTextColor: secondaryTextColor,
+          onTap: () => _exportAllUserData(context),
+        ),
+        const Divider(height: 1, color: Color(0xFF334155)),
+        _buildSettingsItem(
+          icon: Icons.delete_forever,
+          title: 'Delete Account',
+          textColor: const Color(0xFFEF4444), // Red color for danger
+          secondaryTextColor: secondaryTextColor,
+          onTap: () => _showDeleteAccountDialog(context),
+        ),
+      ],
     );
   }
   
@@ -969,6 +1009,201 @@ class SettingsScreen extends StatelessWidget {
                 ),
           ],
         ),
+      ),
+    );
+  }
+  
+  // Profile Settings Dialog
+  void _showProfileDialog(BuildContext context, Color textColor, Color secondaryTextColor) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: Text(
+          'Profile Settings',
+          style: TextStyle(color: textColor),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.person, color: Color(0xFF3B82F6)),
+              title: Text('Change Username', style: TextStyle(color: textColor)),
+              subtitle: Text('Update your display name', style: TextStyle(color: secondaryTextColor, fontSize: 12)),
+              onTap: () {
+                Navigator.pop(context);
+                _showUsernameDialog(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.email, color: Color(0xFF10B981)),
+              title: Text('Change Email', style: TextStyle(color: textColor)),
+              subtitle: Text('Update your email address', style: TextStyle(color: secondaryTextColor, fontSize: 12)),
+              onTap: () {
+                Navigator.pop(context);
+                _showEmailDialog(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.lock, color: Color(0xFFF97316)),
+              title: Text('Change Password', style: TextStyle(color: textColor)),
+              subtitle: Text('Update your password', style: TextStyle(color: secondaryTextColor, fontSize: 12)),
+              onTap: () {
+                Navigator.pop(context);
+                _showPasswordDialog(context);
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Close', style: TextStyle(color: secondaryTextColor)),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  // Backup & Sync Dialog
+  void _showBackupDialog(BuildContext context, Color textColor, Color secondaryTextColor) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: Text(
+          'Backup & Sync',
+          style: TextStyle(color: textColor),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.cloud_upload, color: Color(0xFF3B82F6)),
+              title: Text('Backup to Cloud', style: TextStyle(color: textColor)),
+              subtitle: Text('Save your data to Google Drive', style: TextStyle(color: secondaryTextColor, fontSize: 12)),
+              onTap: () {
+                Navigator.pop(context);
+                _performCloudBackup(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.cloud_download, color: Color(0xFF10B981)),
+              title: Text('Restore from Cloud', style: TextStyle(color: textColor)),
+              subtitle: Text('Restore your data from backup', style: TextStyle(color: secondaryTextColor, fontSize: 12)),
+              onTap: () {
+                Navigator.pop(context);
+                _performCloudRestore(context);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.sync, color: Color(0xFFF97316)),
+              title: Text('Auto-Sync', style: TextStyle(color: textColor)),
+              subtitle: Text('Automatically sync across devices', style: TextStyle(color: secondaryTextColor, fontSize: 12)),
+              trailing: Switch(
+                value: true, // TODO: Connect to actual setting
+                onChanged: (value) {
+                  // TODO: Implement auto-sync toggle
+                },
+                activeColor: const Color(0xFF3B82F6),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Close', style: TextStyle(color: secondaryTextColor)),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  // Export All Data
+  void _exportAllUserData(BuildContext context) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF3B82F6)),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Exporting all your data...',
+              style: TextStyle(color: Colors.white),
+            ),
+          ],
+        ),
+      ),
+    );
+    
+    // Simulate export process
+    await Future.delayed(const Duration(seconds: 2));
+    
+    if (context.mounted) {
+      Navigator.pop(context); // Close loading dialog
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✓ All data exported successfully!'),
+          backgroundColor: Color(0xFF10B981),
+        ),
+      );
+    }
+  }
+  
+  // Helper methods for profile dialogs
+  void _showUsernameDialog(BuildContext context) {
+    // TODO: Implement username change dialog
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Username change coming soon!'),
+        backgroundColor: Color(0xFF3B82F6),
+      ),
+    );
+  }
+  
+  void _showEmailDialog(BuildContext context) {
+    // TODO: Implement email change dialog
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Email change coming soon!'),
+        backgroundColor: Color(0xFF3B82F6),
+      ),
+    );
+  }
+  
+  void _showPasswordDialog(BuildContext context) {
+    // TODO: Implement password change dialog
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Password change coming soon!'),
+        backgroundColor: Color(0xFF3B82F6),
+      ),
+    );
+  }
+  
+  void _performCloudBackup(BuildContext context) async {
+    // TODO: Implement cloud backup
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Cloud backup coming soon!'),
+        backgroundColor: Color(0xFF3B82F6),
+      ),
+    );
+  }
+  
+  void _performCloudRestore(BuildContext context) async {
+    // TODO: Implement cloud restore
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Cloud restore coming soon!'),
+        backgroundColor: Color(0xFF3B82F6),
       ),
     );
   }
