@@ -1429,10 +1429,8 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
                       // Content layer (scrollable)
                       SingleChildScrollView(
                         child: Container(
-                          // Grey content area for black background, transparent for others
-                          color: widget.backgroundId == 'paper_black' 
-                              ? const Color(0xFF2A2A2A) // Grey content area on black
-                              : (widget.backgroundId == null ? const Color(0xFF1E1E1E) : Colors.transparent),
+                          // BACK TO ORIGINAL GREY - NO BLACK BACKGROUND BULLSHIT
+                          color: widget.backgroundId == null ? const Color(0xFF1E1E1E) : Colors.transparent,
                           padding: const EdgeInsets.all(16),
                           constraints: BoxConstraints(
                             minHeight: MediaQuery.of(context).size.height - 200,
@@ -1442,23 +1440,12 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
                             children: [
                               SizedBox(
                                 height: MediaQuery.of(context).size.height - 250,
-                                // Wrap QuillEditor in Theme to fix gray overlay AND ensure white text
+                                // ORIGINAL THEME - NO FORCED WHITE TEXT
                                 child: Theme(
                                   data: ThemeData.dark().copyWith(
                                     scaffoldBackgroundColor: Colors.transparent,
                                     canvasColor: Colors.transparent,
                                     cardColor: Colors.transparent,
-                                    // FORCE WHITE TEXT on black background
-                                    textTheme: const TextTheme(
-                                      bodyLarge: TextStyle(color: Colors.white),
-                                      bodyMedium: TextStyle(color: Colors.white),
-                                      bodySmall: TextStyle(color: Colors.white),
-                                    ),
-                                    textSelectionTheme: const TextSelectionThemeData(
-                                      cursorColor: Colors.white,
-                                      selectionColor: Color(0xFF3B82F6),
-                                      selectionHandleColor: Color(0xFF3B82F6),
-                                    ),
                                   ),
                                   child: quill.QuillEditor.basic(
                                     focusNode: _focusNode,
