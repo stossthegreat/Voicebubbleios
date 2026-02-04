@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../services/auth_service.dart';
 import '../../services/subscription_service.dart';
 import '../onboarding/onboarding_one.dart';
@@ -35,40 +34,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
-  Future<void> _launchUrl(String urlString) async {
-    try {
-      final url = Uri.parse(urlString);
-      if (await canLaunchUrl(url)) {
-        await launchUrl(url, mode: LaunchMode.externalApplication);
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Could not open: $urlString'),
-              backgroundColor: const Color(0xFFEF4444),
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: const Color(0xFFEF4444),
-          ),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     const backgroundColor = Color(0xFF000000);
     const surfaceColor = Color(0xFF1A1A1A);
     const textColor = Colors.white;
     const secondaryTextColor = Color(0xFF94A3B8);
-    const primaryColor = Color(0xFF3B82F6);
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -88,213 +59,151 @@ class _SettingsScreenState extends State<SettingsScreen> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: Column(
-        children: [
-          const UsageDisplayWidget(),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            const UsageDisplayWidget(),
 
-          // Upgrade Button (FREE users only)
-          if (!_isLoading && !_isPro)
-            Container(
-              margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => PaywallScreen(
-                          onSubscribe: () {
-                            Navigator.pop(context);
-                            _checkProStatus();
-                          },
-                          onRestore: () {
-                            Navigator.pop(context);
-                            _checkProStatus();
-                          },
-                          onClose: () => Navigator.pop(context),
+            // Upgrade Button (FREE users only)
+            if (!_isLoading && !_isPro)
+              Container(
+                margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => PaywallScreen(
+                            onSubscribe: () {
+                              Navigator.pop(context);
+                              _checkProStatus();
+                            },
+                            onRestore: () {
+                              Navigator.pop(context);
+                              _checkProStatus();
+                            },
+                            onClose: () => Navigator.pop(context),
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                  borderRadius: BorderRadius.circular(16),
-                  child: Ink(
-                    height: 70,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.workspace_premium, color: Colors.white, size: 32),
-                        SizedBox(width: 16),
-                        Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Upgrade to Pro',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              '90 min + Unlimited AI',
-                              style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Ink(
+                      height: 70,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
-                      ],
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.workspace_premium, color: Colors.white, size: 32),
+                          SizedBox(width: 16),
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Upgrade to Pro',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                '90 min + Unlimited AI',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
 
-          Expanded(
-            child: ListView(
+            Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              children: [
-                // APP & STORE
-                _SectionHeader(title: 'APP & STORE', color: secondaryTextColor),
-                _SettingsCard(
-                  children: [
-                    _SettingsTile(
-                      icon: Icons.shop,
-                      title: 'Download App',
-                      onTap: () => _launchUrl('https://play.google.com/store/apps/details?id=com.voicebubble.app'),
-                    ),
-                    _SettingsTile(
-                      icon: Icons.star,
-                      title: 'Rate App',
-                      onTap: () => _launchUrl('https://play.google.com/store/apps/details?id=com.voicebubble.app'),
-                    ),
-                    _SettingsTile(
-                      icon: Icons.language,
-                      title: 'Website',
-                      onTap: () => _launchUrl('https://www.voice-bubble.com'),
-                      isLast: true,
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 24),
-
-                // SOCIALS
-                _SectionHeader(title: 'SOCIALS', color: secondaryTextColor),
-                _SettingsCard(
-                  children: [
-                    _SettingsTile(
-                      icon: Icons.tag,
-                      title: 'X (Twitter)',
-                      onTap: () => _launchUrl('https://x.com/VoiceBubbl53136'),
-                    ),
-                    _SettingsTile(
-                      icon: Icons.camera_alt,
-                      title: 'Instagram',
-                      onTap: () => _launchUrl('https://www.instagram.com/voicebubble1?igsh=MW81dXcyZG5iczRtbg=='),
-                    ),
-                    _SettingsTile(
-                      icon: Icons.music_note,
-                      title: 'TikTok',
-                      onTap: () => _launchUrl('https://www.tiktok.com/@voice_bubble?_r=1&_t=ZN-93STKgiHnWR'),
-                    ),
-                    _SettingsTile(
-                      icon: Icons.facebook,
-                      title: 'Facebook',
-                      onTap: () => _launchUrl('https://www.facebook.com/share/1AdnQ1oodx/'),
-                    ),
-                    _SettingsTile(
-                      icon: Icons.play_circle_filled,
-                      title: 'YouTube',
-                      onTap: () => _launchUrl('https://youtube.com/@voicebubble1?si=-eSwiUjQfmg1f3Qe'),
-                    ),
-                    _SettingsTile(
-                      icon: Icons.business,
-                      title: 'LinkedIn',
-                      onTap: () => _launchUrl('https://www.linkedin.com/company/voice-bubble/'),
-                      isLast: true,
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 24),
-
-                // LEGAL & SUPPORT
-                _SectionHeader(title: 'LEGAL & SUPPORT', color: secondaryTextColor),
-                _SettingsCard(
-                  children: [
-                    _SettingsTile(
-                      icon: Icons.help_outline,
-                      title: 'Help & Support',
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const HelpScreen()),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // LEGAL & SUPPORT
+                  _SectionHeader(title: 'LEGAL & SUPPORT', color: secondaryTextColor),
+                  _SettingsCard(
+                    children: [
+                      _SettingsTile(
+                        icon: Icons.help_outline,
+                        title: 'Help & Support',
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const HelpScreen()),
+                        ),
                       ),
-                    ),
-                    _SettingsTile(
-                      icon: Icons.privacy_tip_outlined,
-                      title: 'Privacy Policy',
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const PrivacyScreen()),
+                      _SettingsTile(
+                        icon: Icons.privacy_tip_outlined,
+                        title: 'Privacy Policy',
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const PrivacyScreen()),
+                        ),
                       ),
-                    ),
-                    _SettingsTile(
-                      icon: Icons.description_outlined,
-                      title: 'Terms & Conditions',
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const TermsScreen()),
+                      _SettingsTile(
+                        icon: Icons.description_outlined,
+                        title: 'Terms & Conditions',
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const TermsScreen()),
+                        ),
+                        isLast: true,
                       ),
-                      isLast: true,
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
 
-                const SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-                // ACCOUNT
-                _SectionHeader(title: 'ACCOUNT', color: secondaryTextColor),
-                _SettingsCard(
-                  children: [
-                    _SettingsTile(
-                      icon: Icons.manage_accounts,
-                      title: 'Account Management',
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const AccountManagementScreen()),
+                  // ACCOUNT
+                  _SectionHeader(title: 'ACCOUNT', color: secondaryTextColor),
+                  _SettingsCard(
+                    children: [
+                      _SettingsTile(
+                        icon: Icons.manage_accounts,
+                        title: 'Account Management',
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const AccountManagementScreen()),
+                        ),
                       ),
-                    ),
-                    _SettingsTile(
-                      icon: Icons.cleaning_services_outlined,
-                      title: 'Clear Cache',
-                      onTap: () => _showClearCacheDialog(),
-                    ),
-                    _SettingsTile(
-                      icon: Icons.logout,
-                      title: 'Sign Out',
-                      onTap: () => _showSignOutDialog(),
-                      isLast: true,
-                    ),
-                  ],
-                ),
+                      _SettingsTile(
+                        icon: Icons.cleaning_services_outlined,
+                        title: 'Clear Cache',
+                        onTap: () => _showClearCacheDialog(),
+                      ),
+                      _SettingsTile(
+                        icon: Icons.logout,
+                        title: 'Sign Out',
+                        onTap: () => _showSignOutDialog(),
+                        isLast: true,
+                      ),
+                    ],
+                  ),
 
-                const SizedBox(height: 40),
-              ],
+                  const SizedBox(height: 40),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -378,7 +287,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 }
 
-// Section Header Widget
 class _SectionHeader extends StatelessWidget {
   final String title;
   final Color color;
@@ -402,7 +310,6 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-// Settings Card Widget
 class _SettingsCard extends StatelessWidget {
   final List<Widget> children;
 
@@ -421,7 +328,6 @@ class _SettingsCard extends StatelessWidget {
   }
 }
 
-// Settings Tile Widget
 class _SettingsTile extends StatelessWidget {
   final IconData icon;
   final String title;
