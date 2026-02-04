@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:in_app_review/in_app_review.dart';
 import '../services/usage_service.dart';
 import '../services/subscription_service.dart';
 
-/// Dialog to ask for app review
+/// Dialog to ask for app review using native OS review dialog
 /// - Free users: Shown when 5 min exhausted, offers 1 min bonus
 /// - Pro users: Shown after upgrade to say thanks
 class ReviewDialog extends StatelessWidget {
@@ -15,6 +15,8 @@ class ReviewDialog extends StatelessWidget {
     required this.isFreeUser,
     this.onReviewComplete,
   });
+
+  static final InAppReview _inAppReview = InAppReview.instance;
 
   /// Show review dialog for free user (with bonus)
   static Future<bool?> showForFreeUser(BuildContext context) {
@@ -33,17 +35,14 @@ class ReviewDialog extends StatelessWidget {
     );
   }
 
-  Future<void> _openReview() async {
-    const androidUrl = 'https://play.google.com/store/apps/details?id=com.voicebubble.app';
-    const iosUrl = 'https://apps.apple.com/app/voicebubble/id123456789';
-
-    try {
-      final uri = Uri.parse(androidUrl);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      }
-    } catch (e) {
-      debugPrint('Error opening review: $e');
+  static Future<void> _requestReview() async {
+    if (await _inAppReview.isAvailable()) {
+      await _inAppReview.requestReview();
+    } else {
+      // Fallback: open store listing
+      await _inAppReview.openStoreListing(
+        appStoreId: 'com.voicebubble.app', // Your app ID
+      );
     }
   }
 
@@ -73,7 +72,7 @@ class ReviewDialog extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            isFreeUser ? 'Enjoying VoiceBubble?' : 'Thank You! 🎉',
+            isFreeUser ? 'Enjoying VoiceBubble?' : 'Thank You! \uD83C\uDF89',
             style: const TextStyle(
               color: textColor,
               fontSize: 22,
@@ -169,36 +168,36 @@ class ReviewDialog extends StatelessWidget {
           ),
         ElevatedButton(
           onPressed: () async {
-            await _openReview();
+            // Close dialog first, then show native review dialog
+            Navigator.pop(context, true);
+
+            // Request native review
+            await _requestReview();
 
             if (isFreeUser) {
               final claimed = await UsageService().claimReviewBonus();
               if (claimed) {
-                debugPrint('✅ Review bonus claimed - 1 minute added');
+                debugPrint('\u2705 Review bonus claimed - 1 minute added');
               }
             } else {
               await SubscriptionService().markLeftReview();
               await SubscriptionService().markAskedForReviewAfterUpgrade();
             }
 
-            if (context.mounted) {
-              Navigator.pop(context, true);
-
-              if (isFreeUser) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Row(
-                      children: [
-                        Icon(Icons.check_circle, color: Colors.white),
-                        SizedBox(width: 12),
-                        Text('🎉 1 extra minute added to your account!'),
-                      ],
-                    ),
-                    backgroundColor: Color(0xFF10B981),
-                    duration: Duration(seconds: 3),
+            if (context.mounted && isFreeUser) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Row(
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.white),
+                      SizedBox(width: 12),
+                      Text('\uD83C\uDF89 1 extra minute added to your account!'),
+                    ],
                   ),
-                );
-              }
+                  backgroundColor: Color(0xFF10B981),
+                  duration: Duration(seconds: 3),
+                ),
+              );
             }
 
             onReviewComplete?.call();

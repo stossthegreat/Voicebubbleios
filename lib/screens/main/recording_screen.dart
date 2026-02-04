@@ -8,6 +8,8 @@ import 'package:path_provider/path_provider.dart';
 import '../../providers/app_state_provider.dart';
 import '../../services/ai_service.dart';
 import '../../services/feature_gate.dart';
+import '../../services/usage_service.dart';
+import '../../services/subscription_service.dart';
 import '../../widgets/usage_display_widget.dart';
 import 'preset_selection_screen.dart';
 import 'result_screen.dart';
@@ -48,6 +50,11 @@ class _RecordingScreenState extends State<RecordingScreen>
   double _currentSoundLevel = 0.0;
   double _targetSoundLevel = 0.3;
   final Random _random = Random();
+
+  // Usage limit tracking
+  int _remainingSeconds = 300;
+  bool _isPro = false;
+  bool _limitReached = false;
   
   // App colors
   final Color _primaryBlue = const Color(0xFF3B82F6);
@@ -61,6 +68,7 @@ class _RecordingScreenState extends State<RecordingScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat();
+    _loadRemainingTime();
     _startRecording();
   }
   
@@ -81,6 +89,12 @@ class _RecordingScreenState extends State<RecordingScreen>
           if (_recordingMilliseconds >= 1000) {
             _recordingMilliseconds = 0;
             _recordingSeconds++;
+
+            // Auto-stop when limit reached
+            if (_recordingSeconds >= _remainingSeconds && !_isProcessing && !_limitReached) {
+              _limitReached = true;
+              _autoStopDueToLimit();
+            }
           }
         });
       }
@@ -93,12 +107,12 @@ class _RecordingScreenState extends State<RecordingScreen>
         setState(() {
           // Smoothly interpolate toward target sound level
           _currentSoundLevel = _currentSoundLevel * 0.7 + _targetSoundLevel * 0.3;
-          
+
           // Shift all bars to the left
           for (int i = 0; i < _waveHeights.length - 1; i++) {
             _waveHeights[i] = _waveHeights[i + 1];
           }
-          
+
           // Generate new bar on the right with variation based on sound level
           final baseHeight = _currentSoundLevel * 0.6 + 0.1;
           final variation = _random.nextDouble() * 0.3 * _currentSoundLevel;
@@ -107,7 +121,34 @@ class _RecordingScreenState extends State<RecordingScreen>
       }
     });
   }
-  
+
+  Future<void> _loadRemainingTime() async {
+    try {
+      final usageService = UsageService();
+      final subService = SubscriptionService();
+      _isPro = await subService.isPro();
+      _remainingSeconds = await usageService.getRemainingSeconds(isPro: _isPro);
+      if (mounted) setState(() {});
+    } catch (e) {
+      _remainingSeconds = 300;
+    }
+  }
+
+  Future<void> _autoStopDueToLimit() async {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_isPro
+            ? 'Monthly limit reached. Recording stopped.'
+            : 'Free limit reached (5 min). Upgrade for more!'),
+          backgroundColor: const Color(0xFFF59E0B),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+    await _stopRecording();
+  }
+
   String _formatTime() {
     final minutes = (_recordingSeconds ~/ 60).toString().padLeft(2, '0');
     final seconds = (_recordingSeconds % 60).toString().padLeft(2, '0');

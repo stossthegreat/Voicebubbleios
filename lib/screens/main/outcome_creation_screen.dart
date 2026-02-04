@@ -644,26 +644,17 @@ class _OutcomeCreationScreenState extends State<OutcomeCreationScreen> {
                   const SizedBox(height: 16),
 
                   // Status row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '${_contentController.text.trim().split(RegExp(r'\s+')).where((word) => word.isNotEmpty).length} words',
-                        style: const TextStyle(
-                          color: secondaryTextColor,
+                  if (_hasUnsavedChanges)
+                    const Align(
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        'Unsaved changes',
+                        style: TextStyle(
+                          color: Color(0xFFF59E0B),
                           fontSize: 12,
                         ),
                       ),
-                      if (_hasUnsavedChanges)
-                        const Text(
-                          'Unsaved changes',
-                          style: TextStyle(
-                            color: Color(0xFFF59E0B),
-                            fontSize: 12,
-                          ),
-                        ),
-                    ],
-                  ),
+                    ),
                   
                   // Extra space at bottom for scrolling
                   const SizedBox(height: 200),

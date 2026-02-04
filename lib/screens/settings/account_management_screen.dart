@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
-import '../onboarding/onboarding_one.dart';
+import '../auth/sign_in_screen.dart';
+import '../main/main_navigation.dart';
 
 class AccountManagementScreen extends StatelessWidget {
   const AccountManagementScreen({super.key});
@@ -204,7 +205,16 @@ class AccountManagementScreen extends StatelessWidget {
                 await AuthService().signOut();
                 if (context.mounted) {
                   Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (_) => OnboardingOne(onNext: () {})),
+                    MaterialPageRoute(
+                      builder: (_) => SignInScreen(
+                        onSignIn: () {
+                          Navigator.pushReplacement(
+                            _,
+                            MaterialPageRoute(builder: (_) => const MainNavigation()),
+                          );
+                        },
+                      ),
+                    ),
                     (route) => false,
                   );
                 }
@@ -284,7 +294,16 @@ class AccountManagementScreen extends StatelessWidget {
                 await AuthService().deleteAccount();
                 if (context.mounted) {
                   Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (_) => OnboardingOne(onNext: () {})),
+                    MaterialPageRoute(
+                      builder: (_) => SignInScreen(
+                        onSignIn: () {
+                          Navigator.pushReplacement(
+                            _,
+                            MaterialPageRoute(builder: (_) => const MainNavigation()),
+                          );
+                        },
+                      ),
+                    ),
                     (route) => false,
                   );
                 }

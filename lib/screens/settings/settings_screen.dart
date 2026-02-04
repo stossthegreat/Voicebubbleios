@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
 import '../../services/subscription_service.dart';
-import '../onboarding/onboarding_one.dart';
+import '../auth/sign_in_screen.dart';
+import '../main/main_navigation.dart';
 import '../paywall/paywall_screen.dart';
 import '../../widgets/usage_display_widget.dart';
 import 'account_management_screen.dart';
@@ -264,7 +265,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 await AuthService().signOut();
                 if (mounted) {
                   Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (_) => OnboardingOne(onNext: () {})),
+                    MaterialPageRoute(
+                      builder: (_) => SignInScreen(
+                        onSignIn: () {
+                          Navigator.pushReplacement(
+                            _,
+                            MaterialPageRoute(builder: (_) => const MainNavigation()),
+                          );
+                        },
+                      ),
+                    ),
                     (route) => false,
                   );
                 }

@@ -1455,7 +1455,7 @@ class RichTextEditorState extends State<RichTextEditor> with TickerProviderState
                                   focusNode: _focusNode,
                                   configurations: quill.QuillEditorConfigurations(
                                     controller: _controller,
-                                    padding: EdgeInsets.zero,
+                                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 400),
                                     autoFocus: !widget.readOnly,
                                     expands: false,
                                     placeholder: 'Start typing...',
