@@ -14,6 +14,7 @@ import '../main/recording_screen.dart';
 import '../main/preset_selection_screen.dart';
 import '../settings/settings_screen.dart';
 import '../paywall/paywall_screen.dart';
+import '../../services/feature_gate.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -247,7 +248,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           // Set transcription in app state
           final appState = context.read<AppStateProvider>();
           appState.setTranscription(transcription);
-          
+
+          // Track usage - estimate audio duration (rough: ~2.5 words/sec speech)
+          final wordCount = transcription.split(RegExp(r'\s+')).length;
+          final estimatedSeconds = (wordCount / 2.5).round().clamp(10, 300);
+          await FeatureGate.trackSTTUsage(estimatedSeconds);
+
           // Navigate to preset selection
           Navigator.push(
             context,
@@ -589,15 +595,29 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 ),
               ),
               const SizedBox(height: 24),
-              // Upload Audio File option
+              // Upload Audio File option (Pro feature)
               ListTile(
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withOpacity(0.2),
+                    color: const Color(0xFFF59E0B).withOpacity(0.2),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.upload_file, color: Color(0xFF10B981)),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      const Icon(Icons.upload_file, color: Color(0xFFF59E0B)),
+                      Positioned(
+                        right: -4,
+                        top: -4,
+                        child: Icon(
+                          Icons.workspace_premium,
+                          size: 12,
+                          color: const Color(0xFFFFD700),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 title: Text(
                   'Upload Audio File',
@@ -608,14 +628,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   ),
                 ),
                 subtitle: Text(
-                  'Transcribe an existing audio file',
+                  'Pro feature • Transcribe audio files',
                   style: TextStyle(
-                    color: textColor.withOpacity(0.6),
+                    color: const Color(0xFFF59E0B),
                     fontSize: 13,
                   ),
                 ),
-                onTap: () {
+                onTap: () async {
                   Navigator.pop(context);
+
+                  // Check if user can use STT (Pro status AND remaining time)
+                  final canUse = await FeatureGate.canUseSTT(context);
+
+                  if (!canUse) {
+                    return; // FeatureGate already showed dialog
+                  }
+
                   _pickAudioFile();
                 },
               ),

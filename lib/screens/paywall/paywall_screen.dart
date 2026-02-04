@@ -198,6 +198,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
                 _feature(Icons.auto_awesome_rounded, 'Premium rewrite quality'),
                 _feature(Icons.palette_rounded, 'Unlimited custom presets'),
                 _feature(Icons.highlight_rounded, 'Highlight text and choose AI preset'),
+                _feature(Icons.upload_file_rounded, 'Upload audio files'),
                 _feature(Icons.workspace_premium_rounded, 'Priority support'),
                 const SizedBox(height: 24),
 
