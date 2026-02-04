@@ -31,7 +31,8 @@ subprojects {
 
 // Force all subprojects to use consistent JVM target for both Java and Kotlin
 subprojects {
-    afterEvaluate {
+    // Define configuration logic that can be applied immediately or after evaluation
+    val configureJvmTargets: () -> Unit = {
         // Configure Kotlin JVM target for all Kotlin compile tasks
         tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
             kotlinOptions {
@@ -53,6 +54,15 @@ subprojects {
                     targetCompatibility = JavaVersion.VERSION_11
                 }
             }
+        }
+    }
+
+    // Check if project is already evaluated to avoid afterEvaluate error
+    if (project.state.executed) {
+        configureJvmTargets()
+    } else {
+        afterEvaluate {
+            configureJvmTargets()
         }
     }
 }
