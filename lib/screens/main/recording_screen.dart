@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../providers/app_state_provider.dart';
 import '../../services/ai_service.dart';
 import '../../services/feature_gate.dart';
+import '../../widgets/usage_display_widget.dart';
 import 'preset_selection_screen.dart';
 import 'result_screen.dart';
 
@@ -348,7 +349,7 @@ class _RecordingScreenState extends State<RecordingScreen>
             const SizedBox(height: 20),
             
             // STT Time Remaining Display
-            const UsageDisplayCompact(),
+            UsageDisplayCompact(),
             
             const SizedBox(height: 20),
             
