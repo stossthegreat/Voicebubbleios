@@ -1076,10 +1076,7 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
 
     // PAPER TYPES
     if (background.isPaper) {
-      if (background.id == 'paper_black') {
-        // BLACK PAPER - pure black background, grey content area
-        return Container(color: const Color(0xFF000000));
-      } else if (background.id == 'paper_plain') {
+      if (background.id == 'paper_plain') {
         // CODED: Plain white paper
         return Container(color: const Color(0xFFFFFFFF));
       } else if (background.id == 'paper_lined') {
@@ -1542,9 +1539,9 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
                         const SizedBox(width: 16),
                       ],
                       
-                      // Word/character count on LEFT SIDE (moved further left from mic)
+                      // Word/character count on LEFT SIDE (MUCH further left from mic)
                       Padding(
-                        padding: const EdgeInsets.only(right: 24), // More space from mic icon
+                        padding: const EdgeInsets.only(right: 80), // WAY more space from mic icon
                         child: Text(
                           '$_wordCount words • $_characterCount characters',
                           style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12),

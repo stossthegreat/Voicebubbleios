@@ -26,14 +26,6 @@ class BackgroundAssets {
   // ════════════════════════════════════════════════════════════════════════════
 
   static const List<BackgroundAsset> allPapers = [
-    // Black paper (default)
-    BackgroundAsset(
-      id: 'paper_black',
-      name: 'Black Paper',
-      assetPath: null, // CODED - pure black
-      isPaper: true,
-      fallbackColor: Color(0xFF000000), // Pure black
-    ),
     // Plain white paper (CODED - no image)
     BackgroundAsset(
       id: 'paper_plain',
