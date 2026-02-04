@@ -404,7 +404,7 @@ class _BatchOperationsScreenState extends State<BatchOperationsScreen> {
             );
 
             if (selectedTagId != null && mounted) {
-              await _batchService.addTagToNotes(_selectedNotes, selectedTagId);
+              await _batchService.addTagToNotes(_selectedNotes, selectedTagId, updatedAppState);
               
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
