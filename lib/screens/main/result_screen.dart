@@ -18,6 +18,9 @@ import '../../widgets/outcome_chip.dart';
 import '../../widgets/refinement_buttons.dart';
 import '../../widgets/add_to_project_dialog.dart';
 import '../../widgets/reminder_button.dart';
+import '../../widgets/review_dialog.dart';
+import '../../services/feature_gate.dart';
+import '../../services/usage_service.dart';
 import 'preset_selection_screen.dart';
 import 'recording_detail_screen.dart';
 import 'recording_screen.dart';
@@ -111,6 +114,9 @@ class _ResultScreenState extends State<ResultScreen> {
         _rewrittenText = rewrittenText;
         _isLoading = false;
       });
+
+      // Check if we should show review prompt for extra minute
+      _checkAndShowReviewPrompt();
 
       // Initialize history with first result
       _saveToHistory(rewrittenText);
@@ -560,11 +566,11 @@ class _ResultScreenState extends State<ResultScreen> {
       _isLoading = true;
       _error = null;
     });
-    
+
     try {
       // Just call _generateRewrite again - it will regenerate from original transcription
       await _generateRewrite();
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -579,6 +585,31 @@ class _ResultScreenState extends State<ResultScreen> {
         _error = e.toString();
         _isLoading = false;
       });
+    }
+  }
+
+  /// Check if we should show review prompt for extra minute
+  void _checkAndShowReviewPrompt() async {
+    final isPro = await FeatureGate.isPro();
+    if (!isPro) {
+      final usageService = UsageService();
+      final shouldShow = await usageService.shouldShowReviewPrompt(isPro: false);
+      final hasBonus = await usageService.hasClaimedReviewBonus();
+
+      if (shouldShow && !hasBonus && mounted) {
+        await Future.delayed(const Duration(milliseconds: 500));
+        if (mounted) {
+          final didReview = await ReviewDialog.showForFreeUser(context);
+          if (didReview == true && mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Thanks! You got 1 extra minute!'),
+                backgroundColor: Color(0xFF10B981),
+              ),
+            );
+          }
+        }
+      }
     }
   }
   

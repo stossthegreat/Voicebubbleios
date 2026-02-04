@@ -122,23 +122,33 @@ class ProjectService {
     await box.delete(projectId);
   }
 
-  /// Get all items in a project
+  /// Get all items in a project (NO DUPLICATES)
   Future<List<RecordingItem>> getProjectItems(String projectId) async {
     final projectBox = await Hive.openBox<Project>(_projectsBoxName);
     final project = projectBox.get(projectId);
-    
+
     if (project == null) {
       return [];
     }
 
     final recordingBox = await Hive.openBox<RecordingItem>(_recordingItemsBoxName);
     final allItems = recordingBox.values.toList();
-    
-    // Filter and sort by creation date (newest first)
-    final projectItems = allItems
-        .where((item) => project.itemIds.contains(item.id))
-        .toList()
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+    // Use Set to prevent duplicates
+    final seenIds = <String>{};
+    final projectItems = <RecordingItem>[];
+
+    for (final item in allItems) {
+      // Item belongs if in itemIds OR has projectId set
+      final belongsToProject = project.itemIds.contains(item.id) || item.projectId == projectId;
+
+      if (belongsToProject && !seenIds.contains(item.id)) {
+        seenIds.add(item.id);
+        projectItems.add(item);
+      }
+    }
+
+    projectItems.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
     return projectItems;
   }

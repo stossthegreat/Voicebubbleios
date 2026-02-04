@@ -68,7 +68,22 @@ class _RecordingScreenState extends State<RecordingScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat();
-    _loadRemainingTime();
+
+    // Check if user can record BEFORE starting
+    _checkCanRecordAndStart();
+  }
+
+  Future<void> _checkCanRecordAndStart() async {
+    final canRecord = await FeatureGate.canUseSTT(context);
+
+    if (!canRecord) {
+      // No time left - FeatureGate already showed upgrade dialog
+      if (mounted) Navigator.pop(context);
+      return;
+    }
+
+    // Has time - proceed
+    await _loadRemainingTime();
     _startRecording();
   }
   
