@@ -318,59 +318,26 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // VoiceBubble text with tagline + Record Icon + MIC ANIMATION
-                  Row(
+                  // VoiceBubble text with tagline (NO ICONS)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
-                        Icons.radio_button_checked,
-                        color: Colors.white,
-                        size: 24,
+                      Text(
+                        'VoiceBubble',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF3B82F6),
+                        ),
                       ),
-                      const SizedBox(width: 8),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'VoiceBubble',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF3B82F6),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Speak, AI Writes, Done',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: secondaryTextColor,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(width: 16),
-                      // MIC ANIMATION - Small white mic with pulsing circle
-                      Consumer<AppStateProvider>(
-                        builder: (context, appState, _) {
-                          final isRecording = appState.isRecording;
-                          return AnimatedContainer(
-                            duration: const Duration(milliseconds: 300),
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(isRecording ? 0.3 : 0.1),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Center(
-                              child: Icon(
-                                Icons.mic,
-                                color: Colors.white,
-                                size: 16,
-                              ),
-                            ),
-                          );
-                        },
+                      const SizedBox(height: 4),
+                      Text(
+                        'Speak, AI Writes, Done',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: secondaryTextColor,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ],
                   ),

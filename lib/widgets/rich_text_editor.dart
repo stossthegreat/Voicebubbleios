@@ -1447,12 +1447,23 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
                             children: [
                               SizedBox(
                                 height: MediaQuery.of(context).size.height - 250,
-                                // Wrap QuillEditor in Theme to fix gray overlay
+                                // Wrap QuillEditor in Theme to fix gray overlay AND ensure white text
                                 child: Theme(
                                   data: ThemeData.dark().copyWith(
                                     scaffoldBackgroundColor: Colors.transparent,
                                     canvasColor: Colors.transparent,
                                     cardColor: Colors.transparent,
+                                    // FORCE WHITE TEXT on black background
+                                    textTheme: const TextTheme(
+                                      bodyLarge: TextStyle(color: Colors.white),
+                                      bodyMedium: TextStyle(color: Colors.white),
+                                      bodySmall: TextStyle(color: Colors.white),
+                                    ),
+                                    textSelectionTheme: const TextSelectionThemeData(
+                                      cursorColor: Colors.white,
+                                      selectionColor: Color(0xFF3B82F6),
+                                      selectionHandleColor: Color(0xFF3B82F6),
+                                    ),
                                   ),
                                   child: quill.QuillEditor.basic(
                                     focusNode: _focusNode,
