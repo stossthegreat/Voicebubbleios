@@ -490,7 +490,10 @@ class _BatchOperationsScreenState extends State<BatchOperationsScreen> {
 
   // PROJECT SELECTION
   void _showProjectSelection() async {
-    final projects = await _projectService.getAllProjects();
+    final appState = context.read<AppStateProvider>();
+
+    // Use appState.projects for reactive updates
+    final projects = appState.projects;
 
     if (projects.isEmpty) {
       // Show create project option instead of just error message
@@ -531,10 +534,8 @@ class _BatchOperationsScreenState extends State<BatchOperationsScreen> {
           context: context,
           builder: (context) => const CreateProjectDialog(),
         );
-        // Reload projects
-        final projects = await _projectService.getAllProjects();
-        // After creating and reloading, try showing project selection again
-        if (mounted && projects.isNotEmpty) {
+        // After creating, try showing project selection again (appState will have updated)
+        if (mounted && context.read<AppStateProvider>().projects.isNotEmpty) {
           _showProjectSelection();
         }
       }
@@ -595,9 +596,11 @@ class _BatchOperationsScreenState extends State<BatchOperationsScreen> {
         );
       }
 
-      // FIX: Use projectService directly
-      await _batchService.moveNotesToProject(_selectedNotes, selectedProjectId, _projectService);
-      
+      // FIX: Use appState.addItemToProject directly for reactive UI updates
+      for (final note in _selectedNotes) {
+        await appState.addItemToProject(note.id, selectedProjectId);
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

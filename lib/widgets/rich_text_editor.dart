@@ -1497,7 +1497,7 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
 
                 // Status bar with action buttons at bottom left
                 Container(
-                  padding: const EdgeInsets.only(left: 8, right: 80, top: 8, bottom: 8),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: surfaceColor,
                     border: Border(top: BorderSide(color: Colors.white.withOpacity(0.1))),
@@ -1538,16 +1538,15 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
                         ),
                         const SizedBox(width: 16),
                       ],
-                      
-                      // Word/character count on LEFT SIDE (MUCH further left from mic)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 80), // WAY more space from mic icon
-                        child: Text(
-                          '$_wordCount words • $_characterCount characters',
-                          style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12),
-                        ),
+
+                      // Word/character count - right after toolbar buttons
+                      Text(
+                        '$_wordCount words • $_characterCount characters',
+                        style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12),
                       ),
                       const Spacer(),
+                      // FAB clearance - prevent overlap with mic button
+                      const SizedBox(width: 60),
                     ],
                   ),
                 ),

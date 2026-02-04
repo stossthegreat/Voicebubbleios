@@ -577,18 +577,23 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
       // Build continue context from this single item
       final continueService = ContinueService();
       final continueContext = await continueService.buildContextFromItem(item.id);
-      
+
       // Set the context
       appState.setContinueContext(continueContext);
-      
+
       // Navigate to recording screen (PUSH, not replace - so we can come back)
       if (context.mounted) {
-        Navigator.push(
+        await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => const RecordingScreen(),
           ),
         );
+
+        // After returning from recording, refresh to show updated content
+        if (mounted) {
+          setState(() {});
+        }
       }
     } catch (e) {
       if (context.mounted) {
