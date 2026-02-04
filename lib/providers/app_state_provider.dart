@@ -331,11 +331,43 @@ ContinueContext? get continueContext => _continueContext;
       final item = box.get(key);
       if (item != null) {
         await ReminderManager().cancelReminderForDeletedItem(item);
+
+        // If item belongs to a project, remove from project's itemIds list
+        if (item.projectId != null) {
+          await _removeItemFromProject(item.projectId!, id);
+        }
       }
-      
+
       await box.delete(key);
       await _loadRecordingItems();
       debugPrint('🗑️ Recording deleted: $id');
+    }
+  }
+
+  /// Helper method to remove item from project's itemIds list
+  Future<void> _removeItemFromProject(String projectId, String itemId) async {
+    try {
+      final projectBox = await Hive.openBox<Project>('projects');
+      final project = projectBox.get(projectId);
+
+      if (project != null) {
+        final updatedItemIds = List<String>.from(project.itemIds)..remove(itemId);
+        final updatedProject = project.copyWith(
+          itemIds: updatedItemIds,
+          updatedAt: DateTime.now(),
+        );
+        await projectBox.put(projectId, updatedProject);
+
+        // Update local projects list
+        final index = _projects.indexWhere((p) => p.id == projectId);
+        if (index != -1) {
+          _projects[index] = updatedProject;
+        }
+
+        debugPrint('✅ Removed item $itemId from project $projectId. New count: ${updatedItemIds.length}');
+      }
+    } catch (e) {
+      debugPrint('❌ Error removing item from project: $e');
     }
   }
   
