@@ -527,7 +527,13 @@ class RichTextEditorState extends State<RichTextEditor> with TickerProviderState
     _selectionTimer?.cancel();
     _selectionTimer = Timer(const Duration(milliseconds: 200), _checkSelection);
 
-    // NO AUTO-SAVE TIMER! Will save on dispose instead
+    // Debounced auto-save - saves 1.5 seconds after user stops typing
+    _saveTimer?.cancel();
+    _saveTimer = Timer(const Duration(milliseconds: 1500), () {
+      if (mounted && _hasUnsavedChanges) {
+        _saveContent();
+      }
+    });
   }
 
   void _checkSelection() {
