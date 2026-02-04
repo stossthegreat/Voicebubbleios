@@ -329,24 +329,47 @@ class _OutcomesScreenCleanState extends State<OutcomesScreenClean> {
                   ),
                 ),
                 
-                // Alarm icon - ALWAYS SHOW - NOW CLICKABLE
+                // Alarm icon with TIME DISPLAY - ALWAYS SHOW - NOW CLICKABLE
                 GestureDetector(
                   onTap: () => _showReminderPicker(item),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: isOverdue 
-                          ? const Color(0xFFEF4444).withOpacity(0.15)
-                          : (hasReminder ? color.withOpacity(0.15) : const Color(0xFF374151).withOpacity(0.15)),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.alarm,
-                      size: 18,
-                      color: isOverdue 
-                          ? const Color(0xFFEF4444) 
-                          : (hasReminder ? color : const Color(0xFF6B7280)),
-                    ),
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: isOverdue 
+                              ? const Color(0xFFEF4444).withOpacity(0.15)
+                              : (hasReminder ? color.withOpacity(0.15) : const Color(0xFF374151).withOpacity(0.15)),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Icons.alarm,
+                          size: 18,
+                          color: isOverdue 
+                              ? const Color(0xFFEF4444) 
+                              : (hasReminder ? color : const Color(0xFF6B7280)),
+                        ),
+                      ),
+                      // Show time if reminder is set
+                      if (hasReminder) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          '${item.reminderDateTime!.hour.toString().padLeft(2, '0')}:${item.reminderDateTime!.minute.toString().padLeft(2, '0')}',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: isOverdue ? const Color(0xFFEF4444) : color,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          '${item.reminderDateTime!.day}/${item.reminderDateTime!.month}',
+                          style: TextStyle(
+                            fontSize: 9,
+                            color: isOverdue ? const Color(0xFFEF4444) : color.withOpacity(0.7),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                 ),
               ],
