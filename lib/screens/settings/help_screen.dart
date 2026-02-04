@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class HelpScreen extends StatelessWidget {
   const HelpScreen({super.key});
@@ -145,8 +146,19 @@ class HelpScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 24),
                         ElevatedButton(
-                          onPressed: () {
-                            // TODO: Open email client
+                          onPressed: () async {
+                            final Uri emailUri = Uri(
+                              scheme: 'mailto',
+                              path: 'info@voice-bubble.com',
+                              query: 'subject=VoiceBubble Support Request',
+                            );
+                            try {
+                              if (await canLaunchUrl(emailUri)) {
+                                await launchUrl(emailUri);
+                              }
+                            } catch (e) {
+                              debugPrint('Error opening email: $e');
+                            }
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: primaryColor,

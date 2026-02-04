@@ -11,6 +11,7 @@ import 'package:uuid/uuid.dart';
 import 'package:record/record.dart';
 import 'package:just_audio/just_audio.dart';
 import '../services/refinement_service.dart';
+import '../services/feature_gate.dart';
 import '../models/outcome_type.dart';
 import '../constants/background_assets.dart';
 import './outcome_chip.dart';
@@ -585,10 +586,13 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
     }
   }
 
-  void _showAIMenu() {
+  Future<void> _showAIMenu() async {
     if (_selectedText.isEmpty) return;
+    final canUse = await FeatureGate.canUseHighlightAI(context);
+    if (!canUse) return;
     HapticFeedback.mediumImpact();
-    
+
+    if (!mounted) return;
     showDialog(
       context: context,
       barrierColor: Colors.transparent, // No dark overlay

@@ -5,20 +5,38 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/app_state_provider.dart';
 import '../../services/auth_service.dart';
+import '../../services/subscription_service.dart';
 import '../onboarding/onboarding_one.dart';
 import '../paywall/paywall_screen.dart';
+import '../../widgets/usage_display_widget.dart';
 import 'terms_screen.dart';
 import 'privacy_screen.dart';
 import 'help_screen.dart';
-// ✨ NEW IMPORTS ✨
-// COMMENTED OUT - Templates moved to Library tab only
-// import '../analytics_dashboard.dart';
-// import '../templates_gallery.dart';
-// import '../main/recording_detail_screen.dart';
-// ✨ END NEW IMPORTS ✨
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  bool _isPro = false;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkProStatus();
+  }
+
+  Future<void> _checkProStatus() async {
+    final isPro = await SubscriptionService().isPro();
+    setState(() {
+      _isPro = isPro;
+      _isLoading = false;
+    });
+  }
   
   @override
   Widget build(BuildContext context) {
@@ -32,637 +50,324 @@ class SettingsScreen extends StatelessWidget {
     
     return Scaffold(
       backgroundColor: backgroundColor,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: surfaceColor,
-                      borderRadius: BorderRadius.circular(40),
-                    ),
-                    child: IconButton(
-                      padding: EdgeInsets.zero,
-                      onPressed: () => Navigator.pop(context),
-                      icon: Icon(Icons.close, color: textColor, size: 20),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Text(
-                    'Settings',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: textColor,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            
-            // Settings Content
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                children: [
-                  // Account Section
-                  _buildSectionHeader('ACCOUNT', secondaryTextColor),
-                  const SizedBox(height: 12),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: surfaceColor,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: _buildAccountItem(
-                      context,
-                      textColor,
-                      secondaryTextColor,
-                      primaryColor,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Upgrade to Pro Card
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [primaryColor, const Color(0xFFEC4899)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: primaryColor.withOpacity(0.3),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () => _showPaywall(context),
-                        borderRadius: BorderRadius.circular(16),
-                        child: Padding(
-                          padding: const EdgeInsets.all(20),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(10),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: const Icon(
-                                      Icons.workspace_premium,
-                                      color: Colors.white,
-                                      size: 28,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  const Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Upgrade to Pro',
-                                          style: TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                        Text(
-                                          'Unlimited recordings',
-                                          style: TextStyle(
-                                            fontSize: 13,
-                                            color: Colors.white70,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  const Icon(
-                                    Icons.arrow_forward_rounded,
-                                    color: Colors.white,
-                                    size: 24,
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  // ✨ FEATURES SECTION COMMENTED OUT - Templates moved to Library tab ✨
-                  /*
-                  _buildSectionHeader('FEATURES', secondaryTextColor),
-                  const SizedBox(height: 12),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: surfaceColor,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      children: [
-                        _buildSettingsItem(
-                          icon: Icons.article_outlined,
-                          title: 'Templates',
-                          textColor: textColor,
-                          secondaryTextColor: secondaryTextColor,
-                          onTap: () {
-                            showModalBottomSheet(
-                              context: context,
-                              isScrollControlled: true,
-                              backgroundColor: Colors.transparent,
-                              builder: (_) => TemplatesGallery(
-                                onTemplateSelected: (note) async {
-                                  final appState = context.read<AppStateProvider>();
-                                  await appState.saveRecording(note);
-                                  
-                                  if (context.mounted) {
-                                    Navigator.pop(context); // Close templates
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => RecordingDetailScreen(recordingId: note.id),
-                                      ),
-                                    );
-                                  }
-                                },
-                              ),
-                            );
-                          },
-                        ),
-                        Divider(height: 1, color: dividerColor),
-                        _buildSettingsItem(
-                          icon: Icons.analytics_outlined,
-                          title: 'Analytics',
-                          textColor: textColor,
-                          secondaryTextColor: secondaryTextColor,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const AnalyticsDashboard()),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  */
-                  // ✨ END FEATURES SECTION ✨
-                  
-                  // Connect Section
-                  _buildSectionHeader('CONNECT', secondaryTextColor),
-                  const SizedBox(height: 12),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: surfaceColor,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      children: [
-                        _buildSettingsItem(
-                          icon: Icons.email_outlined,
-                          title: 'Support Email',
-                          textColor: textColor,
-                          secondaryTextColor: secondaryTextColor,
-                          onTap: () => _launchUrl('mailto:info@voice-bubble.com'),
-                        ),
-                        Divider(height: 1, color: dividerColor),
-                        _buildSettingsItem(
-                          icon: Icons.language,
-                          title: 'Website',
-                          textColor: textColor,
-                          secondaryTextColor: secondaryTextColor,
-                          onTap: () => _launchUrl('https://www.voice-bubble.com'),
-                        ),
-                        Divider(height: 1, color: dividerColor),
-                        _buildSettingsItem(
-                          icon: Icons.star_rate,
-                          title: 'Rate on Play Store',
-                          textColor: textColor,
-                          secondaryTextColor: secondaryTextColor,
-                          onTap: () => _launchUrl('https://play.google.com/store/apps/details?id=com.voicebubble.app'),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // Social Media Section
-                  _buildSectionHeader('FOLLOW US', secondaryTextColor),
-                  const SizedBox(height: 12),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: surfaceColor,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      children: [
-                        _buildSocialItem(
-                          icon: '𝕏', // X/Twitter icon
-                          title: 'X (Twitter)',
-                          textColor: textColor,
-                          secondaryTextColor: secondaryTextColor,
-                          onTap: () => _launchUrl('https://x.com/VoiceBubbl53136'),
-                        ),
-                        Divider(height: 1, color: dividerColor),
-                        _buildSocialItem(
-                          icon: '📷', // Instagram icon
-                          title: 'Instagram',
-                          textColor: textColor,
-                          secondaryTextColor: secondaryTextColor,
-                          onTap: () => _launchUrl('https://www.instagram.com/voicebubble1?igsh=MW81dXcyZG5iczRtbg=='),
-                        ),
-                        Divider(height: 1, color: dividerColor),
-                        _buildSocialItem(
-                          icon: '🎵', // TikTok icon
-                          title: 'TikTok',
-                          textColor: textColor,
-                          secondaryTextColor: secondaryTextColor,
-                          onTap: () => _launchUrl('https://www.tiktok.com/@voice_bubble?_r=1&_t=ZN-93STKgiHnWR'),
-                        ),
-                        Divider(height: 1, color: dividerColor),
-                        _buildSocialItem(
-                          icon: '📘', // Facebook icon
-                          title: 'Facebook',
-                          textColor: textColor,
-                          secondaryTextColor: secondaryTextColor,
-                          onTap: () => _launchUrl('https://www.facebook.com/share/1AdnQ1oodx/'),
-                        ),
-                        Divider(height: 1, color: dividerColor),
-                        _buildSocialItem(
-                          icon: '📺', // YouTube icon
-                          title: 'YouTube',
-                          textColor: textColor,
-                          secondaryTextColor: secondaryTextColor,
-                          onTap: () => _launchUrl('https://youtube.com/@voicebubble1?si=-eSwiUjQfmg1f3Qe'),
-                        ),
-                        Divider(height: 1, color: dividerColor),
-                        _buildSocialItem(
-                          icon: '💼', // LinkedIn icon
-                          title: 'LinkedIn',
-                          textColor: textColor,
-                          secondaryTextColor: secondaryTextColor,
-                          onTap: () => _launchUrl('https://www.linkedin.com/company/voice-bubble/'),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  // About Section
-                  _buildSectionHeader('ABOUT', secondaryTextColor),
-                  const SizedBox(height: 12),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: surfaceColor,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      children: [
-                        _buildSettingsItem(
-                          icon: Icons.help_outline,
-                          title: 'Help & Support',
-                          textColor: textColor,
-                          secondaryTextColor: secondaryTextColor,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const HelpScreen(),
-                              ),
-                            );
-                          },
-                        ),
-                        Divider(height: 1, color: dividerColor),
-                        _buildSettingsItem(
-                          icon: Icons.description_outlined,
-                          title: 'Terms & Conditions',
-                          textColor: textColor,
-                          secondaryTextColor: secondaryTextColor,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const TermsScreen(),
-                              ),
-                            );
-                          },
-                        ),
-                        Divider(height: 1, color: dividerColor),
-                        _buildSettingsItem(
-                          icon: Icons.privacy_tip_outlined,
-                          title: 'Privacy Policy',
-                          textColor: textColor,
-                          secondaryTextColor: secondaryTextColor,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const PrivacyScreen(),
-                              ),
-                            );
-                          },
-                        ),
-                        Divider(height: 1, color: dividerColor),
-                        Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Version',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: textColor,
-                                ),
-                              ),
-                              Text(
-                                '1.0.0 (2)',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: secondaryTextColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  // Advanced Section
-                  _buildSectionHeader('ADVANCED', secondaryTextColor),
-                  const SizedBox(height: 12),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: surfaceColor,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      children: [
-                        _buildSettingsItem(
-                          icon: Icons.cleaning_services_outlined,
-                          title: 'Clear Cache',
-                          textColor: textColor,
-                          secondaryTextColor: secondaryTextColor,
-                          onTap: () {
-                            _showClearCacheDialog(context);
-                          },
-                        ),
-                        Divider(height: 1, color: dividerColor),
-                        _buildSettingsItem(
-                          icon: Icons.restore,
-                          title: 'Reset Settings',
-                          textColor: textColor,
-                          secondaryTextColor: secondaryTextColor,
-                          onTap: () {
-                            _showResetDialog(context);
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  // Danger Zone
-                  _buildSectionHeader('DANGER ZONE', secondaryTextColor),
-                  const SizedBox(height: 12),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: surfaceColor,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      children: [
-                        InkWell(
-                          onTap: () {
-                            _showSignOutDialog(context);
-                          },
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(
-                                  Icons.logout_rounded,
-                                  color: Color(0xFFF59E0B),
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Sign Out',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: const Color(0xFFF59E0B),
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        Divider(height: 1, color: dividerColor),
-                        InkWell(
-                          onTap: () {
-                            _showDeleteAccountDialog(context);
-                          },
-                          borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(
-                                  Icons.delete_forever_rounded,
-                                  color: Color(0xFFEF4444),
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Delete Account',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: const Color(0xFFEF4444),
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-  
-  Widget _buildSectionHeader(String title, Color color) {
-    return Text(
-      title,
-      style: TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.w600,
-        color: color,
-        letterSpacing: 0.5,
-      ),
-    );
-  }
-  
-  Widget _buildAccountItem(
-    BuildContext context,
-    Color textColor,
-    Color secondaryTextColor,
-    Color primaryColor,
-  ) {
-    return Column(
-      children: [
-        // User Profile Section
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(48),
-                  gradient: LinearGradient(
-                    colors: [primaryColor, const Color(0xFFEC4899)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                child: const Center(
-                  child: Text(
-                    'U',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Free Plan',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: textColor,
-                      ),
-                    ),
-                    Text(
-                      '5 recordings/day',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: secondaryTextColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.edit,
-                color: secondaryTextColor,
-                size: 20,
-              ),
-            ],
+      appBar: AppBar(
+        backgroundColor: backgroundColor,
+        elevation: 0,
+        title: const Text(
+          'Settings',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.w600,
           ),
         ),
-        
-        // Account Management Options
-        const Divider(height: 1, color: Color(0xFF334155)),
-        _buildSettingsItem(
-          icon: Icons.person_outline,
-          title: 'Profile Settings',
-          textColor: textColor,
-          secondaryTextColor: secondaryTextColor,
-          onTap: () => _showProfileDialog(context, textColor, secondaryTextColor),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
         ),
-        const Divider(height: 1, color: Color(0xFF334155)),
-        _buildSettingsItem(
-          icon: Icons.backup,
-          title: 'Backup & Sync',
-          textColor: textColor,
-          secondaryTextColor: secondaryTextColor,
-          onTap: () => _showBackupDialog(context, textColor, secondaryTextColor),
-        ),
-        const Divider(height: 1, color: Color(0xFF334155)),
-        _buildSettingsItem(
-          icon: Icons.download,
-          title: 'Export All Data',
-          textColor: textColor,
-          secondaryTextColor: secondaryTextColor,
-          onTap: () => _exportAllUserData(context),
-        ),
-        const Divider(height: 1, color: Color(0xFF334155)),
-        _buildSettingsItem(
-          icon: Icons.delete_forever,
-          title: 'Delete Account',
-          textColor: const Color(0xFFEF4444), // Red color for danger
-          secondaryTextColor: secondaryTextColor,
-          onTap: () => _showDeleteAccountDialog(context),
-        ),
-      ],
+      ),
+      body: Column(
+        children: [
+          const UsageDisplayWidget(),
+          
+          // Upgrade to Pro Button (FREE users only)
+          if (!_isLoading && !_isPro)
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: SizedBox(
+                width: double.infinity,
+                height: 64,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => PaywallScreen(
+                          onSubscribe: () {
+                            Navigator.pop(context);
+                            _checkProStatus();
+                          },
+                          onRestore: () {
+                            Navigator.pop(context);
+                            _checkProStatus();
+                          },
+                          onClose: () => Navigator.pop(context),
+                        ),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: EdgeInsets.zero,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: Ink(
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [
+                          Color(0xFF3B82F6),
+                          Color(0xFF2563EB),
+                          Color(0xFF1D4ED8),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Container(
+                      alignment: Alignment.center,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.workspace_premium, size: 28),
+                          const SizedBox(width: 12),
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Upgrade to Pro',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                '90 minutes + Unlimited AI',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.white.withOpacity(0.9),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                // APP & STORE LINKS
+                _buildSectionHeader('APP & STORE', secondaryTextColor),
+                const SizedBox(height: 12),
+                Container(
+                  decoration: BoxDecoration(
+                    color: surfaceColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      _buildSettingsItem(
+                        icon: Icons.download,
+                        title: 'Download App',
+                        textColor: textColor,
+                        secondaryTextColor: secondaryTextColor,
+                        onTap: () => _launchUrl(context, 'https://play.google.com/store/apps/details?id=com.voicebubble.app'),
+                      ),
+                      Divider(height: 1, color: dividerColor),
+                      _buildSettingsItem(
+                        icon: Icons.star_rate,
+                        title: 'Rate App',
+                        textColor: textColor,
+                        secondaryTextColor: secondaryTextColor,
+                        onTap: () => _launchUrl(context, 'https://play.google.com/store/apps/details?id=com.voicebubble.app'),
+                      ),
+                      Divider(height: 1, color: dividerColor),
+                      _buildSettingsItem(
+                        icon: Icons.language,
+                        title: 'Website',
+                        textColor: textColor,
+                        secondaryTextColor: secondaryTextColor,
+                        onTap: () => _launchUrl(context, 'https://www.voice-bubble.com'),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                // SOCIAL MEDIA
+                _buildSectionHeader('SOCIALS', secondaryTextColor),
+                const SizedBox(height: 12),
+                Container(
+                  decoration: BoxDecoration(
+                    color: surfaceColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      _buildSettingsItem(
+                        icon: Icons.alternate_email,
+                        title: 'X (Twitter)',
+                        textColor: textColor,
+                        secondaryTextColor: secondaryTextColor,
+                        onTap: () => _launchUrl(context, 'https://x.com/VoiceBubbl53136'),
+                      ),
+                      Divider(height: 1, color: dividerColor),
+                      _buildSettingsItem(
+                        icon: Icons.camera_alt,
+                        title: 'Instagram',
+                        textColor: textColor,
+                        secondaryTextColor: secondaryTextColor,
+                        onTap: () => _launchUrl(context, 'https://www.instagram.com/voicebubble1?igsh=MW81dXcyZG5iczRtbg=='),
+                      ),
+                      Divider(height: 1, color: dividerColor),
+                      _buildSettingsItem(
+                        icon: Icons.music_note,
+                        title: 'TikTok',
+                        textColor: textColor,
+                        secondaryTextColor: secondaryTextColor,
+                        onTap: () => _launchUrl(context, 'https://www.tiktok.com/@voice_bubble?_r=1&_t=ZN-93STKgiHnWR'),
+                      ),
+                      Divider(height: 1, color: dividerColor),
+                      _buildSettingsItem(
+                        icon: Icons.facebook,
+                        title: 'Facebook',
+                        textColor: textColor,
+                        secondaryTextColor: secondaryTextColor,
+                        onTap: () => _launchUrl(context, 'https://www.facebook.com/share/1AdnQ1oodx/'),
+                      ),
+                      Divider(height: 1, color: dividerColor),
+                      _buildSettingsItem(
+                        icon: Icons.play_circle,
+                        title: 'YouTube',
+                        textColor: textColor,
+                        secondaryTextColor: secondaryTextColor,
+                        onTap: () => _launchUrl(context, 'https://youtube.com/@voicebubble1?si=-eSwiUjQfmg1f3Qe'),
+                      ),
+                      Divider(height: 1, color: dividerColor),
+                      _buildSettingsItem(
+                        icon: Icons.business,
+                        title: 'LinkedIn',
+                        textColor: textColor,
+                        secondaryTextColor: secondaryTextColor,
+                        onTap: () => _launchUrl(context, 'https://www.linkedin.com/company/voice-bubble/'),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                // LEGAL & SUPPORT
+                _buildSectionHeader('LEGAL & SUPPORT', secondaryTextColor),
+                const SizedBox(height: 12),
+                Container(
+                  decoration: BoxDecoration(
+                    color: surfaceColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      _buildSettingsItem(
+                        icon: Icons.help_outline,
+                        title: 'Help & Support',
+                        textColor: textColor,
+                        secondaryTextColor: secondaryTextColor,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const HelpScreen()),
+                          );
+                        },
+                      ),
+                      Divider(height: 1, color: dividerColor),
+                      _buildSettingsItem(
+                        icon: Icons.privacy_tip_outlined,
+                        title: 'Privacy Policy',
+                        textColor: textColor,
+                        secondaryTextColor: secondaryTextColor,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const PrivacyScreen()),
+                          );
+                        },
+                      ),
+                      Divider(height: 1, color: dividerColor),
+                      _buildSettingsItem(
+                        icon: Icons.description_outlined,
+                        title: 'Terms & Conditions',
+                        textColor: textColor,
+                        secondaryTextColor: secondaryTextColor,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const TermsScreen()),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                // ACCOUNT SETTINGS
+                _buildSectionHeader('ACCOUNT', secondaryTextColor),
+                const SizedBox(height: 12),
+                Container(
+                  decoration: BoxDecoration(
+                    color: surfaceColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: [
+                      _buildSettingsItem(
+                        icon: Icons.cleaning_services_outlined,
+                        title: 'Clear Cache',
+                        textColor: textColor,
+                        secondaryTextColor: secondaryTextColor,
+                        onTap: () => _showClearCacheDialog(context),
+                      ),
+                      Divider(height: 1, color: dividerColor),
+                      _buildSettingsItem(
+                        icon: Icons.delete_outline,
+                        title: 'Delete Account',
+                        textColor: const Color(0xFFEF4444),
+                        secondaryTextColor: secondaryTextColor,
+                        onTap: () => _showDeleteAccountDialog(context),
+                      ),
+                      Divider(height: 1, color: dividerColor),
+                      _buildSettingsItem(
+                        icon: Icons.logout,
+                        title: 'Sign Out',
+                        textColor: textColor,
+                        secondaryTextColor: secondaryTextColor,
+                        onTap: () => _showSignOutDialog(context),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 40),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
-  
-  void _showPaywall(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        fullscreenDialog: true,
-        builder: (context) => PaywallScreen(
-          onSubscribe: () {
-            Navigator.of(context).pop();
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('✓ Welcome to Pro!'),
-                backgroundColor: Color(0xFF10B981),
-              ),
-            );
-          },
-          onRestore: () {
-            Navigator.of(context).pop();
-          },
-          onClose: () {
-            Navigator.of(context).pop();
-          },
+
+  Widget _buildSectionHeader(String title, Color color) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 8),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: color,
+          letterSpacing: 0.5,
         ),
       ),
     );
   }
-  
+
   Widget _buildSettingsItem({
     required IconData icon,
     required String title,
@@ -676,573 +381,158 @@ class SettingsScreen extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Row(
-              children: [
-                Icon(
-                  icon,
-                  size: 20,
+            Icon(icon, color: textColor, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 16,
                   color: textColor,
                 ),
-                const SizedBox(width: 12),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: textColor,
-                  ),
-                ),
-              ],
+              ),
             ),
-            trailing ??
-                Icon(
-                  Icons.chevron_right,
-                  size: 20,
-                  color: secondaryTextColor,
-                ),
+            trailing ?? Icon(
+              Icons.chevron_right,
+              color: secondaryTextColor,
+              size: 20,
+            ),
           ],
         ),
       ),
     );
   }
-  
+
+  // URL Launcher helper
+  Future<void> _launchUrl(BuildContext context, String urlString) async {
+    try {
+      final url = Uri.parse(urlString);
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      debugPrint('Error launching URL: $e');
+    }
+  }
+
   void _showClearCacheDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Clear Cache'),
-        content: const Text('Are you sure you want to clear the cache?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Cache cleared')),
-              );
-            },
-            child: const Text('Clear'),
-          ),
-        ],
-      ),
-    );
-  }
-  
-  void _showResetDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Reset Settings'),
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: const Text('Clear Cache', style: TextStyle(color: Colors.white)),
         content: const Text(
-          'Are you sure you want to reset all settings to default?',
+          'This will clear temporary files and free up storage space.',
+          style: TextStyle(color: Color(0xFF94A3B8)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Settings reset')),
-              );
-            },
-            child: const Text('Reset'),
-          ),
-        ],
-      ),
-    );
-  }
-  
-  void _showSignOutDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Sign Out'),
-        content: const Text('Are you sure you want to sign out?\n\nYour saved data will remain on this device.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: const Text('Cancel', style: TextStyle(color: Color(0xFF94A3B8))),
           ),
           TextButton(
             onPressed: () async {
-              Navigator.pop(context); // Close dialog
-              await _performSignOut(context);
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Cache cleared successfully'),
+                  backgroundColor: Color(0xFF10B981),
+                ),
+              );
             },
-            style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFFF59E0B),
-            ),
-            child: const Text('Sign Out'),
+            child: const Text('Clear', style: TextStyle(color: Color(0xFF3B82F6))),
           ),
         ],
       ),
     );
   }
-  
-  Future<void> _performSignOut(BuildContext context) async {
-    try {
-      // Sign out from Firebase
-      await AuthService().signOut();
-      
-      // Clear app state
-      if (context.mounted) {
-        context.read<AppStateProvider>().reset();
-      }
-      
-      // Clear SharedPreferences (user session)
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('hasCompletedOnboarding', false);
-      await prefs.remove('userEmail');
-      await prefs.remove('userName');
-      // Keep overlay state, theme, and other preferences
-      
-      // Navigate to onboarding/sign-in
-      if (context.mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (context) => OnboardingOne(onNext: () {
-              // This will be handled by the main.dart flow
-            }),
-          ),
-          (route) => false, // Remove all previous routes
-        );
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('✓ Signed out successfully'),
-            backgroundColor: Color(0xFF10B981),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-    } catch (e) {
-      debugPrint('Sign out error: $e');
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to sign out: ${e.toString()}'),
-            backgroundColor: const Color(0xFFEF4444),
-          ),
-        );
-      }
-    }
-  }
-  
+
   void _showDeleteAccountDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.warning_rounded, color: Color(0xFFEF4444), size: 28),
-            SizedBox(width: 12),
-            Text('Delete Account'),
-          ],
-        ),
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: const Text('Delete Account', style: TextStyle(color: Colors.white)),
         content: const Text(
-          'This action is PERMANENT and CANNOT be undone.\n\n'
-          '• All your data will be deleted\n'
-          '• Your subscription will be cancelled\n'
-          '• You will lose access to all premium features\n\n'
-          'Are you absolutely sure?',
+          'This will permanently delete your account and all data. This action cannot be undone.',
+          style: TextStyle(color: Color(0xFF94A3B8)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context); // Close first dialog
-              _showFinalDeleteConfirmation(context);
-            },
-            style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFFEF4444),
-            ),
-            child: const Text('Delete Account'),
-          ),
-        ],
-      ),
-    );
-  }
-  
-  void _showFinalDeleteConfirmation(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Final Confirmation'),
-        content: const Text(
-          'Type "DELETE" below to confirm account deletion.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: const Text('Cancel', style: TextStyle(color: Color(0xFF94A3B8))),
           ),
           TextButton(
             onPressed: () async {
-              Navigator.pop(context); // Close dialog
-              await _performDeleteAccount(context);
+              Navigator.pop(context);
+              try {
+                await AuthService().deleteAccount();
+                if (context.mounted) {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => OnboardingOne(onNext: () {})),
+                    (route) => false,
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error: ${e.toString()}'),
+                      backgroundColor: const Color(0xFFEF4444),
+                    ),
+                  );
+                }
+              }
             },
-            style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFFEF4444),
-            ),
-            child: const Text('Confirm Delete'),
+            child: const Text('DELETE', style: TextStyle(color: Color(0xFFEF4444))),
           ),
         ],
       ),
     );
   }
-  
-  Future<void> _performDeleteAccount(BuildContext context) async {
-    try {
-      // Show loading
-      if (context.mounted) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => const Center(
-            child: CircularProgressIndicator(),
-          ),
-        );
-      }
-      
-      // Delete account from Firebase
-      await AuthService().deleteAccount();
-      
-      // Clear ALL app data
-      if (context.mounted) {
-        context.read<AppStateProvider>().reset();
-      }
-      
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.clear(); // Clear everything
-      
-      // Navigate to onboarding
-      if (context.mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (context) => OnboardingOne(onNext: () {}),
-          ),
-          (route) => false,
-        );
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Account deleted successfully'),
-            backgroundColor: Color(0xFF10B981),
-            duration: Duration(seconds: 3),
-          ),
-        );
-      }
-    } catch (e) {
-      debugPrint('Delete account error: $e');
-      if (context.mounted) {
-        Navigator.pop(context); // Close loading dialog
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to delete account: ${e.toString()}'),
-            backgroundColor: const Color(0xFFEF4444),
-          ),
-        );
-      }
-    }
-  }
-  
-  // URL Launcher helper
-  Future<void> _launchUrl(String urlString) async {
-    debugPrint('🔗 Attempting to launch URL: $urlString');
-    
-    try {
-      final url = Uri.parse(urlString);
-      debugPrint('🔗 Parsed URL: $url');
-      
-      final canLaunch = await canLaunchUrl(url);
-      debugPrint('🔗 Can launch URL: $canLaunch');
-      
-      if (canLaunch) {
-        await launchUrl(url, mode: LaunchMode.externalApplication);
-        debugPrint('🔗 Successfully launched URL');
-        
-        // Show success feedback
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text('Opening link...'),
-              backgroundColor: const Color(0xFF10B981),
-              duration: const Duration(seconds: 1),
-            ),
-          );
-        }
-      } else {
-        // Show error to user
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Could not open $urlString'),
-              backgroundColor: const Color(0xFFEF4444),
-            ),
-          );
-        }
-        debugPrint('❌ Could not launch $urlString');
-      }
-    } catch (e) {
-      // Show error to user
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error opening link: ${e.toString()}'),
-            backgroundColor: const Color(0xFFEF4444),
-          ),
-        );
-      }
-      debugPrint('❌ Error launching URL: $e');
-    }
-  }
-  
-  // Social media item builder
-  Widget _buildSocialItem({
-    required String icon,
-    required String title,
-    Widget? trailing,
-    required Color textColor,
-    required Color secondaryTextColor,
-    VoidCallback? onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
-              children: [
-                Text(
-                  icon,
-                  style: const TextStyle(fontSize: 20),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: textColor,
-                  ),
-                ),
-              ],
-            ),
-            trailing ??
-                Icon(
-                  Icons.open_in_new,
-                  size: 18,
-                  color: secondaryTextColor,
-                ),
-          ],
-        ),
-      ),
-    );
-  }
-  
-  // Profile Settings Dialog
-  void _showProfileDialog(BuildContext context, Color textColor, Color secondaryTextColor) {
+
+  void _showSignOutDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1A1A1A),
-        title: Text(
-          'Profile Settings',
-          style: TextStyle(color: textColor),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.person, color: Color(0xFF3B82F6)),
-              title: Text('Change Username', style: TextStyle(color: textColor)),
-              subtitle: Text('Update your display name', style: TextStyle(color: secondaryTextColor, fontSize: 12)),
-              onTap: () {
-                Navigator.pop(context);
-                _showUsernameDialog(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.email, color: Color(0xFF10B981)),
-              title: Text('Change Email', style: TextStyle(color: textColor)),
-              subtitle: Text('Update your email address', style: TextStyle(color: secondaryTextColor, fontSize: 12)),
-              onTap: () {
-                Navigator.pop(context);
-                _showEmailDialog(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.lock, color: Color(0xFFF97316)),
-              title: Text('Change Password', style: TextStyle(color: textColor)),
-              subtitle: Text('Update your password', style: TextStyle(color: secondaryTextColor, fontSize: 12)),
-              onTap: () {
-                Navigator.pop(context);
-                _showPasswordDialog(context);
-              },
-            ),
-          ],
+        title: const Text('Sign Out', style: TextStyle(color: Colors.white)),
+        content: const Text(
+          'Are you sure you want to sign out?',
+          style: TextStyle(color: Color(0xFF94A3B8)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Close', style: TextStyle(color: secondaryTextColor)),
+            child: const Text('Cancel', style: TextStyle(color: Color(0xFF94A3B8))),
           ),
-        ],
-      ),
-    );
-  }
-  
-  // Backup & Sync Dialog
-  void _showBackupDialog(BuildContext context, Color textColor, Color secondaryTextColor) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: Text(
-          'Backup & Sync',
-          style: TextStyle(color: textColor),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.cloud_upload, color: Color(0xFF3B82F6)),
-              title: Text('Backup to Cloud', style: TextStyle(color: textColor)),
-              subtitle: Text('Save your data to Google Drive', style: TextStyle(color: secondaryTextColor, fontSize: 12)),
-              onTap: () {
-                Navigator.pop(context);
-                _performCloudBackup(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.cloud_download, color: Color(0xFF10B981)),
-              title: Text('Restore from Cloud', style: TextStyle(color: textColor)),
-              subtitle: Text('Restore your data from backup', style: TextStyle(color: secondaryTextColor, fontSize: 12)),
-              onTap: () {
-                Navigator.pop(context);
-                _performCloudRestore(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.sync, color: Color(0xFFF97316)),
-              title: Text('Auto-Sync', style: TextStyle(color: textColor)),
-              subtitle: Text('Automatically sync across devices', style: TextStyle(color: secondaryTextColor, fontSize: 12)),
-              trailing: Switch(
-                value: true, // TODO: Connect to actual setting
-                onChanged: (value) {
-                  // TODO: Implement auto-sync toggle
-                },
-                activeColor: const Color(0xFF3B82F6),
-              ),
-            ),
-          ],
-        ),
-        actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Close', style: TextStyle(color: secondaryTextColor)),
+            onPressed: () async {
+              Navigator.pop(context);
+              try {
+                await AuthService().signOut();
+                if (context.mounted) {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => OnboardingOne(onNext: () {})),
+                    (route) => false,
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error: ${e.toString()}'),
+                      backgroundColor: const Color(0xFFEF4444),
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Sign Out', style: TextStyle(color: Color(0xFF3B82F6))),
           ),
         ],
-      ),
-    );
-  }
-  
-  // Export All Data
-  void _exportAllUserData(BuildContext context) async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF3B82F6)),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Exporting all your data...',
-              style: TextStyle(color: Colors.white),
-            ),
-          ],
-        ),
-      ),
-    );
-    
-    // Simulate export process
-    await Future.delayed(const Duration(seconds: 2));
-    
-    if (context.mounted) {
-      Navigator.pop(context); // Close loading dialog
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('✓ All data exported successfully!'),
-          backgroundColor: Color(0xFF10B981),
-        ),
-      );
-    }
-  }
-  
-  // Helper methods for profile dialogs
-  void _showUsernameDialog(BuildContext context) {
-    // TODO: Implement username change dialog
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Username change coming soon!'),
-        backgroundColor: Color(0xFF3B82F6),
-      ),
-    );
-  }
-  
-  void _showEmailDialog(BuildContext context) {
-    // TODO: Implement email change dialog
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Email change coming soon!'),
-        backgroundColor: Color(0xFF3B82F6),
-      ),
-    );
-  }
-  
-  void _showPasswordDialog(BuildContext context) {
-    // TODO: Implement password change dialog
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Password change coming soon!'),
-        backgroundColor: Color(0xFF3B82F6),
-      ),
-    );
-  }
-  
-  void _performCloudBackup(BuildContext context) async {
-    // TODO: Implement cloud backup
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Cloud backup coming soon!'),
-        backgroundColor: Color(0xFF3B82F6),
-      ),
-    );
-  }
-  
-  void _performCloudRestore(BuildContext context) async {
-    // TODO: Implement cloud restore
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Cloud restore coming soon!'),
-        backgroundColor: Color(0xFF3B82F6),
       ),
     );
   }
 }
-

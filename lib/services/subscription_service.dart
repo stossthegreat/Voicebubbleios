@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 import 'package:in_app_purchase_storekit/in_app_purchase_storekit.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -235,6 +236,11 @@ class SubscriptionService {
     }
   }
 
+  /// Alias for feature gates: Pro = has active subscription
+  Future<bool> isPro() async {
+    return await hasActiveSubscription();
+  }
+
   /// Check if user has active subscription
   Future<bool> hasActiveSubscription() async {
     final User? user = FirebaseAuth.instance.currentUser;
@@ -266,6 +272,30 @@ class SubscriptionService {
       debugPrint('❌ Error checking subscription: $e');
       return false;
     }
+  }
+
+  /// Review prompts (stored locally)
+  static const String _keyAskedReviewAfterUpgrade = 'asked_review_after_upgrade';
+  static const String _keyHasLeftReview = 'has_left_review';
+
+  Future<bool> hasAskedForReviewAfterUpgrade() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyAskedReviewAfterUpgrade) ?? false;
+  }
+
+  Future<void> markAskedForReviewAfterUpgrade() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyAskedReviewAfterUpgrade, true);
+  }
+
+  Future<bool> hasLeftReview() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyHasLeftReview) ?? false;
+  }
+
+  Future<void> markLeftReview() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyHasLeftReview, true);
   }
 
   /// Dispose subscriptions

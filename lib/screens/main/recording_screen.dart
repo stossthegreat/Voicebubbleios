@@ -3,10 +3,12 @@ import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 import '../../providers/app_state_provider.dart';
 import '../../services/ai_service.dart';
+import '../../services/feature_gate.dart';
 import 'preset_selection_screen.dart';
 import 'result_screen.dart';
 
@@ -24,6 +26,9 @@ class RecordingScreen extends StatefulWidget {
 
 class _RecordingScreenState extends State<RecordingScreen>
     with SingleTickerProviderStateMixin {
+  // Live speech-to-text for streaming preview
+  final stt.SpeechToText _speech = stt.SpeechToText();
+  
   // Audio recorder for high-quality Whisper transcription
   final AudioRecorder _audioRecorder = AudioRecorder();
   final AIService _aiService = AIService();
@@ -59,14 +64,15 @@ class _RecordingScreenState extends State<RecordingScreen>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat();
-    _startRecording();
+    _initSpeech();
   }
-
+  
   @override
   void dispose() {
     _pulseController.dispose();
     _timer?.cancel();
     _waveTimer?.cancel();
+    _speech.stop();
     _audioRecorder.dispose();
     super.dispose();
   }
@@ -113,59 +119,88 @@ class _RecordingScreenState extends State<RecordingScreen>
     return '$minutes:$seconds.$millis';
   }
   
+  void _updateWaveHeights(double soundLevel) {
+    // Normalize sound level (typically -2 to 10, we want 0.1 to 1.0)
+    final normalizedLevel = ((soundLevel.clamp(-2, 8) + 2) / 10).clamp(0.1, 1.0);
+    
+    // Shift existing waves to the left and add new one at the end
+    setState(() {
+      for (int i = 0; i < _waveHeights.length - 1; i++) {
+        _waveHeights[i] = _waveHeights[i + 1];
+      }
+      // Add some randomness to make it look more natural
+      _waveHeights[_waveHeights.length - 1] = 
+          (normalizedLevel * 0.6 + 0.1 + _random.nextDouble() * 0.3).clamp(0.1, 1.0);
+    });
+  }
+  
+  Future<void> _initSpeech() async {
+    try {
+      final available = await _speech.initialize();
+      print('Speech initialization: $available');
+      if (available) {
+        await _startRecording();
+      } else {
+        print('Speech recognition not available');
+        // Still start recording for audio-only mode
+        await _startRecording();
+      }
+    } catch (e) {
+      print('Error initializing speech: $e');
+      // Still start recording for audio-only mode
+      await _startRecording();
+    }
+  }
+  
   Future<void> _startRecording() async {
     try {
-      // Check permission FIRST
-      if (!await _audioRecorder.hasPermission()) {
-        print('❌ No microphone permission');
-        if (mounted) {
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Microphone permission required'),
-              backgroundColor: Color(0xFFEF4444),
-            ),
-          );
-        }
-        return; // EXIT EARLY
+      // Start audio recording for Whisper
+      if (await _audioRecorder.hasPermission()) {
+        final directory = await getTemporaryDirectory();
+        _audioPath = '${directory.path}/recording_${DateTime.now().millisecondsSinceEpoch}.m4a';
+
+        await _audioRecorder.start(
+          const RecordConfig(
+            encoder: AudioEncoder.aacLc,
+            bitRate: 128000,
+            sampleRate: 44100,
+          ),
+          path: _audioPath!,
+        );
       }
 
-      // Start audio recording
-      final directory = await getTemporaryDirectory();
-      _audioPath = '${directory.path}/recording_${DateTime.now().millisecondsSinceEpoch}.m4a';
-
-      await _audioRecorder.start(
-        const RecordConfig(
-          encoder: AudioEncoder.aacLc,
-          bitRate: 128000,
-          sampleRate: 44100,
-        ),
-        path: _audioPath!,
+      // Start live speech-to-text for recording (no display needed)
+      try {
+        if (_speech.isAvailable) {
+          await _speech.listen(
+            onResult: (result) {
+              // We don't need to show the transcription anymore
+              print('STT result: ${result.recognizedWords}');
+            },
+            listenMode: stt.ListenMode.dictation, // Continuous dictation mode
+            pauseFor: const Duration(seconds: 30), // Don't auto-stop
+            partialResults: true,
+            onSoundLevelChange: (level) {
+              // Update target sound level - the wave animation timer will smoothly animate toward this
+              // Sound levels typically range from -2 (silence) to 10 (loud)
+              // Normalize to 0.3 (minimum wave) to 1.0 (maximum wave) for better visual feedback
+              final normalizedLevel = ((level.clamp(-2, 10) + 2) / 12).clamp(0.3, 1.0);
+              _targetSoundLevel = normalizedLevel;
+            },
+        cancelOnError: false,
+        listenFor: const Duration(minutes: 5), // Max 5 minutes
       );
 
-      // Use recorder's amplitude for waveform (NOT speech-to-text which steals mic on Android)
-      _audioRecorder.onAmplitudeChanged(const Duration(milliseconds: 100)).listen((amp) {
-        if (!_isPaused && mounted) {
-          // amp.current is in dB, typically -40 to 0
-          final normalized = ((amp.current + 40) / 40).clamp(0.1, 1.0);
-          _targetSoundLevel = normalized;
-        }
-      });
-
-      // NOW set recording state
       setState(() {
         _isRecording = true;
       });
-
+      
       _startTimer();
       _startWaveAnimation();
-      print('Recording started: $_audioPath');
 
+      print('Recording started: $_audioPath');
     } catch (e) {
       print('Error starting recording: $e');
-      if (mounted) {
-        Navigator.pop(context);
-      }
     }
   }
   
@@ -188,8 +223,9 @@ class _RecordingScreenState extends State<RecordingScreen>
   Future<void> _cancelRecording() async {
     _timer?.cancel();
     _waveTimer?.cancel();
+    await _speech.stop();
     await _audioRecorder.stop();
-
+    
     if (mounted) {
       Navigator.pop(context);
     }
@@ -206,6 +242,9 @@ class _RecordingScreenState extends State<RecordingScreen>
     _waveTimer?.cancel();
 
     try {
+      // Stop live speech
+      await _speech.stop();
+      
       // Stop audio recording
       final path = await _audioRecorder.stop();
 
@@ -230,9 +269,10 @@ class _RecordingScreenState extends State<RecordingScreen>
         if (!mounted) return;
         context.read<AppStateProvider>().setTranscription(transcription);
 
+        // Track STT usage for free/pro limits
+        await FeatureGate.trackSTTUsage(_recordingSeconds);
+
         print('Final transcription: $transcription');
-        print('✅ SET transcription: "${transcription.substring(0, transcription.length > 50 ? 50 : transcription.length)}..."');
-        print('✅ VERIFY transcription in state: "${context.read<AppStateProvider>().transcription.substring(0, context.read<AppStateProvider>().transcription.length > 50 ? 50 : context.read<AppStateProvider>().transcription.length)}..."');
         
         // If in instructions mode, return transcription directly
         if (widget.isInstructionsMode) {
