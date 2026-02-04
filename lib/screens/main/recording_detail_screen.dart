@@ -539,7 +539,7 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
     // Just log it here for reference
   }
 
-  void _handleMenuAction(BuildContext context, AppStateProvider appState, RecordingItem item, String action) {
+  Future<void> _handleMenuAction(BuildContext context, AppStateProvider appState, RecordingItem item, String action) async {
     switch (action) {
       case 'continue':
         _handleContinue(context, appState, item);
@@ -570,10 +570,18 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
         break;
       // ✨ EXPORT HANDLER ✨
       case 'export':
-        showDialog(
-          context: context,
-          builder: (_) => ExportDialog(note: item),
+        // Wait for any pending auto-saves and get fresh item
+        await Future.delayed(const Duration(milliseconds: 100));
+        final freshExportItem = appState.allRecordingItems.firstWhere(
+          (r) => r.id == item.id,
+          orElse: () => item,
         );
+        if (context.mounted) {
+          showDialog(
+            context: context,
+            builder: (_) => ExportDialog(note: freshExportItem),
+          );
+        }
         break;
       // ✨ END NEW HANDLERS ✨
       case 'delete':
