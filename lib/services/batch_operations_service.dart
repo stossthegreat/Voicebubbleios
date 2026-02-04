@@ -68,7 +68,7 @@ class BatchOperationsService {
   ) async {
     for (var note in notes) {
       final updatedNote = note.copyWith(hiddenInLibrary: true);
-      await appState.saveRecording(updatedNote);
+      await appState.updateRecording(updatedNote);
     }
   }
 
@@ -79,7 +79,7 @@ class BatchOperationsService {
   ) async {
     for (var note in notes) {
       final updatedNote = note.copyWith(hiddenInLibrary: false);
-      await appState.saveRecording(updatedNote);
+      await appState.updateRecording(updatedNote);
     }
   }
 
