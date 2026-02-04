@@ -1,8 +1,11 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
+import 'package:archive/archive.dart';
+import 'package:syncfusion_flutter_pdf/pdf.dart';
 import '../../models/recording_item.dart';
 import '../../providers/app_state_provider.dart';
 import '../../services/share_handler_service.dart';
@@ -15,8 +18,14 @@ import '../paywall/paywall_screen.dart';
 /// Screen for processing imported/shared content
 class ImportContentScreen extends StatefulWidget {
   final SharedContent content;
+  /// Optional: If provided, imported content will be appended to this note
+  final String? appendToNoteId;
 
-  const ImportContentScreen({super.key, required this.content});
+  const ImportContentScreen({
+    super.key,
+    required this.content,
+    this.appendToNoteId,
+  });
 
   @override
   State<ImportContentScreen> createState() => _ImportContentScreenState();
@@ -69,34 +78,15 @@ class _ImportContentScreenState extends State<ImportContentScreen> {
           break;
 
         case SharedContentType.pdf:
-          _extractedText = _buildPlaceholderText(
-            'PDF Import',
-            'PDF text extraction coming soon!\n\n'
-            'For now, you can:\n'
-            '- Copy text from the PDF manually\n'
-            '- Use the text as a reference\n'
-            '- Share plain text instead',
-          );
+          await _extractPdfText();
           break;
 
         case SharedContentType.document:
-          _extractedText = _buildPlaceholderText(
-            'Document Import',
-            'Word document import coming soon!\n\n'
-            'For now, you can:\n'
-            '- Copy text from the document manually\n'
-            '- Save as plain text and share again',
-          );
+          await _extractDocxText();
           break;
 
         case SharedContentType.image:
-          _extractedText = _buildPlaceholderText(
-            'Image Import',
-            'Image OCR (text extraction) coming soon!\n\n'
-            'For now, you can:\n'
-            '- Type the text you see in the image\n'
-            '- Use voice recording to describe it',
-          );
+          _extractedText = _buildImageImportText();
           break;
 
         case SharedContentType.video:
@@ -126,6 +116,152 @@ class _ImportContentScreenState extends State<ImportContentScreen> {
     return '[$title]\n\n'
            'File: ${widget.content.fileName ?? "Unknown"}\n\n'
            '$message';
+  }
+
+  /// Extract text from PDF using Syncfusion PDF library
+  Future<void> _extractPdfText() async {
+    if (widget.content.filePath == null) {
+      _error = 'No PDF file path';
+      return;
+    }
+
+    try {
+      final file = File(widget.content.filePath!);
+      if (!await file.exists()) {
+        _error = 'PDF file not found';
+        return;
+      }
+
+      final bytes = await file.readAsBytes();
+
+      // Load PDF document
+      final PdfDocument document = PdfDocument(inputBytes: bytes);
+
+      // Extract text from all pages
+      final StringBuffer textBuffer = StringBuffer();
+      final PdfTextExtractor extractor = PdfTextExtractor(document);
+
+      for (int i = 0; i < document.pages.count; i++) {
+        final pageText = extractor.extractText(startPageIndex: i, endPageIndex: i);
+        if (pageText.isNotEmpty) {
+          if (textBuffer.isNotEmpty) {
+            textBuffer.write('\n\n');
+          }
+          textBuffer.write(pageText.trim());
+        }
+      }
+
+      document.dispose();
+
+      final extractedText = textBuffer.toString().trim();
+
+      if (extractedText.isEmpty) {
+        _error = 'No text could be extracted from this PDF. It may be an image-based PDF.';
+        return;
+      }
+
+      _extractedText = extractedText;
+      debugPrint('PDF extraction complete: ${_extractedText!.length} chars from ${document.pages.count} pages');
+    } catch (e) {
+      debugPrint('PDF extraction error: $e');
+      _error = 'Failed to extract text from PDF: ${e.toString()}';
+    }
+  }
+
+  /// Extract text from Word documents (.docx)
+  Future<void> _extractDocxText() async {
+    if (widget.content.filePath == null) {
+      _error = 'No document file path';
+      return;
+    }
+
+    try {
+      final file = File(widget.content.filePath!);
+      if (!await file.exists()) {
+        _error = 'Document file not found';
+        return;
+      }
+
+      final bytes = await file.readAsBytes();
+      final extension = widget.content.filePath!.toLowerCase();
+
+      // Check if it's a .doc (old format) or .docx (new format)
+      if (extension.endsWith('.doc') && !extension.endsWith('.docx')) {
+        _error = 'Old .doc format is not supported. Please save as .docx and try again.';
+        return;
+      }
+
+      // .docx is a ZIP archive containing XML files
+      final archive = ZipDecoder().decodeBytes(bytes);
+
+      // Find the main document content (word/document.xml)
+      final documentFile = archive.findFile('word/document.xml');
+      if (documentFile == null) {
+        _error = 'Invalid Word document: missing document.xml';
+        return;
+      }
+
+      // Decode the XML content
+      final xmlContent = utf8.decode(documentFile.content as List<int>);
+
+      // Parse XML and extract text from <w:t> elements (Word text elements)
+      final textBuffer = StringBuffer();
+
+      // Simple regex-based extraction of text from XML
+      // <w:t>text</w:t> or <w:t xml:space="preserve">text</w:t>
+      final textRegex = RegExp(r'<w:t[^>]*>([^<]*)</w:t>');
+      final matches = textRegex.allMatches(xmlContent);
+
+      String currentParagraph = '';
+      int lastEnd = 0;
+
+      for (final match in matches) {
+        final text = match.group(1) ?? '';
+
+        // Check if there's a paragraph break between this and the last match
+        final between = xmlContent.substring(lastEnd, match.start);
+        if (between.contains('</w:p>')) {
+          // End of paragraph - add to buffer with newline
+          if (currentParagraph.isNotEmpty) {
+            textBuffer.writeln(currentParagraph.trim());
+            textBuffer.writeln();
+          }
+          currentParagraph = text;
+        } else {
+          currentParagraph += text;
+        }
+        lastEnd = match.end;
+      }
+
+      // Add final paragraph
+      if (currentParagraph.isNotEmpty) {
+        textBuffer.write(currentParagraph.trim());
+      }
+
+      final extractedText = textBuffer.toString().trim();
+
+      if (extractedText.isEmpty) {
+        _error = 'No text could be extracted from this document.';
+        return;
+      }
+
+      _extractedText = extractedText;
+      debugPrint('DOCX extraction complete: ${_extractedText!.length} chars');
+    } catch (e) {
+      debugPrint('DOCX extraction error: $e');
+      _error = 'Failed to extract text from document: ${e.toString()}';
+    }
+  }
+
+  /// Build import text for images
+  String _buildImageImportText() {
+    final fileName = widget.content.fileName ?? 'Unknown';
+    return '[Image Import]\n\n'
+           'File: $fileName\n\n'
+           'Image OCR (text extraction) coming soon!\n\n'
+           'For now, you can:\n'
+           '- Type the text you see in the image\n'
+           '- Use voice recording to describe it';
   }
 
   Future<void> _transcribeAudio() async {
@@ -191,6 +327,32 @@ class _ImportContentScreenState extends State<ImportContentScreen> {
 
     final appState = context.read<AppStateProvider>();
 
+    // If we're appending to an existing note
+    if (widget.appendToNoteId != null) {
+      final existingItem = appState.allRecordingItems.firstWhere(
+        (r) => r.id == widget.appendToNoteId,
+        orElse: () => throw Exception('Note not found'),
+      );
+
+      // Append the imported text to the existing content
+      final newText = existingItem.finalText.isEmpty
+          ? _extractedText!
+          : '${existingItem.finalText}\n\n---\n[Imported from: ${widget.content.fileName ?? "file"}]\n\n${_extractedText!}';
+
+      final updatedItem = existingItem.copyWith(
+        finalText: newText,
+        formattedContent: null, // Reset formatted content so editor uses plain text
+      );
+
+      await appState.updateRecording(updatedItem);
+
+      if (mounted) {
+        Navigator.pop(context, true); // Return true to indicate content was imported
+      }
+      return;
+    }
+
+    // Otherwise create a new note
     // Generate title from filename or content
     String title = widget.content.fileName ?? 'Imported Content';
     if (title.contains('.')) {
@@ -542,8 +704,9 @@ class _ImportContentScreenState extends State<ImportContentScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Primary: Process with AI (only if content can be processed)
-                if (widget.content.canProcessWithAI || widget.content.type == SharedContentType.text)
+                // Primary: Process with AI (only if creating new note, not appending)
+                if (widget.appendToNoteId == null &&
+                    (widget.content.canProcessWithAI || widget.content.type == SharedContentType.text))
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
@@ -567,27 +730,51 @@ class _ImportContentScreenState extends State<ImportContentScreen> {
                       ),
                     ),
                   ),
-                if (widget.content.canProcessWithAI || widget.content.type == SharedContentType.text)
+                if (widget.appendToNoteId == null &&
+                    (widget.content.canProcessWithAI || widget.content.type == SharedContentType.text))
                   const SizedBox(height: 12),
 
-                // Secondary: Save as Note
+                // Save/Add button
                 SizedBox(
                   width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: _extractedText != null ? _saveAsNote : null,
-                    icon: Icon(Icons.save_alt, color: _secondaryTextColor, size: 20),
-                    label: Text(
-                      'Save as Note',
-                      style: TextStyle(color: _secondaryTextColor, fontSize: 16),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      side: BorderSide(color: _secondaryTextColor.withOpacity(0.3)),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  child: widget.appendToNoteId != null
+                    // When appending, make it primary action with filled button
+                    ? ElevatedButton.icon(
+                        onPressed: _extractedText != null ? _saveAsNote : null,
+                        icon: const Icon(Icons.add_circle_outline, color: Colors.white, size: 20),
+                        label: const Text(
+                          'Add to Note',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _primaryColor,
+                          disabledBackgroundColor: _primaryColor.withOpacity(0.3),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      )
+                    // When creating new, use outlined button
+                    : OutlinedButton.icon(
+                        onPressed: _extractedText != null ? _saveAsNote : null,
+                        icon: Icon(Icons.save_alt, color: _secondaryTextColor, size: 20),
+                        label: Text(
+                          'Save as Note',
+                          style: TextStyle(color: _secondaryTextColor, fontSize: 16),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          side: BorderSide(color: _secondaryTextColor.withOpacity(0.3)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
                 ),
               ],
             ),

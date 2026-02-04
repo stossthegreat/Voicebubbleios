@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:file_picker/file_picker.dart';
 import '../../providers/app_state_provider.dart';
+import '../../services/share_handler_service.dart';
+import '../import/import_content_screen.dart';
 import '../../models/recording_item.dart';
 import '../../models/tag.dart';
 import '../../models/outcome_type.dart';
@@ -297,12 +300,23 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
                                 ],
                               ),
                             ),
+                          // ✨ IMPORT MENU ITEM ✨
+                          PopupMenuItem(
+                            value: 'import',
+                            child: Row(
+                              children: [
+                                Icon(Icons.file_download, color: const Color(0xFF8B5CF6), size: 18),
+                                const SizedBox(width: 12),
+                                Text('Import', style: TextStyle(color: textColor)),
+                              ],
+                            ),
+                          ),
                           // ✨ EXPORT MENU ITEM ✨
                           PopupMenuItem(
                             value: 'export',
                             child: Row(
                               children: [
-                                Icon(Icons.download, color: textColor, size: 18),
+                                Icon(Icons.upload, color: textColor, size: 18),
                                 const SizedBox(width: 12),
                                 Text('Export', style: TextStyle(color: textColor)),
                               ],
@@ -568,6 +582,10 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
           ),
         );
         break;
+      // ✨ IMPORT HANDLER ✨
+      case 'import':
+        _pickImportFile(context, appState, item);
+        break;
       // ✨ EXPORT HANDLER ✨
       case 'export':
         // Wait for any pending auto-saves and get fresh item
@@ -691,6 +709,115 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
       debugPrint('✅ Updated background for item: ${item.id}');
     } catch (e) {
       debugPrint('❌ Error updating background: $e');
+    }
+  }
+
+  /// Pick and import files (PDF, Word, text, images) into the current note
+  Future<void> _pickImportFile(BuildContext context, AppStateProvider appState, RecordingItem item) async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: [
+          // Documents
+          'pdf', 'doc', 'docx',
+          // Text
+          'txt', 'md', 'rtf',
+          // Images
+          'jpg', 'jpeg', 'png', 'gif', 'webp',
+        ],
+      );
+
+      if (result != null && result.files.single.path != null) {
+        final filePath = result.files.single.path!;
+        final fileName = result.files.single.name;
+        final extension = result.files.single.extension?.toLowerCase() ?? '';
+
+        if (!mounted) return;
+
+        // Determine content type from extension
+        SharedContentType contentType;
+        String mimeType;
+
+        switch (extension) {
+          case 'jpg':
+          case 'jpeg':
+            contentType = SharedContentType.image;
+            mimeType = 'image/jpeg';
+            break;
+          case 'png':
+            contentType = SharedContentType.image;
+            mimeType = 'image/png';
+            break;
+          case 'gif':
+            contentType = SharedContentType.image;
+            mimeType = 'image/gif';
+            break;
+          case 'webp':
+            contentType = SharedContentType.image;
+            mimeType = 'image/webp';
+            break;
+          case 'pdf':
+            contentType = SharedContentType.pdf;
+            mimeType = 'application/pdf';
+            break;
+          case 'doc':
+            contentType = SharedContentType.document;
+            mimeType = 'application/msword';
+            break;
+          case 'docx':
+            contentType = SharedContentType.document;
+            mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+            break;
+          case 'txt':
+            contentType = SharedContentType.text;
+            mimeType = 'text/plain';
+            break;
+          case 'md':
+            contentType = SharedContentType.text;
+            mimeType = 'text/markdown';
+            break;
+          case 'rtf':
+            contentType = SharedContentType.text;
+            mimeType = 'text/rtf';
+            break;
+          default:
+            contentType = SharedContentType.unknown;
+            mimeType = 'application/octet-stream';
+        }
+
+        // Navigate to import screen
+        final imported = await Navigator.push<bool>(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ImportContentScreen(
+              content: SharedContent(
+                type: contentType,
+                filePath: filePath,
+                fileName: fileName,
+                mimeType: mimeType,
+              ),
+              appendToNoteId: item.id, // Pass the current note ID to append content
+            ),
+          ),
+        );
+
+        // If content was imported, refresh the editor
+        if (imported == true && mounted) {
+          setState(() {
+            _editorRebuildKey++;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error picking file: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
     }
   }
 }

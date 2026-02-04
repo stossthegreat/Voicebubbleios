@@ -77,6 +77,10 @@ dependencies:
   
   # PDF Export
   pdf: ^3.10.4
+
+  # PDF/Document Import (text extraction)
+  syncfusion_flutter_pdf: ^25.1.35
+  archive: ^3.4.10
 dependency_overrides:
   # Fix flutter_inappwebview namespace issue
   flutter_inappwebview: ^6.1.5
