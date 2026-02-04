@@ -41,8 +41,8 @@ class RecordingDetailScreen extends StatefulWidget {
 class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
   bool _isEditingTitle = false;
   late TextEditingController _titleController;
-  final GlobalKey<RichTextEditorState> _editorKey = GlobalKey<RichTextEditorState>();
-  
+  int _editorRebuildKey = 0;  // Forces editor to rebuild with fresh content from Hive
+
   @override
   void initState() {
     super.initState();
@@ -405,7 +405,7 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
   Widget _buildContentEditor(RecordingItem item, AppStateProvider appState) {
     // ALWAYS use RichTextEditor with context-aware features
     return RichTextEditor(
-      key: _editorKey,
+      key: ValueKey('editor_${item.id}_$_editorRebuildKey'),
       initialFormattedContent: item.formattedContent,
       initialPlainText: item.finalText,
       onSave: (plainText, deltaJson) => _saveContent(appState, item, plainText, deltaJson),
@@ -577,10 +577,7 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
 
   void _handleContinue(BuildContext context, AppStateProvider appState, RecordingItem item) async {
     try {
-      // FORCE SAVE EDITOR CONTENT FIRST
-      await _editorKey.currentState?.forceSave();
-
-      // Small delay to ensure Hive write completes
+      // Small delay to ensure any pending auto-saves complete
       await Future.delayed(const Duration(milliseconds: 100));
 
       // Reload item from state to get latest saved content
@@ -606,9 +603,12 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
           ),
         );
 
-        // After returning from recording, refresh to show updated content
+        // FORCE EDITOR TO REBUILD WITH FRESH CONTENT FROM HIVE
+        // This ensures the editor reloads content including any appended text
         if (mounted) {
-          setState(() {});
+          setState(() {
+            _editorRebuildKey++;  // This forces editor to reload from Hive
+          });
         }
       }
     } catch (e) {
