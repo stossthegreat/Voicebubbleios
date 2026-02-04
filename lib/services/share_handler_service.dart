@@ -10,7 +10,6 @@ class ShareHandlerService {
   ShareHandlerService._internal();
 
   StreamSubscription? _mediaSubscription;
-  StreamSubscription? _textSubscription;
   bool _initialized = false;
 
   final _pendingShareController = StreamController<SharedContent>.broadcast();
@@ -25,17 +24,11 @@ class ShareHandlerService {
 
     debugPrint('Initializing ShareHandlerService...');
 
-    // Listen for shares while app is running
+    // Listen for shares while app is running (warm start)
     _mediaSubscription = ReceiveSharingIntent.instance
         .getMediaStream()
         .listen(_handleSharedMedia, onError: (err) {
       debugPrint('Share media stream error: $err');
-    });
-
-    _textSubscription = ReceiveSharingIntent.instance
-        .getTextStream()
-        .listen(_handleSharedText, onError: (err) {
-      debugPrint('Share text stream error: $err');
     });
 
     // Handle shares that opened the app (cold start)
@@ -46,18 +39,11 @@ class ShareHandlerService {
   }
 
   Future<void> _checkInitialShares() async {
-    // Check for shared media files
+    // Check for shared media files (includes text in newer API)
     final initialMedia = await ReceiveSharingIntent.instance.getInitialMedia();
     if (initialMedia.isNotEmpty) {
       debugPrint('App opened with ${initialMedia.length} shared file(s)');
       _handleSharedMedia(initialMedia);
-    }
-
-    // Check for shared text
-    final initialText = await ReceiveSharingIntent.instance.getInitialText();
-    if (initialText != null && initialText.isNotEmpty) {
-      debugPrint('App opened with shared text');
-      _handleSharedText(initialText);
     }
   }
 
@@ -71,31 +57,28 @@ class ShareHandlerService {
       debugPrint('  MIME: ${file.mimeType}');
       debugPrint('  Type: ${file.type}');
 
-      final content = SharedContent(
-        type: _getContentType(file.mimeType, file.type),
-        filePath: file.path,
-        mimeType: file.mimeType,
-        fileName: _extractFileName(file.path),
-      );
-
-      _pendingShareController.add(content);
+      // Handle text shared via SharedMediaType.text
+      if (file.type == SharedMediaType.text) {
+        // For text type, the path might contain the actual text or a file path
+        final content = SharedContent(
+          type: SharedContentType.text,
+          text: file.path, // In text type, path often contains the text content
+          mimeType: file.mimeType,
+        );
+        _pendingShareController.add(content);
+      } else {
+        // Handle files (images, audio, video, documents)
+        final content = SharedContent(
+          type: _getContentType(file.mimeType, file.type),
+          filePath: file.path,
+          mimeType: file.mimeType,
+          fileName: _extractFileName(file.path),
+        );
+        _pendingShareController.add(content);
+      }
     }
 
     // Reset so we don't process again
-    ReceiveSharingIntent.instance.reset();
-  }
-
-  void _handleSharedText(String text) {
-    if (text.isEmpty) return;
-
-    debugPrint('Received shared text (${text.length} chars)');
-
-    final content = SharedContent(
-      type: SharedContentType.text,
-      text: text,
-    );
-
-    _pendingShareController.add(content);
     ReceiveSharingIntent.instance.reset();
   }
 
@@ -103,6 +86,7 @@ class ShareHandlerService {
     // Check media type first
     if (mediaType == SharedMediaType.image) return SharedContentType.image;
     if (mediaType == SharedMediaType.video) return SharedContentType.video;
+    if (mediaType == SharedMediaType.text) return SharedContentType.text;
 
     // Fall back to MIME type
     if (mimeType == null) return SharedContentType.unknown;
@@ -127,7 +111,6 @@ class ShareHandlerService {
 
   void dispose() {
     _mediaSubscription?.cancel();
-    _textSubscription?.cancel();
     _pendingShareController.close();
   }
 }
