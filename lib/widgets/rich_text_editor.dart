@@ -413,6 +413,8 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
   late Animation<double> _saveIndicatorAnimation;
   int _wordCount = 0;
   int _characterCount = 0;
+  bool _hasUnsavedChanges = false;
+  bool _showSaved = false;
   
   // Selection tracking
   bool _hasSelection = false;
