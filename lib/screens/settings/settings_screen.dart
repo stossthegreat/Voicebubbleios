@@ -266,10 +266,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 if (mounted) {
                   Navigator.of(context).pushAndRemoveUntil(
                     MaterialPageRoute(
-                      builder: (_) => SignInScreen(
+                      builder: (ctx) => SignInScreen(
                         onSignIn: () {
                           Navigator.pushReplacement(
-                            _,
+                            ctx,
                             MaterialPageRoute(builder: (_) => const MainNavigation()),
                           );
                         },
