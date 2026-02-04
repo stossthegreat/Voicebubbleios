@@ -1543,10 +1543,10 @@ class _RichTextEditorState extends State<RichTextEditor> with TickerProviderStat
                         const SizedBox(width: 16),
                       ],
 
-                      // Word/character count - right after toolbar buttons
+                      // Word count - MOVED HERE
                       Text(
-                        '$_wordCount words • $_characterCount characters',
-                        style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12),
+                        '$_wordCount • $_characterCount',
+                        style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12),
                       ),
                       const Spacer(),
                       // FAB clearance - prevent overlap with mic button

@@ -187,9 +187,10 @@ class _RecordingScreenState extends State<RecordingScreen>
               final normalizedLevel = ((level.clamp(-2, 10) + 2) / 12).clamp(0.3, 1.0);
               _targetSoundLevel = normalizedLevel;
             },
-        cancelOnError: false,
-        listenFor: const Duration(minutes: 5), // Max 5 minutes
-      );
+            cancelOnError: false,
+            listenFor: const Duration(minutes: 5), // Max 5 minutes
+          );
+        }
 
       setState(() {
         _isRecording = true;

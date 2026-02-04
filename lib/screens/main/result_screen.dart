@@ -304,7 +304,7 @@ class _ResultScreenState extends State<ResultScreen> {
         
         if (originalItem.id == originalItemId) {
           // Append new content to original document with separator
-          final appendedText = '${originalItem.finalText}\n\n$_rewrittenText';
+          final appendedText = '${originalItem.finalText}\n\n---\n\n$_rewrittenText';
           final updatedItem = originalItem.copyWith(
             finalText: appendedText,
             formattedContent: '',  // Empty string clears it (null keeps old value)
@@ -407,9 +407,9 @@ class _ResultScreenState extends State<ResultScreen> {
       );
       
       // Combine the old text with new text
-      // The AI was given the original text as context, so _rewrittenText 
+      // The AI was given the original text as context, so _rewrittenText
       // should already be a coherent continuation/combination
-      final combinedText = '${originalItem.finalText}\n\n$_rewrittenText';
+      final combinedText = '${originalItem.finalText}\n\n---\n\n$_rewrittenText';
       
       // Create updated item
       final updatedItem = originalItem.copyWith(

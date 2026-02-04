@@ -598,7 +598,7 @@ class _BatchOperationsScreenState extends State<BatchOperationsScreen> {
 
       // FIX: Use appState.addItemToProject directly for reactive UI updates
       for (final note in _selectedNotes) {
-        await appState.addItemToProject(note.id, selectedProjectId);
+        await appState.addItemToProject(selectedProjectId, note.id);
       }
 
       if (mounted) {
