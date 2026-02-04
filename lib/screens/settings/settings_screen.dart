@@ -9,6 +9,7 @@ import '../../services/subscription_service.dart';
 import '../onboarding/onboarding_one.dart';
 import '../paywall/paywall_screen.dart';
 import '../../widgets/usage_display_widget.dart';
+import 'account_management_screen.dart';
 import 'terms_screen.dart';
 import 'privacy_screen.dart';
 import 'help_screen.dart';
@@ -319,19 +320,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: Column(
                     children: [
                       _buildSettingsItem(
+                        icon: Icons.manage_accounts,
+                        title: 'Account Management',
+                        textColor: textColor,
+                        secondaryTextColor: secondaryTextColor,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const AccountManagementScreen()),
+                          );
+                        },
+                      ),
+                      Divider(height: 1, color: dividerColor),
+                      _buildSettingsItem(
                         icon: Icons.cleaning_services_outlined,
                         title: 'Clear Cache',
                         textColor: textColor,
                         secondaryTextColor: secondaryTextColor,
                         onTap: () => _showClearCacheDialog(context),
-                      ),
-                      Divider(height: 1, color: dividerColor),
-                      _buildSettingsItem(
-                        icon: Icons.delete_outline,
-                        title: 'Delete Account',
-                        textColor: const Color(0xFFEF4444),
-                        secondaryTextColor: secondaryTextColor,
-                        onTap: () => _showDeleteAccountDialog(context),
                       ),
                       Divider(height: 1, color: dividerColor),
                       _buildSettingsItem(
@@ -442,50 +448,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               );
             },
             child: const Text('Clear', style: TextStyle(color: Color(0xFF3B82F6))),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showDeleteAccountDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        title: const Text('Delete Account', style: TextStyle(color: Colors.white)),
-        content: const Text(
-          'This will permanently delete your account and all data. This action cannot be undone.',
-          style: TextStyle(color: Color(0xFF94A3B8)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: Color(0xFF94A3B8))),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              try {
-                await AuthService().deleteAccount();
-                if (context.mounted) {
-                  Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (_) => OnboardingOne(onNext: () {})),
-                    (route) => false,
-                  );
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error: ${e.toString()}'),
-                      backgroundColor: const Color(0xFFEF4444),
-                    ),
-                  );
-                }
-              }
-            },
-            child: const Text('DELETE', style: TextStyle(color: Color(0xFFEF4444))),
           ),
         ],
       ),

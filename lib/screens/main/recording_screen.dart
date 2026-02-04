@@ -341,7 +341,12 @@ class _RecordingScreenState extends State<RecordingScreen>
       body: SafeArea(
         child: Column(
           children: [
-            const SizedBox(height: 40),
+            const SizedBox(height: 20),
+            
+            // STT Time Remaining Display
+            const UsageDisplayCompact(),
+            
+            const SizedBox(height: 20),
             
             // Instructions mode banner (if applicable)
             if (widget.isInstructionsMode) ...[
