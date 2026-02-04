@@ -31,18 +31,12 @@ subprojects {
 
 // Force all subprojects to use consistent Kotlin JVM target
 subprojects {
-    afterEvaluate {
-        if (project.hasProperty("android")) {
-            project.extensions.findByType<com.android.build.gradle.BaseExtension>()?.apply {
-                compileOptions {
-                    sourceCompatibility = JavaVersion.VERSION_11
-                    targetCompatibility = JavaVersion.VERSION_11
+    project.plugins.whenPluginAdded {
+        if (this is org.jetbrains.kotlin.gradle.plugin.KotlinBasePlugin) {
+            project.tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
+                kotlinOptions {
+                    jvmTarget = "11"
                 }
-            }
-        }
-        project.tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {
-            kotlinOptions {
-                jvmTarget = "11"
             }
         }
     }
