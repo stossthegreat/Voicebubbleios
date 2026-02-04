@@ -350,12 +350,69 @@ class _BatchOperationsScreenState extends State<BatchOperationsScreen> {
           context: context,
           builder: (context) => const CreateTagDialog(),
         );
-        // Reload tags from app state (tags are automatically updated by CreateTagDialog)
-        final updatedAppState = context.read<AppStateProvider>();
-        final updatedTags = updatedAppState.tags;
-        // After creating and reloading, try showing tag selection again
-        if (mounted && updatedTags.isNotEmpty) {
-          _showTagSelection();
+        
+        // Wait a moment for state to update, then check tags
+        await Future.delayed(const Duration(milliseconds: 300));
+        
+        if (mounted) {
+          final updatedAppState = context.read<AppStateProvider>();
+          final updatedTags = updatedAppState.tags;
+          
+          // If we now have tags, show selection dialog directly (no recursion)
+          if (updatedTags.isNotEmpty) {
+            final selectedTagId = await showDialog<String>(
+              context: context,
+              builder: (context) => AlertDialog(
+                backgroundColor: const Color(0xFF1A1A1A),
+                title: const Text(
+                  'Add Tag to Notes',
+                  style: TextStyle(color: Colors.white),
+                ),
+                content: SizedBox(
+                  width: double.maxFinite,
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: updatedTags.length,
+                    itemBuilder: (context, index) {
+                      final tag = updatedTags[index];
+                      return ListTile(
+                        leading: const Icon(Icons.local_offer, color: Color(0xFF3B82F6)),
+                        title: Text(
+                          tag.name,
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                        onTap: () => Navigator.pop(context, tag.id),
+                      );
+                    },
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(color: Color(0xFF94A3B8)),
+                    ),
+                  ),
+                ],
+              ),
+            );
+
+            if (selectedTagId != null && mounted) {
+              await _batchService.addTagToNotes(_selectedNotes, selectedTagId);
+              
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Tag added to selected notes'),
+                    backgroundColor: Color(0xFF10B981),
+                  ),
+                );
+                widget.onComplete(_selectedNotes);
+                Navigator.pop(context);
+              }
+            }
+          }
         }
       }
       return;
