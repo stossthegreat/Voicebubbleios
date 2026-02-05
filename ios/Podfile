@@ -1,5 +1,8 @@
 platform :ios, '15.5'
 
+# Force clean pod install every time (no stale cache)
+install! 'cocoapods', :deterministic_uuids => false, :clean_install => true
+
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 
 project 'Runner', {
