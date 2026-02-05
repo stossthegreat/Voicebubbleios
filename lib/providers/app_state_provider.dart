@@ -117,6 +117,27 @@ ContinueContext? get continueContext => _continueContext;
   Future<void> _loadRecordingItems() async {
     try {
       final box = await Hive.openBox<RecordingItem>('recording_items');
+
+      // One-time cleanup: remove duplicate entries created by string-key puts
+      final seen = <String>{};
+      final keysToDelete = <dynamic>[];
+      for (final key in box.keys) {
+        final item = box.get(key);
+        if (item != null) {
+          if (seen.contains(item.id)) {
+            keysToDelete.add(key); // Duplicate — mark for deletion
+          } else {
+            seen.add(item.id);
+          }
+        }
+      }
+      if (keysToDelete.isNotEmpty) {
+        for (final key in keysToDelete) {
+          await box.delete(key);
+        }
+        debugPrint('🧹 Cleaned up ${keysToDelete.length} duplicate items');
+      }
+
       _recordingItems = box.values.toList();
       _recordingItems.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       debugPrint('📚 Loaded ${_recordingItems.length} recording items from Hive');
@@ -273,13 +294,11 @@ ContinueContext? get continueContext => _continueContext;
             tags: [...item.tags, tagId],
           );
           _recordingItems[index] = updatedItem;
-          
-          // Save to Hive
-          final box = await Hive.openBox<RecordingItem>('recording_items');
-          await box.put(updatedItem.id, updatedItem);
-          
+
+          // Save to Hive — use updateRecording to find the CORRECT Hive key
+          await updateRecording(updatedItem);
+
           debugPrint('🏷️ Added tag $tagId to recording $recordingId');
-          notifyListeners();
         }
       }
     } catch (e) {
@@ -295,13 +314,11 @@ ContinueContext? get continueContext => _continueContext;
         final updatedTags = item.tags.where((t) => t != tagId).toList();
         final updatedItem = item.copyWith(tags: updatedTags);
         _recordingItems[index] = updatedItem;
-        
-        // Save to Hive
-        final box = await Hive.openBox<RecordingItem>('recording_items');
-        await box.put(updatedItem.id, updatedItem);
-        
+
+        // Save to Hive — use updateRecording to find the CORRECT Hive key
+        await updateRecording(updatedItem);
+
         debugPrint('🏷️ Removed tag $tagId from recording $recordingId');
-        notifyListeners();
       }
     } catch (e) {
       debugPrint('❌ Error removing tag: $e');
