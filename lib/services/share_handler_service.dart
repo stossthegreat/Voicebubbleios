@@ -15,6 +15,16 @@ class ShareHandlerService {
   final _pendingShareController = StreamController<SharedContent>.broadcast();
   Stream<SharedContent> get pendingShares => _pendingShareController.stream;
 
+  /// Buffer for cold-start share that may arrive before any listener subscribes
+  SharedContent? _bufferedContent;
+
+  /// Get and clear any buffered content from cold start
+  SharedContent? consumeBufferedContent() {
+    final content = _bufferedContent;
+    _bufferedContent = null;
+    return content;
+  }
+
   /// Initialize - call once at app startup in main()
   void initialize() {
     if (_initialized) {
@@ -65,6 +75,7 @@ class ShareHandlerService {
           text: file.path, // In text type, path often contains the text content
           mimeType: file.mimeType,
         );
+        _bufferedContent = content; // Buffer in case no listener yet
         _pendingShareController.add(content);
       } else {
         // Handle files (images, audio, video, documents)
@@ -74,6 +85,7 @@ class ShareHandlerService {
           mimeType: file.mimeType,
           fileName: _extractFileName(file.path),
         );
+        _bufferedContent = content; // Buffer in case no listener yet
         _pendingShareController.add(content);
       }
     }
