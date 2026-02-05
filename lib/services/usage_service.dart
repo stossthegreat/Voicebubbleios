@@ -6,6 +6,9 @@ import 'package:flutter/foundation.dart';
 /// Tracks STT and AI usage for free/pro limits
 /// FREE: 5 minutes (300 seconds) + 1 minute bonus for review
 /// PRO: 90 minutes (5400 seconds)
+///
+/// Usage is stored locally in Hive AND backed up to Firestore.
+/// Firestore sync is FIRE-AND-FORGET — it never blocks the main flow.
 class UsageService {
   static const String _boxName = 'usage_data';
   static const int freeSecondsLimit = 300;      // 5 minutes
@@ -25,14 +28,16 @@ class UsageService {
   }
 
   /// Add seconds to usage (call after recording/export)
+  /// Saves to Hive immediately, then syncs to Firestore in background
   Future<void> addUsage(int seconds) async {
     final box = await Hive.openBox(_boxName);
     final monthKey = _getCurrentMonthKey();
     final current = box.get('stt_seconds_$monthKey', defaultValue: 0);
     final newTotal = current + seconds;
     await box.put('stt_seconds_$monthKey', newTotal);
-    // Sync to Firestore so it persists across reinstalls
-    await _syncUsageToFirestore(newTotal);
+
+    // ✅ FIRE-AND-FORGET: Sync to Firestore in background — NEVER await this
+    _syncUsageToFirestore(newTotal);
   }
 
   /// Check if user can use STT/AI
@@ -63,7 +68,7 @@ class UsageService {
     return box.get('review_bonus_claimed', defaultValue: false);
   }
 
-  /// Claim review bonus (only works once, only for free users)
+  /// Claim the review bonus (adds 1 minute)
   Future<bool> claimReviewBonus() async {
     final box = await Hive.openBox(_boxName);
     final alreadyClaimed = box.get('review_bonus_claimed', defaultValue: false);
@@ -72,20 +77,19 @@ class UsageService {
 
     await box.put('review_bonus_claimed', true);
     await box.put('review_bonus_claimed_at', DateTime.now().toIso8601String());
-    // Sync to Firestore so it can't be reclaimed after reinstall
-    await _syncReviewBonusToFirestore(true);
+
+    // ✅ FIRE-AND-FORGET: Sync to Firestore in background
+    _syncReviewBonusToFirestore(true);
     return true;
   }
 
-  /// Check if user has exhausted free limit (to show review prompt)
+  /// Should we prompt for review? (after using 3+ minutes, and not yet claimed)
   Future<bool> shouldShowReviewPrompt({required bool isPro}) async {
     if (isPro) return false;
-
-    final hasBonus = await hasClaimedReviewBonus();
-    if (hasBonus) return false; // Already claimed
-
+    final claimed = await hasClaimedReviewBonus();
+    if (claimed) return false;
     final used = await getSecondsUsed();
-    return used >= freeSecondsLimit; // Show when 5 min exhausted
+    return used >= 180; // After 3 minutes of use
   }
 
   /// Format seconds to MM:SS display
@@ -123,14 +127,24 @@ class UsageService {
     await box.delete('review_bonus_claimed_at');
   }
 
+  /// Get the current month key (e.g., "2026_2" for February 2026)
   String _getCurrentMonthKey() {
     final now = DateTime.now();
     return '${now.year}_${now.month}';
   }
 
-  /// Get the current user's UID, or null if not logged in
+  // ══════════════════════════════════════════════════════════
+  // FIRESTORE SYNC — ALL FIRE-AND-FORGET, NEVER BLOCKS
+  // ══════════════════════════════════════════════════════════
+
+  /// Get current Firebase user ID, or null if not logged in
   String? _getUserId() {
-    return FirebaseAuth.instance.currentUser?.uid;
+    try {
+      return FirebaseAuth.instance.currentUser?.uid;
+    } catch (e) {
+      debugPrint('⚠️ UsageService: Could not get user ID: $e');
+      return null;
+    }
   }
 
   /// Get the Firestore document reference for this user's usage
@@ -140,86 +154,88 @@ class UsageService {
     return FirebaseFirestore.instance.collection('users').doc(uid);
   }
 
-  /// Sync local usage TO Firestore (call after addUsage)
-  Future<void> _syncUsageToFirestore(int totalSeconds) async {
-    final doc = _getUserUsageDoc();
-    if (doc == null) return; // Not logged in, local only
-
-    final monthKey = _getCurrentMonthKey();
+  /// Sync usage seconds to Firestore (FIRE-AND-FORGET — never await this)
+  void _syncUsageToFirestore(int totalSeconds) {
     try {
-      await doc.set({
+      final doc = _getUserUsageDoc();
+      if (doc == null) return; // Not logged in, skip
+
+      final monthKey = _getCurrentMonthKey();
+
+      // Don't await — fire and forget
+      doc.set({
         'usage': {
           'stt_seconds_$monthKey': totalSeconds,
           'lastUpdated': FieldValue.serverTimestamp(),
         },
-      }, SetOptions(merge: true));
+      }, SetOptions(merge: true)).catchError((e) {
+        debugPrint('⚠️ UsageService: Firestore usage sync failed (non-critical): $e');
+      });
     } catch (e) {
-      debugPrint('⚠️ Failed to sync usage to Firestore: $e');
-      // Non-fatal — local cache still works
+      debugPrint('⚠️ UsageService: Firestore usage sync error (non-critical): $e');
     }
   }
 
-  /// Sync review bonus TO Firestore
-  Future<void> _syncReviewBonusToFirestore(bool claimed) async {
-    final doc = _getUserUsageDoc();
-    if (doc == null) return;
-
+  /// Sync review bonus status to Firestore (FIRE-AND-FORGET)
+  void _syncReviewBonusToFirestore(bool claimed) {
     try {
-      await doc.set({
+      final doc = _getUserUsageDoc();
+      if (doc == null) return;
+
+      doc.set({
         'usage': {
           'review_bonus_claimed': claimed,
-          'review_bonus_claimed_at': claimed ? FieldValue.serverTimestamp() : null,
+          'lastUpdated': FieldValue.serverTimestamp(),
         },
-      }, SetOptions(merge: true));
+      }, SetOptions(merge: true)).catchError((e) {
+        debugPrint('⚠️ UsageService: Firestore bonus sync failed (non-critical): $e');
+      });
     } catch (e) {
-      debugPrint('⚠️ Failed to sync review bonus to Firestore: $e');
+      debugPrint('⚠️ UsageService: Firestore bonus sync error (non-critical): $e');
     }
   }
 
-  /// Load usage FROM Firestore into local Hive (call on app start)
-  /// This prevents abuse: if Firestore says 300 seconds used, local can't say 0
+  /// Load usage from Firestore on app start (call once in main.dart)
+  /// Takes the HIGHER of local vs server to prevent abuse
   Future<void> syncFromFirestore() async {
-    final doc = _getUserUsageDoc();
-    if (doc == null) return;
-
     try {
-      final snapshot = await doc.get();
+      final doc = _getUserUsageDoc();
+      if (doc == null) return; // Not logged in, skip
+
+      final snapshot = await doc.get().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () => throw Exception('Firestore timeout'),
+      );
+
       if (!snapshot.exists) return;
 
       final data = snapshot.data() as Map<String, dynamic>?;
       if (data == null || data['usage'] == null) return;
 
       final usage = data['usage'] as Map<String, dynamic>;
-      final box = await Hive.openBox(_boxName);
       final monthKey = _getCurrentMonthKey();
+      final serverSeconds = usage['stt_seconds_$monthKey'] as int? ?? 0;
+      final serverBonusClaimed = usage['review_bonus_claimed'] as bool? ?? false;
 
-      // Sync seconds used — take the HIGHER value (prevent downgrade abuse)
-      final firestoreSeconds = usage['stt_seconds_$monthKey'] as int? ?? 0;
+      // Take the HIGHER value to prevent abuse
+      final box = await Hive.openBox(_boxName);
       final localSeconds = box.get('stt_seconds_$monthKey', defaultValue: 0) as int;
-      final trueSeconds = firestoreSeconds > localSeconds ? firestoreSeconds : localSeconds;
-      await box.put('stt_seconds_$monthKey', trueSeconds);
 
-      // If Firestore is behind, push local up
-      if (localSeconds > firestoreSeconds) {
-        await _syncUsageToFirestore(localSeconds);
+      if (serverSeconds > localSeconds) {
+        await box.put('stt_seconds_$monthKey', serverSeconds);
+        debugPrint('📊 UsageService: Synced from Firestore: $serverSeconds seconds (was $localSeconds locally)');
       }
 
-      // Sync review bonus — if EVER claimed on server, it stays claimed
-      final firestoreBonusClaimed = usage['review_bonus_claimed'] as bool? ?? false;
-      if (firestoreBonusClaimed) {
-        await box.put('review_bonus_claimed', true);
-      } else {
-        // If local says claimed but server doesn't, push to server
-        final localBonusClaimed = box.get('review_bonus_claimed', defaultValue: false) as bool;
-        if (localBonusClaimed) {
-          await _syncReviewBonusToFirestore(true);
+      if (serverBonusClaimed) {
+        final localClaimed = box.get('review_bonus_claimed', defaultValue: false) as bool;
+        if (!localClaimed) {
+          await box.put('review_bonus_claimed', true);
+          debugPrint('📊 UsageService: Synced review bonus claimed from Firestore');
         }
       }
-
-      debugPrint('✅ Usage synced from Firestore: ${trueSeconds}s used, bonus=$firestoreBonusClaimed');
     } catch (e) {
-      debugPrint('⚠️ Failed to sync usage from Firestore: $e');
-      // Non-fatal — use local cache
+      // NEVER crash on sync failure — local data is always the fallback
+      debugPrint('⚠️ UsageService: syncFromFirestore failed (non-critical): $e');
     }
   }
 }
