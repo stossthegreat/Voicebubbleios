@@ -1,6 +1,10 @@
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/auth_service.dart';
 
 class SignInScreen extends StatefulWidget {
@@ -75,7 +79,7 @@ class _SignInScreenState extends State<SignInScreen> with SingleTickerProviderSt
       debugPrint('🔵 UI: Starting Google Sign-In...');
       final res = await _authService.signInWithGoogle();
       debugPrint('🔵 UI: Sign-In result: ${res != null ? "Success" : "Cancelled"}');
-      
+
       if (res != null) {
         debugPrint('🟢 UI: Calling onSignIn callback');
         widget.onSignIn();
@@ -91,6 +95,54 @@ class _SignInScreenState extends State<SignInScreen> with SingleTickerProviderSt
         debugPrint('🔵 UI: Setting loading to false');
         setState(() => _isLoading = false);
       }
+    }
+  }
+
+  Future<void> _handleAppleSignIn() async {
+    setState(() => _isLoading = true);
+    try {
+      final credential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+      );
+
+      final oauthCredential = OAuthProvider('apple.com').credential(
+        idToken: credential.identityToken,
+        accessToken: credential.authorizationCode,
+      );
+
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(oauthCredential);
+
+      if (userCredential.user != null) {
+        String displayName = 'User';
+        if (credential.givenName != null) {
+          displayName = '${credential.givenName} ${credential.familyName ?? ''}'.trim();
+        } else if (userCredential.user!.email != null) {
+          displayName = userCredential.user!.email!.split('@').first;
+        }
+
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userCredential.user!.uid)
+            .set({
+          'email': userCredential.user!.email ?? credential.email ?? '',
+          'fullName': displayName,
+          'createdAt': FieldValue.serverTimestamp(),
+          'lastSignIn': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      }
+
+      if (mounted) widget.onSignIn();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Apple Sign-In failed: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -160,6 +212,7 @@ class _SignInScreenState extends State<SignInScreen> with SingleTickerProviderSt
                             _buildDivider(),
                             const SizedBox(height: 20),
                             _buildGoogleButton(),
+                            _buildAppleButton(),
                             const SizedBox(height: 24),
                             _buildToggleText(),
                             const SizedBox(height: 32),
@@ -289,6 +342,43 @@ class _SignInScreenState extends State<SignInScreen> with SingleTickerProviderSt
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAppleButton() {
+    if (!Platform.isIOS) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: _isLoading ? null : _handleAppleSignIn,
+          borderRadius: BorderRadius.circular(12),
+          child: Ink(
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.apple, size: 28, color: _isLoading ? Colors.black38 : Colors.black),
+                const SizedBox(width: 10),
+                Text(
+                  'Continue with Apple',
+                  style: TextStyle(
+                    color: _isLoading ? Colors.black38 : Colors.black,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

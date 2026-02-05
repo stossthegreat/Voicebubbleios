@@ -1,6 +1,6 @@
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
-// Overlay imports removed - bubble not in onboarding
 
 class PermissionsScreen extends StatelessWidget {
   final VoidCallback onComplete;
@@ -9,11 +9,11 @@ class PermissionsScreen extends StatelessWidget {
   
   Future<void> _requestPermissions(BuildContext context) async {
     debugPrint('🔐 Starting permission request flow...');
-    
+
     // Request microphone permission FIRST
     final micStatus = await Permission.microphone.request();
     debugPrint('🎤 Microphone permission: ${micStatus.isGranted}');
-    
+
     if (!micStatus.isGranted) {
       // Show error dialog for microphone permission
       if (context.mounted) {
@@ -42,7 +42,13 @@ class PermissionsScreen extends StatelessWidget {
       }
       return;
     }
-    
+
+    // Request speech recognition on iOS
+    if (Platform.isIOS) {
+      final speechStatus = await Permission.speech.request();
+      debugPrint('🗣️ Speech recognition permission: ${speechStatus.isGranted}');
+    }
+
     // Complete onboarding - mic permission granted, move on
     debugPrint('✅ Permissions flow complete, moving to home screen');
     onComplete();
@@ -110,7 +116,9 @@ class PermissionsScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                   // Description
                   Text(
-                    'We need 1 permission to work perfectly',
+                    Platform.isIOS
+                        ? 'We need 2 permissions to work perfectly'
+                        : 'We need 1 permission to work perfectly',
                     style: TextStyle(
                       fontSize: 18,
                       color: Colors.white.withOpacity(0.9),
@@ -128,6 +136,15 @@ class PermissionsScreen extends StatelessWidget {
                         'To record your voice',
                         const Color(0xFF42A5F5),
                       ),
+                      if (Platform.isIOS) ...[
+                        const SizedBox(height: 16),
+                        _buildPermissionCard(
+                          Icons.record_voice_over_rounded,
+                          'Speech Recognition',
+                          'To transcribe your voice',
+                          const Color(0xFF42A5F5),
+                        ),
+                      ],
                     ],
                   ),
                 ],
