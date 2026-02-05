@@ -117,4 +117,7 @@ coverage/
 
 # Hive
 *.hive
-*.lock
+*.hive.lock
+
+# Preserve iOS Podfile.lock (required for CI/CD)
+!ios/Podfile.lock
