@@ -440,7 +440,7 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
       initialOutcomeType: item.outcomes.isNotEmpty ? OutcomeTypeExtension.fromString(item.outcomes.first) : null,
       onOutcomeChanged: (outcomeType) => _updateItemOutcome(appState, item, outcomeType),
       // Reminder button ONLY for outcomes (hiddenInLibrary = true)
-      showReminderButton: item.hiddenInLibrary,
+      showReminderButton: false,
       initialReminder: item.reminderDateTime,
       onReminderChanged: (dateTime) => _updateItemReminder(appState, item, dateTime),
       showCompletionCheckbox: item.outcomes.isNotEmpty && item.hiddenInLibrary, // ONLY for outcomes, NOT library todos
