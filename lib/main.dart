@@ -58,6 +58,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> {
   final _navigatorKey = GlobalKey<NavigatorState>();
+  SharedContent? _pendingShareContent;
 
   @override
   void initState() {
@@ -66,12 +67,36 @@ class _MyAppState extends State<MyApp> {
   }
 
   void _setupShareListener() {
-    // Listen for files shared from other apps
     ShareHandlerService().pendingShares.listen((content) {
-      debugPrint('Received shared content: ${content.type.name}');
+      debugPrint('📥 Received shared content: ${content.type.name}');
 
-      // Wait for app to be ready, then navigate
-      Future.delayed(const Duration(milliseconds: 500), () {
+      // Always store as pending
+      _pendingShareContent = content;
+
+      // For warm start (app already past splash screen), navigate directly
+      // Use 600ms delay to let any in-progress navigation settle
+      Future.delayed(const Duration(milliseconds: 600), () {
+        // If still pending (cold start handler didn't consume it), navigate now
+        if (_pendingShareContent != null && _navigatorKey.currentState != null) {
+          final pendingContent = _pendingShareContent!;
+          _pendingShareContent = null;
+          _navigatorKey.currentState!.push(
+            MaterialPageRoute(
+              builder: (_) => ImportContentScreen(content: pendingContent),
+            ),
+          );
+        }
+      });
+    });
+  }
+
+  /// Called after MainNavigation is fully loaded to handle any pending share
+  void navigateToImportIfPending() {
+    final content = _pendingShareContent;
+    if (content != null) {
+      _pendingShareContent = null;
+      debugPrint('📥 Navigating to ImportContentScreen for pending share');
+      Future.delayed(const Duration(milliseconds: 300), () {
         if (_navigatorKey.currentState != null) {
           _navigatorKey.currentState!.push(
             MaterialPageRoute(
@@ -80,7 +105,7 @@ class _MyAppState extends State<MyApp> {
           );
         }
       });
-    });
+    }
   }
 
   @override
@@ -146,6 +171,9 @@ class _SplashScreenState extends State<SplashScreen> {
           context,
           MaterialPageRoute(builder: (context) => const MainNavigation()),
         );
+        // Handle any pending share intent AFTER MainNavigation is loaded
+        final appState = context.findAncestorStateOfType<_MyAppState>();
+        appState?.navigateToImportIfPending();
       } else {
         Navigator.pushReplacement(
           context,
