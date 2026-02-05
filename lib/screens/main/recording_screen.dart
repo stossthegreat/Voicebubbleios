@@ -331,30 +331,36 @@ class _RecordingScreenState extends State<RecordingScreen>
         _isProcessing = false;
       });
       
-      // Show error dialog
+      // Show user-friendly error dialog
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('Transcription Failed'),
-          content: Text(
-            'Could not transcribe your audio:\n\n$e\n\nPlease check:\n'
-            '• Backend server is running\n'
-            '• OPENAI_API_KEY is configured\n'
-            '• You have internet connection',
+          backgroundColor: const Color(0xFF1E1E1E),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.cloud_off_rounded, color: Color(0xFFF59E0B), size: 24),
+              SizedBox(width: 10),
+              Text('Connection Issue', style: TextStyle(color: Colors.white, fontSize: 18)),
+            ],
+          ),
+          content: const Text(
+            'We couldn\'t process your recording right now. Please check your internet connection and try again.',
+            style: TextStyle(color: Color(0xFF94A3B8), fontSize: 14, height: 1.5),
           ),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.pop(context); // Close dialog
+                Navigator.pop(context); // Go back to home
               },
-              child: const Text('Try Again'),
+              child: const Text('Go Back', style: TextStyle(color: Color(0xFF94A3B8))),
             ),
             TextButton(
               onPressed: () {
                 Navigator.pop(context); // Close dialog
-                Navigator.pop(context); // Go back to home
               },
-              child: const Text('Cancel'),
+              child: const Text('Try Again', style: TextStyle(color: Color(0xFF3B82F6), fontWeight: FontWeight.w600)),
             ),
           ],
         ),
