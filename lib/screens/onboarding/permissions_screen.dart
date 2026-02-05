@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'dart:io' show Platform;
-import '../../services/native_overlay_service.dart';
+// Overlay imports removed - bubble not in onboarding
 
 class PermissionsScreen extends StatelessWidget {
   final VoidCallback onComplete;
@@ -44,17 +43,7 @@ class PermissionsScreen extends StatelessWidget {
       return;
     }
     
-    // Request overlay permission on Android
-    if (Platform.isAndroid) {
-      // Always open the system \"Display over other apps\" settings screen.
-      // Some devices keep this permission across reinstalls, so we don't
-      // try to be clever here – we just send the user to the right place.
-      debugPrint('🚀 Opening overlay permission settings (always)...');
-      await NativeOverlayService.requestPermission();
-      debugPrint('⏳ Settings should be open now...');
-    }
-    
-    // Complete onboarding - HomeScreen will handle service start when app resumes
+    // Complete onboarding - mic permission granted, move on
     debugPrint('✅ Permissions flow complete, moving to home screen');
     onComplete();
   }
@@ -121,7 +110,7 @@ class PermissionsScreen extends StatelessWidget {
                   const SizedBox(height: 16),
                   // Description
                   Text(
-                    'We need 2 permissions to work perfectly',
+                    'We need 1 permission to work perfectly',
                     style: TextStyle(
                       fontSize: 18,
                       color: Colors.white.withOpacity(0.9),
@@ -137,13 +126,6 @@ class PermissionsScreen extends StatelessWidget {
                         Icons.mic_rounded,
                         'Microphone',
                         'To record your voice',
-                        const Color(0xFF42A5F5),
-                      ),
-                      const SizedBox(height: 16),
-                      _buildPermissionCard(
-                        Icons.bubble_chart_rounded,
-                        'Display Over Apps',
-                        'To show the floating bubble',
                         const Color(0xFF42A5F5),
                       ),
                     ],

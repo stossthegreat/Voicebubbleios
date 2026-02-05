@@ -122,7 +122,7 @@ class _OnboardingFourState extends State<OnboardingFour> with SingleTickerProvid
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'We need 2 quick permissions to work',
+                          'We need 1 permission to work',
                           style: TextStyle(
                             fontSize: 18,
                             color: Colors.white.withOpacity(0.9),
@@ -138,14 +138,6 @@ class _OnboardingFourState extends State<OnboardingFour> with SingleTickerProvid
                           subtitle: 'To record your voice',
                           number: '1',
                           delay: 0,
-                        ),
-                        const SizedBox(height: 20),
-                        _buildPermissionCard(
-                          icon: Icons.bubble_chart_rounded,
-                          title: 'Display Over Apps',
-                          subtitle: 'To show the floating bubble',
-                          number: '2',
-                          delay: 200,
                         ),
                         const SizedBox(height: 40),
                         // Security Note
