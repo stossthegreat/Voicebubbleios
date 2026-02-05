@@ -1,8 +1,3 @@
-platform :ios, '15.5'
-
-# Force clean pod install every time (no stale cache)
-install! 'cocoapods', :deterministic_uuids => false, :clean_install => true
-
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 
 project 'Runner', {
@@ -27,6 +22,9 @@ end
 require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), flutter_root)
 
 flutter_ios_podfile_setup
+
+# Set platform AFTER flutter_ios_podfile_setup so nothing can override it
+platform :ios, '15.5'
 
 target 'Runner' do
   platform :ios, '15.5'
