@@ -447,7 +447,7 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
       initialCompletion: item.isCompleted,
       onCompletionChanged: (completed) => _updateItemCompletion(appState, item, completed),
       // Top toolbar (Google Keep style) for library items
-      showTopToolbar: !item.hiddenInLibrary, // Show for library, hide for outcomes
+      showTopToolbar: !item.hiddenInLibrary || item.projectId != null, // Show for library AND project items, hide only for outcomes
       isPinned: item.isPinned ?? false,
       onPinChanged: (pinned) => _updateItemPin(appState, item, pinned),
       onVoiceNoteAdded: (path) => _handleVoiceNoteAdded(appState, item, path),
