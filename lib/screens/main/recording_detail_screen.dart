@@ -712,15 +712,21 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
     }
   }
 
-  /// Show import type selection dialog (like Export dialog)
-  void _showImportDialog(BuildContext context, AppStateProvider appState, RecordingItem item) {
+  /// Show import type selection dialog
+  /// CRITICAL: Captures NavigatorState BEFORE opening dialog to avoid dead context issues
+  void _showImportDialog(BuildContext outerContext, AppStateProvider appState, RecordingItem item) {
+    // Capture the navigator BEFORE opening the dialog
+    // Use the State's own `context` (from State<RecordingDetailScreen>)
+    // which is ALWAYS valid as long as the screen is alive
+    final nav = Navigator.of(this.context);
+
     showDialog(
-      context: context,
-      builder: (context) {
-        final surfaceColor = Theme.of(context).brightness == Brightness.dark
+      context: this.context,  // Use State's context, not the popup menu's
+      builder: (dialogContext) {
+        final surfaceColor = Theme.of(dialogContext).brightness == Brightness.dark
             ? const Color(0xFF1A1A1A)
             : const Color(0xFFFFFFFF);
-        final textColor = Theme.of(context).brightness == Brightness.dark
+        final textColor = Theme.of(dialogContext).brightness == Brightness.dark
             ? Colors.white
             : const Color(0xFF1F2937);
 
@@ -755,13 +761,14 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
 
                 // PDF
                 ListTile(
+                  contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.picture_as_pdf, color: Color(0xFFEF4444)),
                   title: Text('PDF Document', style: TextStyle(color: textColor)),
                   subtitle: const Text('Extract text from PDF', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
                   onTap: () {
-                    Navigator.pop(context);
+                    Navigator.pop(dialogContext);
                     _pickAndImportFile(
-                      context, appState, item,
+                      nav, appState, item,
                       extensions: ['pdf'],
                       forceType: SharedContentType.pdf,
                       forceMime: 'application/pdf',
@@ -771,13 +778,14 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
 
                 // Word Document
                 ListTile(
+                  contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.description, color: Color(0xFF3B82F6)),
                   title: Text('Word Document', style: TextStyle(color: textColor)),
                   subtitle: const Text('Import .docx files', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
                   onTap: () {
-                    Navigator.pop(context);
+                    Navigator.pop(dialogContext);
                     _pickAndImportFile(
-                      context, appState, item,
+                      nav, appState, item,
                       extensions: ['doc', 'docx'],
                       forceType: SharedContentType.document,
                       forceMime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -787,13 +795,14 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
 
                 // Text File
                 ListTile(
+                  contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.text_fields, color: Color(0xFF10B981)),
                   title: Text('Text File', style: TextStyle(color: textColor)),
                   subtitle: const Text('Import .txt, .md, .rtf', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
                   onTap: () {
-                    Navigator.pop(context);
+                    Navigator.pop(dialogContext);
                     _pickAndImportFile(
-                      context, appState, item,
+                      nav, appState, item,
                       extensions: ['txt', 'md', 'rtf'],
                       forceType: SharedContentType.text,
                       forceMime: 'text/plain',
@@ -803,13 +812,14 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
 
                 // Image (visual)
                 ListTile(
+                  contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.image, color: Color(0xFFF59E0B)),
                   title: Text('Image', style: TextStyle(color: textColor)),
                   subtitle: const Text('Add image to document', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
                   onTap: () {
-                    Navigator.pop(context);
+                    Navigator.pop(dialogContext);
                     _pickAndImportFile(
-                      context, appState, item,
+                      nav, appState, item,
                       extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
                       forceType: SharedContentType.image,
                       forceMime: 'image/jpeg',
@@ -817,19 +827,20 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
                   },
                 ),
 
-                // Image to Text (OCR) — NEW
+                // Image to Text (OCR)
                 ListTile(
+                  contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.document_scanner, color: Color(0xFF8B5CF6)),
                   title: Text('Image to Text (OCR)', style: TextStyle(color: textColor)),
                   subtitle: const Text('Extract text from image', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
                   onTap: () {
-                    Navigator.pop(context);
+                    Navigator.pop(dialogContext);
                     _pickAndImportFile(
-                      context, appState, item,
+                      nav, appState, item,
                       extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
                       forceType: SharedContentType.image,
                       forceMime: 'image/jpeg',
-                      ocrMode: true, // NEW: triggers OCR instead of image save
+                      ocrMode: true,
                     );
                   },
                 ),
@@ -840,7 +851,7 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: TextButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => Navigator.pop(dialogContext),
                     style: TextButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
@@ -862,8 +873,9 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
   }
 
   /// Pick a file and navigate to import screen
+  /// Uses pre-captured NavigatorState to avoid dead context issues after file picker returns
   Future<void> _pickAndImportFile(
-    BuildContext context,
+    NavigatorState nav,
     AppStateProvider appState,
     RecordingItem item, {
     required List<String> extensions,
@@ -877,67 +889,63 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
         allowedExtensions: extensions,
       );
 
-      if (result != null && result.files.single.path != null) {
-        final filePath = result.files.single.path!;
-        final fileName = result.files.single.name;
-        final extension = result.files.single.extension?.toLowerCase() ?? '';
+      if (result == null || result.files.single.path == null) return;
 
-        if (!context.mounted) return;
+      final filePath = result.files.single.path!;
+      final fileName = result.files.single.name;
+      final extension = result.files.single.extension?.toLowerCase() ?? '';
 
-        // Determine actual content type from extension (for multi-extension picks)
-        SharedContentType contentType = forceType;
-        String mimeType = forceMime;
-
-        // Refine mime type for specific extensions
-        if (forceType == SharedContentType.image) {
-          switch (extension) {
-            case 'png': mimeType = 'image/png'; break;
-            case 'gif': mimeType = 'image/gif'; break;
-            case 'webp': mimeType = 'image/webp'; break;
-            default: mimeType = 'image/jpeg'; break;
-          }
-        } else if (forceType == SharedContentType.text) {
-          switch (extension) {
-            case 'md': mimeType = 'text/markdown'; break;
-            case 'rtf': mimeType = 'text/rtf'; break;
-            default: mimeType = 'text/plain'; break;
-          }
-        } else if (forceType == SharedContentType.document) {
-          if (extension == 'doc') mimeType = 'application/msword';
+      // Refine mime type based on actual file extension
+      String mimeType = forceMime;
+      if (forceType == SharedContentType.image) {
+        switch (extension) {
+          case 'png': mimeType = 'image/png'; break;
+          case 'gif': mimeType = 'image/gif'; break;
+          case 'webp': mimeType = 'image/webp'; break;
+          default: mimeType = 'image/jpeg'; break;
         }
+      } else if (forceType == SharedContentType.text) {
+        switch (extension) {
+          case 'md': mimeType = 'text/markdown'; break;
+          case 'rtf': mimeType = 'text/rtf'; break;
+          default: mimeType = 'text/plain'; break;
+        }
+      } else if (forceType == SharedContentType.document && extension == 'doc') {
+        mimeType = 'application/msword';
+      }
 
-        // If OCR mode, override type to trigger OCR path
-        final actualType = ocrMode ? SharedContentType.unknown : contentType;
+      if (!mounted) return;
 
-        // Navigate to import screen
-        final imported = await Navigator.push<bool>(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ImportContentScreen(
-              content: SharedContent(
-                type: actualType,
-                filePath: filePath,
-                fileName: fileName,
-                mimeType: ocrMode ? 'image/ocr' : mimeType, // Special marker for OCR
-              ),
-              appendToNoteId: item.id,
+      // If OCR mode, override type to trigger OCR path
+      final actualType = ocrMode ? SharedContentType.unknown : forceType;
+
+      // Use the pre-captured NavigatorState — guaranteed to be alive
+      final imported = await nav.push<bool>(
+        MaterialPageRoute(
+          builder: (_) => ImportContentScreen(
+            content: SharedContent(
+              type: actualType,
+              filePath: filePath,
+              fileName: fileName,
+              mimeType: ocrMode ? 'image/ocr' : mimeType,
             ),
+            appendToNoteId: item.id,
           ),
-        );
+        ),
+      );
 
-        // If content was imported, refresh the editor
-        if (imported == true && context.mounted) {
-          setState(() {
-            _editorRebuildKey++;
-          });
-        }
+      // If content was imported, refresh the editor
+      if (imported == true && mounted) {
+        setState(() {
+          _editorRebuildKey++;
+        });
       }
     } catch (e) {
-      debugPrint('Error picking file: $e');
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+      debugPrint('Error picking import file: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(this.context).showSnackBar(
           SnackBar(
-            content: Text('Error: ${e.toString()}'),
+            content: Text('Import error: ${e.toString()}'),
             backgroundColor: const Color(0xFFEF4444),
           ),
         );
