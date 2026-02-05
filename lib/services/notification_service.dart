@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
@@ -44,7 +45,15 @@ class NotificationService {
 
       // Initialize notification plugin
       const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
-      const initSettings = InitializationSettings(android: androidInit);
+      const darwinInit = DarwinInitializationSettings(
+        requestAlertPermission: true,
+        requestBadgePermission: true,
+        requestSoundPermission: true,
+      );
+      const initSettings = InitializationSettings(
+        android: androidInit,
+        iOS: darwinInit,
+      );
 
       await _notifications.initialize(
         initSettings,
@@ -94,13 +103,27 @@ class NotificationService {
   }
 
   Future<bool> requestPermission() async {
-    final androidPlugin = _notifications
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>();
-    if (androidPlugin != null) {
-      final granted = await androidPlugin.requestNotificationsPermission();
-      await androidPlugin.requestExactAlarmsPermission();
-      return granted ?? false;
+    if (Platform.isAndroid) {
+      final androidPlugin = _notifications
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
+      if (androidPlugin != null) {
+        final granted = await androidPlugin.requestNotificationsPermission();
+        await androidPlugin.requestExactAlarmsPermission();
+        return granted ?? false;
+      }
+    } else if (Platform.isIOS) {
+      final iosPlugin = _notifications
+          .resolvePlatformSpecificImplementation<
+              IOSFlutterLocalNotificationsPlugin>();
+      if (iosPlugin != null) {
+        final granted = await iosPlugin.requestPermissions(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+        return granted ?? false;
+      }
     }
     return false;
   }
@@ -145,6 +168,11 @@ class NotificationService {
             playSound: true,
             enableVibration: true,
             visibility: NotificationVisibility.public,
+          ),
+          iOS: DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
           ),
         ),
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
