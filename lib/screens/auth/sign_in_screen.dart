@@ -2,9 +2,6 @@ import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:sign_in_with_apple/sign_in_with_apple.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/auth_service.dart';
 
 class SignInScreen extends StatefulWidget {
@@ -101,46 +98,13 @@ class _SignInScreenState extends State<SignInScreen> with SingleTickerProviderSt
   Future<void> _handleAppleSignIn() async {
     setState(() => _isLoading = true);
     try {
-      final credential = await SignInWithApple.getAppleIDCredential(
-        scopes: [
-          AppleIDAuthorizationScopes.email,
-          AppleIDAuthorizationScopes.fullName,
-        ],
-      );
-
-      final oauthCredential = OAuthProvider('apple.com').credential(
-        idToken: credential.identityToken,
-        accessToken: credential.authorizationCode,
-      );
-
-      final userCredential = await FirebaseAuth.instance.signInWithCredential(oauthCredential);
-
-      if (userCredential.user != null) {
-        String displayName = 'User';
-        if (credential.givenName != null) {
-          displayName = '${credential.givenName} ${credential.familyName ?? ''}'.trim();
-        } else if (userCredential.user!.email != null) {
-          displayName = userCredential.user!.email!.split('@').first;
-        }
-
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(userCredential.user!.uid)
-            .set({
-          'email': userCredential.user!.email ?? credential.email ?? '',
-          'fullName': displayName,
-          'createdAt': FieldValue.serverTimestamp(),
-          'lastSignIn': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
-      }
-
-      if (mounted) widget.onSignIn();
+      debugPrint('🍎 UI: Starting Apple Sign-In...');
+      final res = await _authService.signInWithApple();
+      debugPrint('🍎 UI: Sign-In result: ${res != null ? 'Success' : 'Cancelled'}');
+      if (res != null) widget.onSignIn();
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Apple Sign-In failed: $e'), backgroundColor: Colors.red),
-        );
-      }
+      debugPrint('🍎 UI: Sign-In error: $e');
+      _showError(e.toString().replaceAll('Exception: ', ''));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }

@@ -2,6 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'dart:io' show Platform;
 import 'analytics_service.dart';
 
 class AuthService {
@@ -188,6 +190,69 @@ class AuthService {
       debugPrint('  - Type: ${e.runtimeType}');
       debugPrint('  - Stack trace: $stackTrace');
       throw Exception('Sign-in failed: $e');
+    }
+  }
+
+  // Sign in with Apple (iOS only)
+  Future<UserCredential?> signInWithApple() async {
+    try {
+      debugPrint('🍎 Starting Apple Sign-In flow...');
+
+      // Request Apple credentials
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+      );
+
+      debugPrint('🍎 Apple credential obtained');
+
+      // Create OAuth credential
+      final oauthCredential = OAuthProvider('apple.com').credential(
+        idToken: appleCredential.identityToken,
+        accessToken: appleCredential.authorizationCode,
+      );
+
+      debugPrint('🍎 OAuth credential created, signing in to Firebase...');
+
+      // Sign in to Firebase
+      final userCredential = await _auth.signInWithCredential(oauthCredential);
+
+      // Track for analytics
+      AnalyticsService().setUserId(userCredential.user?.uid);
+      AnalyticsService().setUserProperty(name: 'sign_in_method', value: 'apple');
+
+      debugPrint('🍎 Firebase sign-in successful: ${userCredential.user?.email}');
+
+      // Get display name from Apple (only provided on first sign-in)
+      String? fullName;
+      if (appleCredential.givenName != null || appleCredential.familyName != null) {
+        fullName = '${appleCredential.givenName ?? ''} ${appleCredential.familyName ?? ''}'.trim();
+      }
+
+      // Create/update user document
+      _createUserDocument(
+        uid: userCredential.user!.uid,
+        email: userCredential.user!.email ?? appleCredential.email ?? 'unknown@apple.com',
+        fullName: fullName ?? userCredential.user!.displayName ?? 'User',
+      ).catchError((e) {
+        debugPrint('⚠️ User document creation failed (non-critical): $e');
+      });
+
+      return userCredential;
+    } on SignInWithAppleAuthorizationException catch (e) {
+      debugPrint('🍎 Apple Sign-In Authorization Error: ${e.code} - ${e.message}');
+      if (e.code == AuthorizationErrorCode.canceled) {
+        return null; // User cancelled
+      }
+      throw Exception('Apple Sign-In failed: ${e.message}');
+    } on FirebaseAuthException catch (e) {
+      debugPrint('🍎 Firebase Auth Error: ${e.code} - ${e.message}');
+      throw Exception('Firebase Error: ${e.message}');
+    } catch (e) {
+      debugPrint('🍎 Unexpected error: $e');
+      throw Exception('Apple Sign-In failed: $e');
     }
   }
 

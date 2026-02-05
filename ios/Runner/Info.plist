@@ -70,7 +70,6 @@
 	</array>
 
 	<!-- ========== GOOGLE SIGN-IN URL SCHEME ========== -->
-	<!-- IMPORTANT: Replace the value below with REVERSED_CLIENT_ID from GoogleService-Info.plist -->
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -78,7 +77,7 @@
 			<string>Editor</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>com.googleusercontent.apps.YOUR_REVERSED_CLIENT_ID_HERE</string>
+				<string>com.googleusercontent.apps.343007612090-b0f1qpgtu738j92cp1g7i329c5kc77rk</string>
 			</array>
 		</dict>
 	</array>
