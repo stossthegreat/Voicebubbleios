@@ -5,8 +5,9 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 import 'package:in_app_purchase_storekit/in_app_purchase_storekit.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+// Firestore removed - subscription is now pure local
+// import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:firebase_auth/firebase_auth.dart';
 
 class SubscriptionService {
   static final SubscriptionService _instance = SubscriptionService._internal();
@@ -193,46 +194,38 @@ class SubscriptionService {
     return true;
   }
 
-  /// Deliver the product to the user (update Firestore)
+  // Local subscription storage keys
+  static const String _keyLocalIsPro = 'local_is_pro';
+  static const String _keyLocalExpiryDate = 'local_expiry_date';
+  static const String _keyLocalSubType = 'local_sub_type';
+  static const String _keyLocalProductId = 'local_product_id';
+
+  /// Deliver the product to the user (save locally - no Firestore)
   Future<void> _deliverProduct(PurchaseDetails purchaseDetails) async {
     debugPrint('📦 Delivering product: ${purchaseDetails.productID}');
-    
-    final User? user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      debugPrint('❌ No user logged in, cannot deliver product');
-      return;
+
+    // Determine subscription type
+    String subscriptionType = 'monthly';
+    DateTime expiryDate;
+
+    if (purchaseDetails.productID == yearlyProductId) {
+      subscriptionType = 'yearly';
+      expiryDate = DateTime.now().add(const Duration(days: 365));
+    } else {
+      expiryDate = DateTime.now().add(const Duration(days: 30));
     }
-    
+
+    // Save locally - works offline, instant, no Firestore
     try {
-      final FirebaseFirestore firestore = FirebaseFirestore.instance;
-      
-      // Determine subscription type
-      String subscriptionType = 'monthly';
-      DateTime expiryDate;
-      
-      if (purchaseDetails.productID == yearlyProductId) {
-        subscriptionType = 'yearly';
-        expiryDate = DateTime.now().add(const Duration(days: 365));
-      } else {
-        expiryDate = DateTime.now().add(const Duration(days: 30));
-      }
-      
-      // Update user's subscription in Firestore
-      await firestore.collection('users').doc(user.uid).set({
-        'subscription': {
-          'type': subscriptionType,
-          'status': 'active',
-          'productId': purchaseDetails.productID,
-          'purchaseId': purchaseDetails.purchaseID,
-          'expiryDate': expiryDate.toIso8601String(),
-          'lastUpdated': FieldValue.serverTimestamp(),
-        },
-        'isPremium': true,
-      }, SetOptions(merge: true));
-      
-      debugPrint('✅ User subscription updated in Firestore');
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_keyLocalIsPro, true);
+      await prefs.setString(_keyLocalExpiryDate, expiryDate.toIso8601String());
+      await prefs.setString(_keyLocalSubType, subscriptionType);
+      await prefs.setString(_keyLocalProductId, purchaseDetails.productID);
+
+      debugPrint('✅ Subscription saved locally: $subscriptionType, expires: $expiryDate');
     } catch (e) {
-      debugPrint('❌ Error updating Firestore: $e');
+      debugPrint('❌ Error saving subscription locally: $e');
     }
   }
 
@@ -241,94 +234,30 @@ class SubscriptionService {
     return await hasActiveSubscription();
   }
 
-  // Local cache keys for offline subscription check
-  static const String _keyCachedIsPro = 'cached_is_pro';
-  static const String _keyCachedExpiryDate = 'cached_expiry_date';
-  static const String _keyCachedAt = 'cached_sub_checked_at';
-
-  /// Check if user has active subscription
-  /// Now with local cache fallback for offline use
+  /// Check if user has active subscription (pure local - no Firestore)
   Future<bool> hasActiveSubscription() async {
-    final User? user = FirebaseAuth.instance.currentUser;
-    if (user == null) return false;
-
     try {
-      // Try Firestore first (online path)
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
+      final prefs = await SharedPreferences.getInstance();
+      final isPro = prefs.getBool(_keyLocalIsPro) ?? false;
 
-      if (!doc.exists) {
-        await _cacheSubscriptionStatus(false, null);
+      if (!isPro) {
+        debugPrint('🔍 Subscription: not pro (local)');
         return false;
       }
 
-      final data = doc.data();
-      if (data == null || data['subscription'] == null) {
-        await _cacheSubscriptionStatus(false, null);
+      final expiryStr = prefs.getString(_keyLocalExpiryDate);
+      if (expiryStr == null) {
+        debugPrint('🔍 Subscription: no expiry date found (local)');
         return false;
       }
 
-      final subscription = data['subscription'] as Map<String, dynamic>;
-      final status = subscription['status'] as String?;
-      final expiryDateStr = subscription['expiryDate'] as String?;
-
-      if (status != 'active' || expiryDateStr == null) {
-        await _cacheSubscriptionStatus(false, null);
-        return false;
-      }
-
-      final expiryDate = DateTime.parse(expiryDateStr);
+      final expiryDate = DateTime.parse(expiryStr);
       final isActive = DateTime.now().isBefore(expiryDate);
 
-      // Cache the result locally for offline use
-      await _cacheSubscriptionStatus(isActive, expiryDateStr);
-
-      debugPrint('🔍 Subscription active: $isActive (expires: $expiryDate) [online]');
+      debugPrint('🔍 Subscription active: $isActive (expires: $expiryDate) [local]');
       return isActive;
     } catch (e) {
-      // Offline or Firestore error — fall back to cached status
-      debugPrint('⚠️ Firestore unavailable, using cached subscription status: $e');
-      return await _getCachedSubscriptionStatus();
-    }
-  }
-
-  /// Save subscription status to local SharedPreferences
-  Future<void> _cacheSubscriptionStatus(bool isActive, String? expiryDateStr) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(_keyCachedIsPro, isActive);
-      if (expiryDateStr != null) {
-        await prefs.setString(_keyCachedExpiryDate, expiryDateStr);
-      }
-      await prefs.setString(_keyCachedAt, DateTime.now().toIso8601String());
-      debugPrint('💾 Cached subscription status: isPro=$isActive');
-    } catch (e) {
-      debugPrint('❌ Error caching subscription status: $e');
-    }
-  }
-
-  /// Get cached subscription status when offline
-  Future<bool> _getCachedSubscriptionStatus() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final cachedIsPro = prefs.getBool(_keyCachedIsPro) ?? false;
-      final cachedExpiry = prefs.getString(_keyCachedExpiryDate);
-
-      if (!cachedIsPro || cachedExpiry == null) {
-        debugPrint('📱 Cached status: not pro (offline)');
-        return false;
-      }
-
-      // Double-check expiry date hasn't passed
-      final expiryDate = DateTime.parse(cachedExpiry);
-      final isStillActive = DateTime.now().isBefore(expiryDate);
-
-      debugPrint('📱 Cached subscription: active=$isStillActive (expires: $expiryDate) [offline]');
-      return isStillActive;
-    } catch (e) {
-      debugPrint('❌ Error reading cached subscription: $e');
+      debugPrint('❌ Error checking local subscription: $e');
       return false;
     }
   }
