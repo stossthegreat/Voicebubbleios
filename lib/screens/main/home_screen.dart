@@ -683,48 +683,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   _pickAudioFile();
                 },
               ),
-              Divider(height: 1, color: Colors.white.withOpacity(0.1)),
-
-              // ════════════════════════════════════════════════════
-              // ACTIVATE BUBBLE - EXISTING (Android only)
-              // ════════════════════════════════════════════════════
-              if (Platform.isAndroid)
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: (_overlayEnabled ? const Color(0xFF10B981) : const Color(0xFF3B82F6)).withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      Icons.bubble_chart,
-                      color: _overlayEnabled ? const Color(0xFF10B981) : const Color(0xFF3B82F6),
-                    ),
-                  ),
-                  title: Text(
-                    _overlayEnabled ? 'Deactivate Voice Bubble' : 'Activate Voice Bubble',
-                    style: TextStyle(
-                      color: textColor,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                    ),
-                  ),
-                  subtitle: Text(
-                    _overlayEnabled
-                        ? 'Bubble is active - Tap to disable'
-                        : 'Floating record button',
-                    style: TextStyle(
-                      color: textColor.withOpacity(0.6),
-                      fontSize: 13,
-                    ),
-                  ),
-                  onTap: () async {
-                    Navigator.pop(context);
-                    await _toggleOverlay();
-                    await Future.delayed(const Duration(milliseconds: 500));
-                    await _checkOverlayStatus();
-                  },
-                ),
+              // Bubble option removed - preparing for iOS
 
               const SizedBox(height: 16),
             ],
