@@ -11,17 +11,10 @@ import UserNotifications
     // Firebase is initialized by Flutter's Firebase.initializeApp() in main.dart.
     // Do NOT call FirebaseApp.configure() here — it causes a duplicate-init crash.
 
-    // Request notification permissions
+    // Set notification delegate for foreground handling only.
+    // Permission is requested by Flutter's notification plugin — do NOT request here
+    // or it causes a race condition crash on iOS (two concurrent permission requests).
     UNUserNotificationCenter.current().delegate = self
-    UNUserNotificationCenter.current().requestAuthorization(
-      options: [.alert, .badge, .sound]
-    ) { granted, error in
-      if let error = error {
-        print("Notification auth error: \(error)")
-      }
-      print("Notification permission granted: \(granted)")
-    }
-    application.registerForRemoteNotifications()
 
     GeneratedPluginRegistrant.register(with: self)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
