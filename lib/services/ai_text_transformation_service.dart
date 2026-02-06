@@ -1,7 +1,5 @@
 import 'dart:convert';
-// Force re-commit to sync to GitHub
 import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 // ============================================================
 //        AI TEXT TRANSFORMATION SERVICE
@@ -17,7 +15,7 @@ class AITextTransformationService {
   factory AITextTransformationService() => _instance;
   AITextTransformationService._internal();
 
-  final String _baseUrl = dotenv.env['API_BASE_URL'] ?? 'https://voicebubble-backend.onrender.com';
+  final String _baseUrl = 'https://voicebubble-backend.onrender.com';
 
   Future<String> transformText({
     required String text,

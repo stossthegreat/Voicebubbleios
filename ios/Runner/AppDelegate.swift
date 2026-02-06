@@ -1,6 +1,5 @@
 import UIKit
 import Flutter
-import Firebase
 import UserNotifications
 
 @main
@@ -9,8 +8,8 @@ import UserNotifications
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    // Initialize Firebase
-    FirebaseApp.configure()
+    // Firebase is initialized by Flutter's Firebase.initializeApp() in main.dart.
+    // Do NOT call FirebaseApp.configure() here — it causes a duplicate-init crash.
 
     // Request notification permissions
     UNUserNotificationCenter.current().delegate = self
