@@ -41,7 +41,7 @@ class ReviewDialog extends StatelessWidget {
     } else {
       // Fallback: open store listing
       await _inAppReview.openStoreListing(
-        appStoreId: 'com.voicebubble.app', // Your app ID
+        appStoreId: 'com.example.voicebubble', // Your app ID
       );
     }
   }

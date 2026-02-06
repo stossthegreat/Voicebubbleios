@@ -1,4 +1,4 @@
-package com.voicebubble.app
+package com.example.voicebubble
 
 import android.app.Activity
 import android.app.ActivityManager

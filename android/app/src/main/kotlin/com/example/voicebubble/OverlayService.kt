@@ -1,4 +1,4 @@
-package com.voicebubble.app
+package com.example.voicebubble
 
 // IMPORTANT POLICY COMPLIANCE:
 // This service ONLY shows a floating bubble overlay using TYPE_APPLICATION_OVERLAY.
