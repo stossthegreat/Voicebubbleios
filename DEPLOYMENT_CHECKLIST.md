@@ -14,12 +14,12 @@ Use this checklist before deploying to production or releasing to app stores.
 ### Configuration
 - [ ] OpenAI API key configured (environment variable or .env)
 - [ ] App name correct: "VoiceBubble"
-- [ ] Bundle ID set: `com.voicebubble.app`
+- [ ] Bundle ID set: `com.example.voicebubble`
 - [ ] Version number updated in `pubspec.yaml`
 - [ ] Build numbers incremented
 
 ### Android
-- [ ] Application ID: `com.voicebubble.app`
+- [ ] Application ID: `com.example.voicebubble`
 - [ ] minSdk: 24 (Android 7.0)
 - [ ] targetSdk: 34 (Android 14)
 - [ ] Permissions declared in AndroidManifest.xml
@@ -30,7 +30,7 @@ Use this checklist before deploying to production or releasing to app stores.
 - [ ] Overlay service configured
 
 ### iOS
-- [ ] Bundle identifier: `com.voicebubble.app`
+- [ ] Bundle identifier: `com.example.voicebubble`
 - [ ] Deployment target: iOS 12.0+
 - [ ] Info.plist permissions configured
 - [ ] Code signing certificates installed

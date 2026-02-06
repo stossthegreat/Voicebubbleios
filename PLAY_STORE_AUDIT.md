@@ -162,7 +162,7 @@
 
 ### App Content
 - [x] **App Name:** VoiceBubble
-- [x] **Package Name:** com.voicebubble.app
+- [x] **Package Name:** com.example.voicebubble
 - [x] **Version:** 1.0.0 (Build 2)
 - [x] **Short Description:** AI-powered voice-to-text rewriting app
 - [x] **Full Description:** (Need to write)

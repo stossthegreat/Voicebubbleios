@@ -35,7 +35,7 @@ class ReviewDialog extends StatelessWidget {
 
   Future<void> _openReview() async {
     // Replace with your actual app store URLs
-    const androidUrl = 'https://play.google.com/store/apps/details?id=com.voicebubble.app';
+    const androidUrl = 'https://play.google.com/store/apps/details?id=com.example.voicebubble';
     const iosUrl = 'https://apps.apple.com/app/voicebubble/id123456789';
     
     // Try to open the appropriate store

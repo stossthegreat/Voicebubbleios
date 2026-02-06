@@ -11,7 +11,7 @@ plugins {
 }
 
 android {
-    namespace = "com.voicebubble.app"
+    namespace = "com.example.voicebubble"
     compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
@@ -27,7 +27,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.voicebubble.app"
+        applicationId = "com.example.voicebubble"
         minSdk = 24
         targetSdk = 36
         versionCode = 13

@@ -94,7 +94,7 @@ The floating overlay requires the `SYSTEM_ALERT_WINDOW` permission. This is auto
 
 #### Build Configuration
 Located in `android/app/build.gradle.kts`:
-- Application ID: `com.voicebubble.app`
+- Application ID: `com.example.voicebubble`
 - Min SDK: 24 (Android 7.0)
 - Target SDK: 34 (Android 14)
 
@@ -126,7 +126,7 @@ Configured in `ios/Runner/Info.plist`:
 - Speech recognition: `NSSpeechRecognitionUsageDescription`
 
 #### Bundle Identifier
-Update in Xcode: `com.voicebubble.app`
+Update in Xcode: `com.example.voicebubble`
 
 #### Build
 

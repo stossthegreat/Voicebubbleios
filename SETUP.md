@@ -95,7 +95,7 @@ flutter build appbundle --release
 ### 1. Apple Developer Account
 
 - Enroll in Apple Developer Program ($99/year)
-- Create App ID: `com.voicebubble.app`
+- Create App ID: `com.example.voicebubble`
 - Create provisioning profiles
 
 ### 2. Xcode Configuration
@@ -194,7 +194,7 @@ keytool -list -v -keystore android/app/voicebubble-release.jks \
 ### iOS
 
 1. In Google Cloud Console, add iOS app
-2. Enter Bundle ID: `com.voicebubble.app`
+2. Enter Bundle ID: `com.example.voicebubble`
 3. Download `GoogleService-Info.plist`
 4. Add to `ios/Runner/` in Xcode
 

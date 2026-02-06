@@ -87,7 +87,7 @@
 1. Go to [Firebase Console](https://console.firebase.google.com/)
 2. Create new project: "VoiceBubble"
 3. Add Android app:
-   - Package name: `com.voicebubble.app`
+   - Package name: `com.example.voicebubble`
    - Download `google-services.json`
    - Place in `android/app/`
 4. Enable Authentication:

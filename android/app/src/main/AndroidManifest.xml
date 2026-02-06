@@ -134,7 +134,7 @@
         
         <!-- Overlay Service for floating bubble -->
         <service
-            android:name="com.voicebubble.app.OverlayService"
+            android:name="com.example.voicebubble.OverlayService"
             android:exported="false"
             android:foregroundServiceType="specialUse">
             <property
@@ -144,7 +144,7 @@
         
         <!-- Boot Receiver to restart overlay service after reboot -->
         <receiver
-            android:name="com.voicebubble.app.BootReceiver"
+            android:name="com.example.voicebubble.BootReceiver"
             android:exported="true"
             android:enabled="true">
             <intent-filter>

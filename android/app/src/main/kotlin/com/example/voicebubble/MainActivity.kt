@@ -1,4 +1,4 @@
-package com.voicebubble.app
+package com.example.voicebubble
 
 import android.content.BroadcastReceiver
 import android.content.Context

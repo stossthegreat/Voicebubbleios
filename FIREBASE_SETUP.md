@@ -24,7 +24,7 @@ Without Firebase, users **CANNOT** sign in/sign up and you **CANNOT** track tria
 
 2. **Android package name:**
    ```
-   com.voicebubble.app
+   com.example.voicebubble
    ```
 
 3. **App nickname (optional):** `VoiceBubble Android`
@@ -179,7 +179,7 @@ android/
 ### ✅ Checklist
 
 - [ ] Firebase project created: `VoiceBubble`
-- [ ] Android app added with package: `com.voicebubble.app`
+- [ ] Android app added with package: `com.example.voicebubble`
 - [ ] SHA-1 certificate added to Firebase
 - [ ] `google-services.json` downloaded and placed in `android/app/`
 - [ ] Email/Password auth enabled in Firebase Console

@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:343007612090:android:e71dd80abe09b4dc664683",
         "android_client_info": {
-          "package_name": "com.voicebubble.app"
+          "package_name": "com.example.voicebubble"
         }
       },
       "oauth_client": [
@@ -17,7 +17,7 @@
           "client_id": "343007612090-3bo7v0jneftd8gnpkmrrkcd2q20uc8av.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.voicebubble.app",
+            "package_name": "com.example.voicebubble",
             "certificate_hash": "c4ac8aa6f212e61f9b8fb20fec3c181e7bd0a1e3"
           }
         },

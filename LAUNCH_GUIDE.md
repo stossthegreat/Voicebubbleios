@@ -228,6 +228,6 @@ keytool -list -v -keystore android/app/keystore/voicebubble-release.jks -alias v
 
 **Last Updated:** December 2024  
 **App Version:** 1.0.0  
-**Package:** com.voicebubble.app
+**Package:** com.example.voicebubble
 
 
