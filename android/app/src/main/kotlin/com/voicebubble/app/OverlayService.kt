@@ -37,6 +37,7 @@ import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.ImageView
 import androidx.core.app.NotificationCompat
+import com.example.voicebubble.R
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.engine.dart.DartExecutor
