@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -21,32 +23,62 @@ import 'screens/import/import_content_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialize Firebase - REQUIRED for App Store
-  await Firebase.initializeApp();
-  debugPrint('✅ Firebase initialized successfully');
-  
-  // Initialize Firebase Analytics
-  final analytics = AnalyticsService();
-  debugPrint('✅ Firebase Analytics initialized successfully');
-  
-  // Initialize Hive storage - CRITICAL FOR SAVING!
-  await StorageService.initialize();
-  debugPrint('✅ Hive storage initialized successfully');
 
-  // Initialize reminder system
-  await ReminderManager().initialize();
-  debugPrint('✅ Reminder system initialized');
-  
-  // Initialize In-App Purchase system
-  await SubscriptionService().initialize();
-  debugPrint('✅ Subscription service initialized');
+  // Catch Flutter framework errors
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    debugPrint('Flutter error: ${details.exception}');
+  };
 
-  // Initialize share handler for receiving shared files from other apps
-  ShareHandlerService().initialize();
-  debugPrint('✅ Share handler initialized');
+  // Run app inside a guarded zone to catch async errors
+  runZonedGuarded(() async {
+    try {
+      await Firebase.initializeApp();
+      debugPrint('Firebase initialized successfully');
+    } catch (e) {
+      debugPrint('Firebase initialization failed: $e');
+    }
 
-  runApp(const MyApp());
+    try {
+      final analytics = AnalyticsService();
+      debugPrint('Firebase Analytics initialized successfully');
+    } catch (e) {
+      debugPrint('Analytics initialization failed: $e');
+    }
+
+    try {
+      await StorageService.initialize();
+      debugPrint('Hive storage initialized successfully');
+    } catch (e) {
+      debugPrint('Hive storage initialization failed: $e');
+    }
+
+    try {
+      await ReminderManager().initialize();
+      debugPrint('Reminder system initialized');
+    } catch (e) {
+      debugPrint('Reminder initialization failed: $e');
+    }
+
+    try {
+      await SubscriptionService().initialize();
+      debugPrint('Subscription service initialized');
+    } catch (e) {
+      debugPrint('Subscription initialization failed: $e');
+    }
+
+    try {
+      ShareHandlerService().initialize();
+      debugPrint('Share handler initialized');
+    } catch (e) {
+      debugPrint('Share handler initialization failed: $e');
+    }
+
+    runApp(const MyApp());
+  }, (error, stackTrace) {
+    debugPrint('Uncaught error: $error');
+    debugPrint('Stack trace: $stackTrace');
+  });
 }
 
 class MyApp extends StatefulWidget {
