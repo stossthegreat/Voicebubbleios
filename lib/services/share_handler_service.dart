@@ -49,11 +49,15 @@ class ShareHandlerService {
   }
 
   Future<void> _checkInitialShares() async {
-    // Check for shared media files (includes text in newer API)
-    final initialMedia = await ReceiveSharingIntent.instance.getInitialMedia();
-    if (initialMedia.isNotEmpty) {
-      debugPrint('App opened with ${initialMedia.length} shared file(s)');
-      _handleSharedMedia(initialMedia);
+    try {
+      // Check for shared media files (includes text in newer API)
+      final initialMedia = await ReceiveSharingIntent.instance.getInitialMedia();
+      if (initialMedia.isNotEmpty) {
+        debugPrint('App opened with ${initialMedia.length} shared file(s)');
+        _handleSharedMedia(initialMedia);
+      }
+    } catch (e) {
+      debugPrint('Error checking initial shares: $e');
     }
   }
 
