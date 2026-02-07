@@ -61,6 +61,7 @@ class NotificationService {
       );
       debugPrint('✅ Notification plugin initialized');
 
+      if (Platform.isAndroid) {
       // Get Android plugin for platform-specific setup
       final androidPlugin = _notifications
           .resolvePlatformSpecificImplementation<
@@ -89,6 +90,7 @@ class NotificationService {
         );
         debugPrint('✅ Notification channel created');
       }
+      } // end Platform.isAndroid
 
       _initialized = true;
       debugPrint('🎉 NotificationService fully initialized!');
