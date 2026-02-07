@@ -55,23 +55,23 @@ void main() async {
 
     try {
       await ReminderManager().initialize();
-      debugPrint('Reminder system initialized');
+      debugPrint('✅ Reminder system initialized');
     } catch (e) {
-      debugPrint('Reminder initialization failed: $e');
+      debugPrint('⚠️ Reminder init failed (non-fatal): $e');
     }
 
     try {
       await SubscriptionService().initialize();
-      debugPrint('Subscription service initialized');
+      debugPrint('✅ Subscription service initialized');
     } catch (e) {
-      debugPrint('Subscription initialization failed: $e');
+      debugPrint('⚠️ Subscription init failed (non-fatal): $e');
     }
 
     try {
       ShareHandlerService().initialize();
-      debugPrint('Share handler initialized');
+      debugPrint('✅ Share handler initialized');
     } catch (e) {
-      debugPrint('Share handler initialization failed: $e');
+      debugPrint('⚠️ Share handler init failed (non-fatal): $e');
     }
 
     runApp(const MyApp());
