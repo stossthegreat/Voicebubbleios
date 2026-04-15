@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../services/analytics_service.dart';
 import '../../services/subscription_service.dart';
 
@@ -169,11 +170,11 @@ class _PaywallScreenState extends State<PaywallScreen> {
                 ),
               ),
 
-              const Spacer(flex: 1),
+              const SizedBox(height: 4),
 
               // Logo
-              Image.asset('assets/logo.png', width: 68, height: 68),
-              const SizedBox(height: 16),
+              Image.asset('assets/logo.png', width: 64, height: 64),
+              const SizedBox(height: 14),
 
               // Title
               const Text(
@@ -202,14 +203,14 @@ class _PaywallScreenState extends State<PaywallScreen> {
                 ],
               ),
 
-              const SizedBox(height: 28),
+              const SizedBox(height: 22),
 
               // 3 feature bullets — bigger text
               _feature(Icons.mic_none_rounded, 'Unlimited voice-to-text transcriptions'),
               _feature(Icons.auto_awesome_rounded, 'Unlimited AI rewrites'),
               _feature(Icons.upload_file_rounded, 'Upload audio files for transcription'),
 
-              const SizedBox(height: 28),
+              const SizedBox(height: 22),
 
               // Two price cards — IDENTICAL size (height 100). No outer
               // padding: the floating "7-DAY TRIAL" badge is a Positioned
@@ -281,25 +282,95 @@ class _PaywallScreenState extends State<PaywallScreen> {
                 style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.3)),
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
 
-              // Restore + legal
+              // Restore (clearly tappable, before legal block)
               GestureDetector(
                 onTap: _isLoading || _isPurchasing ? null : _handleRestore,
-                child: Text('Restore Purchase', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.white.withOpacity(0.35))),
+                child: Text(
+                  'Restore Purchase',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white.withOpacity(0.45),
+                    decoration: TextDecoration.underline,
+                    decorationColor: Colors.white.withOpacity(0.25),
+                  ),
+                ),
               ),
-              const SizedBox(height: 6),
-              Text(
-                'Subscription auto-renews. Cancel anytime in settings.',
-                style: TextStyle(fontSize: 10, color: Colors.white.withOpacity(0.2)),
-                textAlign: TextAlign.center,
+
+              const SizedBox(height: 12),
+
+              // ──────────────────────────────────────────────────────
+              // App Store required disclosures (clearly visible)
+              //   • 7-day free trial when yearly is selected
+              //   • Auto-renew disclaimer
+              //   • Terms of Use + Privacy Policy links
+              // ──────────────────────────────────────────────────────
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Text(
+                  _isYearlySelected
+                      ? '7-day free trial, then ${yearlyPrice}/year. Subscription auto-renews unless cancelled at least 24 hours before the end of the current period. Manage or cancel anytime in your Apple ID settings.'
+                      : '${monthlyPrice}/month. Subscription auto-renews unless cancelled at least 24 hours before the end of the current period. Manage or cancel anytime in your Apple ID settings.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 10,
+                    height: 1.35,
+                    color: Colors.white.withOpacity(0.45),
+                  ),
+                ),
               ),
-              const Spacer(flex: 1),
+              const SizedBox(height: 8),
+              // Terms + Privacy links
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  GestureDetector(
+                    onTap: () => _openUrl('https://voicebubble.app/terms'),
+                    child: Text(
+                      'Terms of Use',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white.withOpacity(0.7),
+                        decoration: TextDecoration.underline,
+                        decorationColor: Colors.white.withOpacity(0.4),
+                      ),
+                    ),
+                  ),
+                  Text(
+                    '   •   ',
+                    style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.4)),
+                  ),
+                  GestureDetector(
+                    onTap: () => _openUrl('https://voicebubble.app/privacy'),
+                    child: Text(
+                      'Privacy Policy',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white.withOpacity(0.7),
+                        decoration: TextDecoration.underline,
+                        decorationColor: Colors.white.withOpacity(0.4),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
             ],
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _openUrl(String url) async {
+    try {
+      final uri = Uri.parse(url);
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {}
   }
 
   /// Price card — EXACT old size (height 100, vertical padding 14). Both
