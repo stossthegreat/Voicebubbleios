@@ -1,14 +1,14 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 
 class OverlayService {
   static bool _isOverlayActive = false;
+  
   static bool get isOverlayActive => _isOverlayActive;
-
+  
+  /// Request overlay permission (Android only)
   static Future<bool> requestOverlayPermission() async {
-    if (!Platform.isAndroid) return false;
     try {
       return await FlutterOverlayWindow.requestPermission() ?? false;
     } catch (e) {
@@ -16,9 +16,9 @@ class OverlayService {
       return false;
     }
   }
-
+  
+  /// Check if overlay permission is granted
   static Future<bool> checkOverlayPermission() async {
-    if (!Platform.isAndroid) return false;
     try {
       return await FlutterOverlayWindow.isPermissionGranted() ?? false;
     } catch (e) {
@@ -26,36 +26,64 @@ class OverlayService {
       return false;
     }
   }
-
+  
+  /// Show the floating overlay bubble
   static Future<void> showOverlay() async {
-    if (!Platform.isAndroid) return;
     try {
       final hasPermission = await checkOverlayPermission();
-      if (!hasPermission) return;
+      if (!hasPermission) {
+        debugPrint('❌ Overlay permission not granted');
+        return;
+      }
+      
+      debugPrint('🚀 Starting overlay...');
+      
       await FlutterOverlayWindow.showOverlay(
-        enableDrag: true, overlayTitle: "VoiceBubble", overlayContent: 'Tap to record',
-        flag: OverlayFlag.defaultFlag, visibility: NotificationVisibility.visibilityPublic,
-        positionGravity: PositionGravity.none, width: WindowSize.matchParent, height: WindowSize.matchParent,
+        enableDrag: true,
+        overlayTitle: "VoiceBubble",
+        overlayContent: 'Tap to record',
+        flag: OverlayFlag.defaultFlag,
+        visibility: NotificationVisibility.visibilityPublic,
+        positionGravity: PositionGravity.none,
+        width: WindowSize.matchParent,
+        height: WindowSize.matchParent,
       );
+      
       _isOverlayActive = true;
-    } catch (e) { debugPrint('Error showing overlay: $e'); }
+      debugPrint('✅ Overlay shown successfully');
+    } catch (e) {
+      debugPrint('❌ Error showing overlay: $e');
+      debugPrint('❌ Stack trace: ${StackTrace.current}');
+    }
   }
-
+  
+  /// Close the floating overlay
   static Future<void> closeOverlay() async {
-    if (!Platform.isAndroid) return;
-    try { await FlutterOverlayWindow.closeOverlay(); _isOverlayActive = false; }
-    catch (e) { debugPrint('Error closing overlay: $e'); }
+    try {
+      await FlutterOverlayWindow.closeOverlay();
+      _isOverlayActive = false;
+    } catch (e) {
+      debugPrint('Error closing overlay: $e');
+    }
   }
-
+  
+  /// Share data with overlay
   static Future<void> shareToOverlay(Map<String, dynamic> data) async {
-    if (!Platform.isAndroid) return;
-    try { await FlutterOverlayWindow.shareData(data); }
-    catch (e) { debugPrint('Error sharing data to overlay: $e'); }
+    try {
+      await FlutterOverlayWindow.shareData(data);
+    } catch (e) {
+      debugPrint('Error sharing data to overlay: $e');
+    }
   }
-
+  
+  /// Check if overlay is currently active
   static Future<bool> isActive() async {
-    if (!Platform.isAndroid) return false;
-    try { return await FlutterOverlayWindow.isActive() ?? false; }
-    catch (e) { debugPrint('Error checking overlay status: $e'); return false; }
+    try {
+      return await FlutterOverlayWindow.isActive() ?? false;
+    } catch (e) {
+      debugPrint('Error checking overlay status: $e');
+      return false;
+    }
   }
 }
+

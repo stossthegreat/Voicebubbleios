@@ -11,6 +11,7 @@ import '../services/subscription_service.dart';
 import '../services/tag_service.dart';
 import '../services/language_service.dart';
 import '../services/reminder_manager.dart';
+import '../services/analytics_service.dart';
 
 class AppStateProvider extends ChangeNotifier {
   String _transcription = '';
@@ -297,6 +298,11 @@ ContinueContext? get continueContext => _continueContext;
 
           // Save to Hive — use updateRecording to find the CORRECT Hive key
           await updateRecording(updatedItem);
+
+          AnalyticsService().logCustomEvent(
+            eventName: 'tag_assigned',
+            parameters: {'total_tags_on_item': updatedItem.tags.length},
+          );
 
           debugPrint('🏷️ Added tag $tagId to recording $recordingId');
         }

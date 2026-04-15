@@ -31,6 +31,7 @@ import '../../widgets/outcome_chip.dart';
 import '../../widgets/tag_chip.dart';
 import '../../widgets/tag_selection_dialog.dart';
 import '../../services/reminder_manager.dart';
+import '../../services/analytics_service.dart';
 import '../../widgets/rich_text_editor.dart';
 
 class OutcomeCreationScreen extends StatefulWidget {
@@ -275,6 +276,18 @@ class _OutcomeCreationScreenState extends State<OutcomeCreationScreen> {
         );
 
         await appState.saveRecording(newItem);
+
+        // Track outcome document creation
+        AnalyticsService().logCustomEvent(
+          eventName: 'document_created',
+          parameters: {
+            'document_type': 'outcome',
+            'source': 'outcomes_tab',
+            'creation_method': widget.contentType,
+            'outcome_type': _selectedOutcomeType?.toStorageString() ?? 'none',
+            'has_reminder': _reminderDateTime != null,
+          },
+        );
 
         // Schedule reminder if set
         if (_reminderDateTime != null) {

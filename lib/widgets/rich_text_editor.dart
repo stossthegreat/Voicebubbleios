@@ -6,14 +6,21 @@ import 'package:flutter/services.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:uuid/uuid.dart';
 import 'package:record/record.dart';
 import 'package:just_audio/just_audio.dart';
+import '../providers/app_state_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/refinement_service.dart';
+import '../services/ai_service.dart';
 import '../services/feature_gate.dart';
+import '../services/preset_favorites_service.dart';
 import '../models/outcome_type.dart';
+import '../models/preset.dart';
 import '../constants/background_assets.dart';
+import '../constants/presets.dart';
 import './outcome_chip.dart';
 import './background_picker.dart';
 
@@ -72,7 +79,6 @@ class _ResizableImage extends StatefulWidget {
 }
 
 class _ResizableImageState extends State<_ResizableImage> {
-  double _height = 200;
   bool _isExpanded = false;
 
   @override
@@ -86,39 +92,30 @@ class _ResizableImageState extends State<_ResizableImage> {
             onTap: () {
               setState(() {
                 _isExpanded = !_isExpanded;
-                _height = _isExpanded ? 400 : 200;
               });
             },
             child: ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: Image.file(
-                File(widget.imageUrl),
-                height: _height,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    height: _height,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(8),
+              child: _isExpanded
+                  // EXPANDED: Full image, natural aspect ratio, no cropping
+                  ? Image.file(
+                      File(widget.imageUrl),
+                      width: double.infinity,
+                      fit: BoxFit.fitWidth,
+                      errorBuilder: (context, error, stackTrace) {
+                        return _buildErrorWidget();
+                      },
+                    )
+                  // COLLAPSED: Fixed height preview with cover crop
+                  : Image.file(
+                      File(widget.imageUrl),
+                      height: 200,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return _buildErrorWidget();
+                      },
                     ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.broken_image, color: Colors.red),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Image not found: ${widget.imageUrl.split('/').last}',
-                            style: const TextStyle(color: Colors.red, fontSize: 12),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
             ),
           ),
           const SizedBox(height: 4),
@@ -135,6 +132,29 @@ class _ResizableImageState extends State<_ResizableImage> {
                 style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 11),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorWidget() {
+    return Container(
+      height: 200,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.broken_image, color: Colors.red),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Image not found: ${widget.imageUrl.split('/').last}',
+              style: const TextStyle(color: Colors.red, fontSize: 12),
+            ),
           ),
         ],
       ),
@@ -371,6 +391,9 @@ class RichTextEditor extends StatefulWidget {
   final String? backgroundId;
   final Function(String?)? onBackgroundChanged;
 
+  // Continue recording callback
+  final VoidCallback? onContinuePressed;
+
   // Content type for auto-initialization (e.g., 'todo' to auto-add checkboxes)
   final String? contentType;
 
@@ -394,6 +417,7 @@ class RichTextEditor extends StatefulWidget {
     this.onImageChanged,
     this.backgroundId,
     this.onBackgroundChanged,
+    this.onContinuePressed,
     this.showTopToolbar = true,
     this.isPinned = false,
     this.onPinChanged,
@@ -414,6 +438,10 @@ class RichTextEditorState extends State<RichTextEditor> with TickerProviderState
   late Animation<double> _saveIndicatorAnimation;
   int _wordCount = 0;
   int _characterCount = 0;
+
+  // First-open bubble — shows once, hints that Rewrite = magic
+  static const String _firstOpenBubbleKey = 'editor_first_open_bubble_dismissed';
+  bool _showFirstOpenBubble = false;
   bool _hasUnsavedChanges = false;
   bool _showSaved = false;
   
@@ -435,6 +463,7 @@ class RichTextEditorState extends State<RichTextEditor> with TickerProviderState
   bool _isPinned = false;
   bool _isRecordingVoiceNote = false;
   String? _currentRecordingPath;
+  bool _isImageExpanded = false;
   final AudioRecorder _audioRecorder = AudioRecorder();
 
   @override
@@ -457,6 +486,40 @@ class RichTextEditorState extends State<RichTextEditor> with TickerProviderState
     _saveIndicatorAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _saveIndicatorController, curve: Curves.easeInOut),
     );
+
+    // Immediate save for new items that have plain text but no formatted content
+    // This ensures the delta JSON is persisted right away
+    if (widget.initialFormattedContent == null || widget.initialFormattedContent!.isEmpty) {
+      if (widget.initialPlainText != null && widget.initialPlainText!.isNotEmpty) {
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) _saveContent();
+        });
+      }
+    }
+
+    _maybeShowFirstOpenBubble();
+  }
+
+  Future<void> _maybeShowFirstOpenBubble() async {
+    if (widget.readOnly) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final dismissed = prefs.getBool(_firstOpenBubbleKey) ?? false;
+      if (!dismissed && mounted) {
+        // Small delay so it appears after the editor settles in
+        await Future.delayed(const Duration(milliseconds: 600));
+        if (mounted) setState(() => _showFirstOpenBubble = true);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _dismissFirstOpenBubble() async {
+    if (!_showFirstOpenBubble) return;
+    setState(() => _showFirstOpenBubble = false);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_firstOpenBubbleKey, true);
+    } catch (_) {}
   }
 
   void _initializeController() {
@@ -598,31 +661,51 @@ class RichTextEditorState extends State<RichTextEditor> with TickerProviderState
   }
 
   Future<void> _showAIMenu() async {
-    if (_selectedText.isEmpty) return;
-    final canUse = await FeatureGate.canUseHighlightAI(context);
-    if (!canUse) return;
+    // Use selected text if available, otherwise use full document
+    final textToRewrite = _hasSelection
+        ? _selectedText
+        : _controller.document.toPlainText().trim();
+
+    if (textToRewrite.isEmpty) return;
+
+    // Dismiss the first-open hint when user actually engages with Rewrite
+    _dismissFirstOpenBubble();
+
     HapticFeedback.mediumImpact();
 
     if (!mounted) return;
-    showDialog(
+
+    // Capture the provider here so the sheet can always read the latest
+    // language at the moment the user taps a preset — EXACTLY like the old
+    // ResultScreen._generateRewrite() did: appState.selectedLanguage.code
+    // read fresh at AI-call time (not at sheet-open time).
+    final appStateProvider = Provider.of<AppStateProvider>(context, listen: false);
+
+    // Show full AI presets bottom sheet (Letterly-style Rewrite)
+    showModalBottomSheet(
       context: context,
-      barrierColor: Colors.transparent, // No dark overlay
-      builder: (ctx) => Align(
-        alignment: Alignment.bottomRight,
-        child: Container(
-          margin: const EdgeInsets.only(right: 16, bottom: 120),
-          width: 140, // SMALL COMPACT WIDTH
-          child: Material(
-            color: Colors.transparent,
-            child: _AIMenuSheet(
-              selectedText: _selectedText,
-              onResult: (newText) {
-                Navigator.pop(ctx);
-                _replaceSelection(newText);
-              },
-            ),
-          ),
-        ),
+      backgroundColor: const Color(0xFF0A0A0A),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => _RewritePresetSheet(
+        textToRewrite: textToRewrite,
+        appState: appStateProvider,
+        onResult: (newText) {
+          Navigator.pop(ctx);
+          if (_hasSelection) {
+            _replaceSelection(newText);
+          } else {
+            // Replace full document
+            final length = _controller.document.length;
+            _controller.replaceText(0, length - 1, newText, null);
+            setState(() {
+              _hasSelection = false;
+              _selectedText = '';
+            });
+          }
+        },
       ),
     );
   }
@@ -1063,6 +1146,67 @@ class RichTextEditorState extends State<RichTextEditor> with TickerProviderState
     );
   }
 
+  void _showEditorOptionsMenu() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1A1A1A),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 8),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.add_circle_outline, color: Color(0xFF3B82F6)),
+                title: const Text('Add Content', style: TextStyle(color: Colors.white)),
+                subtitle: Text('Image, voice note, checkbox', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showAddContentMenu();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.palette_outlined, color: Color(0xFF8B5CF6)),
+                title: const Text('Change Background', style: TextStyle(color: Colors.white)),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showBackgroundPicker();
+                },
+              ),
+              ListTile(
+                leading: Icon(
+                  _isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                  color: _isPinned ? const Color(0xFFF59E0B) : Colors.white70,
+                ),
+                title: Text(
+                  _isPinned ? 'Unpin Note' : 'Pin Note',
+                  style: const TextStyle(color: Colors.white),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _togglePin();
+                },
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   void _showBackgroundPicker() {
     showModalBottomSheet(
       context: context,
@@ -1181,44 +1325,6 @@ class RichTextEditorState extends State<RichTextEditor> with TickerProviderState
           children: [
             Column(
               children: [
-                // Quill formatting toolbar (Row 1) - AT TOP for maximum space
-                if (!widget.readOnly)
-                  Container(
-                    color: surfaceColor,
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    child: quill.QuillSimpleToolbar(
-                      configurations: quill.QuillSimpleToolbarConfigurations(
-                        controller: _controller,
-                        multiRowsDisplay: false,
-                        // Enable ALL toolbar options!
-                        showBoldButton: true,
-                        showItalicButton: true,
-                        showUnderLineButton: true,
-                        showStrikeThrough: true,
-                        showColorButton: true,
-                        showBackgroundColorButton: true,
-                        showListNumbers: true,
-                        showListBullets: true,
-                        showListCheck: true,
-                        showCodeBlock: true,
-                        showQuote: true,
-                        showIndent: true,
-                        showLink: true,
-                        showUndo: true,
-                        showRedo: true,
-                        showDirection: true,
-                        showSearchButton: true,
-                        showSubscript: true,
-                        showSuperscript: true,
-                        showSmallButton: true,
-                        showInlineCode: true,
-                        showClearFormat: true,
-                        showHeaderStyle: true,
-                        showAlignmentButtons: true,
-                      ),
-                    ),
-                  ),
-                
                 // Outcome chips section (for outcomes tab) - FIXED
                 if (widget.showOutcomeChips)
                   Container(
@@ -1376,8 +1482,8 @@ class RichTextEditorState extends State<RichTextEditor> with TickerProviderState
                       // Content layer (scrollable)
                       SingleChildScrollView(
                         child: Container(
-                          // BACK TO ORIGINAL GREY - NO BLACK BACKGROUND BULLSHIT
-                          color: widget.backgroundId == null ? const Color(0xFF1E1E1E) : Colors.transparent,
+                          // Clean navy background - matches app
+                          color: widget.backgroundId == null ? const Color(0xFF0D0D1A) : Colors.transparent,
                           padding: const EdgeInsets.all(16),
                           constraints: BoxConstraints(
                             minHeight: MediaQuery.of(context).size.height - 100,
@@ -1435,14 +1541,42 @@ class RichTextEditorState extends State<RichTextEditor> with TickerProviderState
                                       ),
                                       if (_imagePath != null && File(_imagePath!).existsSync()) ...[
                                         const SizedBox(height: 8),
-                                        ClipRRect(
-                                          borderRadius: BorderRadius.circular(8),
-                                          child: Image.file(
-                                            File(_imagePath!),
-                                            width: double.infinity,
-                                            height: 200,
-                                            fit: BoxFit.cover,
+                                        GestureDetector(
+                                          onTap: () {
+                                            setState(() {
+                                              _isImageExpanded = !_isImageExpanded;
+                                            });
+                                          },
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(8),
+                                            child: _isImageExpanded
+                                                ? Image.file(
+                                                    File(_imagePath!),
+                                                    width: double.infinity,
+                                                    fit: BoxFit.fitWidth,
+                                                  )
+                                                : Image.file(
+                                                    File(_imagePath!),
+                                                    width: double.infinity,
+                                                    height: 200,
+                                                    fit: BoxFit.cover,
+                                                  ),
                                           ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              _isImageExpanded ? Icons.unfold_less : Icons.unfold_more,
+                                              color: Colors.white54,
+                                              size: 16,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              _isImageExpanded ? 'Tap to minimize' : 'Tap to expand',
+                                              style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 11),
+                                            ),
+                                          ],
                                         ),
                                       ],
                                     ],
@@ -1460,10 +1594,10 @@ class RichTextEditorState extends State<RichTextEditor> with TickerProviderState
                                   focusNode: _focusNode,
                                   configurations: quill.QuillEditorConfigurations(
                                     controller: _controller,
-                                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 400),
+                                    padding: const EdgeInsets.fromLTRB(4, 8, 4, 400),
                                     autoFocus: !widget.readOnly,
                                     expands: false,
-                                    placeholder: 'Start typing...',
+                                    placeholder: 'Start writing...',
                                     readOnly: widget.readOnly,
                                     scrollPhysics: const ClampingScrollPhysics(),
                                     embedBuilders: [
@@ -1471,13 +1605,26 @@ class RichTextEditorState extends State<RichTextEditor> with TickerProviderState
                                       CustomAudioEmbedBuilder(),
                                     ],
                                     customStyles: quill.DefaultStyles(
+                                      h1: quill.DefaultTextBlockStyle(
+                                        TextStyle(
+                                          color: widget.backgroundId != null && BackgroundAssets.findById(widget.backgroundId!)?.isPaper == true
+                                              ? Colors.black
+                                              : Colors.white,
+                                          fontSize: 28,
+                                          fontWeight: FontWeight.bold,
+                                          height: 1.3,
+                                        ),
+                                        const quill.VerticalSpacing(16, 8),
+                                        const quill.VerticalSpacing(0, 0),
+                                        null,
+                                      ),
                                       paragraph: quill.DefaultTextBlockStyle(
                                         TextStyle(
                                           color: widget.backgroundId != null && BackgroundAssets.findById(widget.backgroundId!)?.isPaper == true
-                                              ? Colors.black // Black text on paper
-                                              : Colors.white, // White text on dark/images
-                                          fontSize: 16,
-                                          height: 1.6,
+                                              ? Colors.black
+                                              : Colors.white.withOpacity(0.9),
+                                          fontSize: 17,
+                                          height: 1.7,
                                         ),
                                         const quill.VerticalSpacing(0, 0),
                                         const quill.VerticalSpacing(0, 0),
@@ -1486,9 +1633,9 @@ class RichTextEditorState extends State<RichTextEditor> with TickerProviderState
                                       placeHolder: quill.DefaultTextBlockStyle(
                                         TextStyle(
                                           color: widget.backgroundId != null && BackgroundAssets.findById(widget.backgroundId!)?.isPaper == true
-                                              ? Colors.black.withOpacity(0.3) // Black placeholder on paper
-                                              : Colors.white.withOpacity(0.3), // White placeholder on dark/images
-                                          fontSize: 16,
+                                              ? Colors.black.withOpacity(0.3)
+                                              : Colors.white.withOpacity(0.25),
+                                          fontSize: 17,
                                         ),
                                         const quill.VerticalSpacing(0, 0),
                                         const quill.VerticalSpacing(0, 0),
@@ -1506,73 +1653,150 @@ class RichTextEditorState extends State<RichTextEditor> with TickerProviderState
                   ),
                 ),
 
-                // Status bar with action buttons at bottom left
+                // ═══════════════════════════════════════════
+                // LETTERLY-STYLE BOTTOM BAR
+                // ═══════════════════════════════════════════
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                   decoration: BoxDecoration(
-                    color: surfaceColor,
-                    border: Border(top: BorderSide(color: Colors.white.withOpacity(0.1))),
+                    color: const Color(0xFF0D0D1A),
+                    border: Border(top: BorderSide(color: Colors.white.withOpacity(0.06))),
                   ),
-                  child: Row(
-                    children: [
-                      // Action buttons at BOTTOM LEFT (if showTopToolbar)
-                      if (widget.showTopToolbar && !widget.readOnly) ...[
-                        // Pin button
-                        IconButton(
-                          icon: Icon(
-                            _isPinned ? Icons.push_pin : Icons.push_pin_outlined,
-                            color: _isPinned ? const Color(0xFFF59E0B) : Colors.white70,
-                            size: 20,
+                  child: SafeArea(
+                    top: false,
+                    child: Row(
+                      children: [
+                        // Add content button (left)
+                        if (widget.showTopToolbar && !widget.readOnly)
+                          _BottomBarIcon(
+                            icon: Icons.add,
+                            color: Colors.white54,
+                            onTap: _showAddContentMenu,
                           ),
-                          onPressed: _togglePin,
-                          tooltip: 'Pin',
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                        ),
-                        const SizedBox(width: 12),
-                        // Single "+" button to add content
-                        IconButton(
-                          icon: const Icon(Icons.add_circle_outline, color: Colors.white70, size: 20),
-                          onPressed: _showAddContentMenu,
-                          tooltip: 'Add content',
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                        ),
-                        const SizedBox(width: 12),
-                        // Background button
-                        IconButton(
-                          icon: const Icon(Icons.palette_outlined, color: Colors.white70, size: 20),
-                          onPressed: _showBackgroundPicker,
-                          tooltip: 'Change background',
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                        ),
-                        const SizedBox(width: 16),
-                      ],
+                        if (widget.showTopToolbar && !widget.readOnly)
+                          const SizedBox(width: 8),
 
-                      // Word count - MOVED HERE
-                      Text(
-                        '$_wordCount • $_characterCount',
-                        style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12),
-                      ),
-                      const Spacer(),
-                      // FAB clearance - prevent overlap with mic button
-                      const SizedBox(width: 60),
-                    ],
+                        // Pin button
+                        if (widget.showTopToolbar && !widget.readOnly)
+                          _BottomBarIcon(
+                            icon: _isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+                            color: _isPinned ? const Color(0xFFF59E0B) : Colors.white54,
+                            onTap: _togglePin,
+                          ),
+
+                        const Spacer(),
+
+                        // ✨ REWRITE BUTTON (center, hero) ✨
+                        if (!widget.readOnly)
+                          GestureDetector(
+                            onTap: _showAIMenu,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFAF5F0),
+                                borderRadius: BorderRadius.circular(24),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.auto_awesome, size: 18, color: Color(0xFF1A1A2E)),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Rewrite',
+                                    style: TextStyle(
+                                      color: Color(0xFF1A1A2E),
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+
+                        const Spacer(),
+
+                        // Background picker
+                        if (widget.showTopToolbar && !widget.readOnly)
+                          _BottomBarIcon(
+                            icon: Icons.palette_outlined,
+                            color: Colors.white54,
+                            onTap: _showBackgroundPicker,
+                          ),
+                        if (widget.showTopToolbar && !widget.readOnly)
+                          const SizedBox(width: 8),
+
+                        // Copy button — same size as other bottom bar icons
+                        if (!widget.readOnly)
+                          _InlineCopyButton(onCopy: _copyDocumentToClipboard),
+                      ],
+                    ),
                   ),
                 ),
               ],
             ),
             
-            // AI BUTTON - shows when text selected
+            // AI selection indicator - subtle hint when text selected
             if (_hasSelection)
               Positioned(
                 right: 16,
-                bottom: 60,
-                child: FloatingActionButton.small(
-                  onPressed: _showAIMenu,
-                  backgroundColor: const Color(0xFF8B5CF6),
-                  child: const Icon(Icons.auto_awesome, size: 18),
+                bottom: 110,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF8B5CF6).withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Text(
+                    'Tap Rewrite',
+                    style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ),
+
+            // First-open bubble — styled like home welcome, one-time only.
+            // Sits directly above Rewrite (just a tiny lift off the bar).
+            if (_showFirstOpenBubble && !widget.readOnly)
+              Positioned(
+                left: 32,
+                right: 32,
+                bottom: 85,
+                child: _FirstOpenBubble(onDismiss: _dismissFirstOpenBubble),
+              ),
+
+            // Continue recording — SAME size as copy (40x40), aligned directly above it
+            if (!widget.readOnly && widget.onContinuePressed != null)
+              Positioned(
+                right: 12,
+                bottom: 70,
+                child: GestureDetector(
+                  onTap: widget.onContinuePressed,
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1A1A2E),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.12),
+                        width: 1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(5),
+                      child: Image.asset(
+                        'assets/logo.png',
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ),
                 ),
               ),
           ],
@@ -1580,117 +1804,775 @@ class RichTextEditorState extends State<RichTextEditor> with TickerProviderState
       ),
     );
   }
+
+  /// Copy the current plain-text of the editor to the clipboard.
+  Future<void> _copyDocumentToClipboard() async {
+    final text = _controller.document.toPlainText().trim();
+    if (text.isEmpty) return;
+    await Clipboard.setData(ClipboardData(text: text));
+    HapticFeedback.lightImpact();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Copied to clipboard'),
+          backgroundColor: Color(0xFF10B981),
+          duration: Duration(seconds: 1),
+        ),
+      );
+    }
+  }
 }
 
-// ============================================================
-// AI MENU BOTTOM SHEET
-// ============================================================
-
-class _AIMenuSheet extends StatefulWidget {
-  final String selectedText;
-  final Function(String) onResult;
-
-  const _AIMenuSheet({required this.selectedText, required this.onResult});
+/// Small copy button for the bottom bar — same 40x40 footprint as other
+/// bottom bar icons so the row stays uniform. Shows a brief green check
+/// when tapped, then reverts.
+/// First-open editor bubble. Shows ONCE, ever, above the bottom bar.
+/// Styled to match the home "Hi there / Let's make the first recording"
+/// welcome — same fonts, same purple, same weights. Arrow points down.
+class _FirstOpenBubble extends StatefulWidget {
+  final VoidCallback onDismiss;
+  const _FirstOpenBubble({required this.onDismiss});
 
   @override
-  State<_AIMenuSheet> createState() => _AIMenuSheetState();
+  State<_FirstOpenBubble> createState() => _FirstOpenBubbleState();
 }
 
-class _AIMenuSheetState extends State<_AIMenuSheet> {
-  bool _loading = false;
-  String? _active;
-  final _service = RefinementService();
+class _FirstOpenBubbleState extends State<_FirstOpenBubble>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _fade;
+  late final Animation<Offset> _slide;
 
-  Future<void> _run(String id) async {
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 380),
+    );
+    _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+    _slide = Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic));
+    _ctrl.forward();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _fade,
+      child: SlideTransition(
+        position: _slide,
+        child: GestureDetector(
+          onTap: widget.onDismiss,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1A1A2E),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: const Color(0xFF7C6AE8).withOpacity(0.4),
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF7C6AE8).withOpacity(0.18),
+                  blurRadius: 18,
+                  spreadRadius: 1,
+                ),
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.4),
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Now the magic ✨',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+                const SizedBox(height: 1),
+                const Text(
+                  'Tap Rewrite to transform',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF7C6AE8),
+                    letterSpacing: -0.1,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _InlineCopyButton extends StatefulWidget {
+  final Future<void> Function() onCopy;
+  const _InlineCopyButton({required this.onCopy});
+
+  @override
+  State<_InlineCopyButton> createState() => _InlineCopyButtonState();
+}
+
+class _InlineCopyButtonState extends State<_InlineCopyButton> {
+  bool _copied = false;
+
+  Future<void> _handleTap() async {
+    await widget.onCopy();
+    if (!mounted) return;
+    setState(() => _copied = true);
+    await Future.delayed(const Duration(milliseconds: 1200));
+    if (mounted) setState(() => _copied = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: _handleTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: _copied
+              ? const Color(0xFF10B981).withOpacity(0.2)
+              : Colors.white.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Icon(
+          _copied ? Icons.check_rounded : Icons.copy_rounded,
+          color: _copied ? const Color(0xFF10B981) : Colors.white54,
+          size: 20,
+        ),
+      ),
+    );
+  }
+}
+
+/// Floating copy button (legacy — no longer used, kept if reintroduced).
+class _CopyButton extends StatefulWidget {
+  final Future<void> Function() onCopy;
+  const _CopyButton({required this.onCopy});
+
+  @override
+  State<_CopyButton> createState() => _CopyButtonState();
+}
+
+class _CopyButtonState extends State<_CopyButton> {
+  bool _copied = false;
+
+  Future<void> _handleTap() async {
+    await widget.onCopy();
+    if (!mounted) return;
+    setState(() => _copied = true);
+    await Future.delayed(const Duration(milliseconds: 1200));
+    if (mounted) setState(() => _copied = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: _handleTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: _copied
+              ? const Color(0xFF10B981)
+              : const Color(0xFF1A1A2E),
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: _copied
+                ? const Color(0xFF10B981)
+                : Colors.white.withOpacity(0.12),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.35),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Icon(
+          _copied ? Icons.check_rounded : Icons.copy_rounded,
+          color: Colors.white,
+          size: 20,
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================
+// BOTTOM BAR ICON WIDGET
+// ============================================================
+
+class _BottomBarIcon extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _BottomBarIcon({
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.06),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Icon(icon, color: color, size: 20),
+      ),
+    );
+  }
+}
+
+// ============================================================
+// REWRITE PRESET SHEET — Full AI presets (Letterly-style)
+// ============================================================
+
+class _RewritePresetSheet extends StatefulWidget {
+  final String textToRewrite;
+  final Function(String) onResult;
+  final AppStateProvider appState;
+
+  const _RewritePresetSheet({
+    required this.textToRewrite,
+    required this.onResult,
+    required this.appState,
+  });
+
+  @override
+  State<_RewritePresetSheet> createState() => _RewritePresetSheetState();
+}
+
+class _RewritePresetSheetState extends State<_RewritePresetSheet> {
+  bool _loading = false;
+  String? _activePresetId;
+  final PresetFavoritesService _favoritesService = PresetFavoritesService();
+  Set<String> _favoriteIds = {};
+
+  // Inline instruction recording state (stays on the sheet)
+  final AudioRecorder _instructionRecorder = AudioRecorder();
+  bool _isRecordingInstruction = false;
+  String? _instructionRecordingPath;
+  int _recordingSeconds = 0;
+  Timer? _recordingTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFavorites();
+  }
+
+  @override
+  void dispose() {
+    _recordingTimer?.cancel();
+    _instructionRecorder.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadFavorites() async {
+    final favorites = await _favoritesService.getFavorites();
+    if (mounted) {
+      setState(() => _favoriteIds = favorites.toSet());
+    }
+  }
+
+  Future<void> _toggleFavorite(String presetId) async {
+    HapticFeedback.lightImpact();
+    await _favoritesService.toggleFavorite(presetId);
+    await _loadFavorites();
+  }
+
+  /// INLINE recording — stays on the sheet, uses OLD backend effect:
+  /// combined prompt + master-prompt wrapper via RefinementService.customRefine.
+  Future<void> _handleInstructionsTap() async {
     if (_loading) return;
-    setState(() { _loading = true; _active = id; });
+
+    if (_isRecordingInstruction) {
+      // STOP — transcribe + fire old flow
+      _recordingTimer?.cancel();
+      setState(() => _isRecordingInstruction = false);
+      try {
+        final path = await _instructionRecorder.stop();
+        if (path == null) return;
+        final file = File(path);
+        if (!await file.exists()) return;
+
+        setState(() {
+          _loading = true;
+          _activePresetId = '_custom';
+        });
+
+        final aiService = AIService();
+        final instruction = await aiService.transcribeAudio(file);
+        if (instruction.trim().isEmpty) {
+          if (mounted) setState(() => _loading = false);
+          return;
+        }
+
+        // OLD BEAST PATTERN from result_screen.dart _addMoreAndRewrite
+        final refinementService = RefinementService();
+        final combinedPrompt = '${widget.textToRewrite}\n\n[User adds: $instruction]';
+        final refined = await refinementService.customRefine(
+          combinedPrompt,
+          "Rewrite the entire text incorporating the user's addition or instruction. Maintain the original style unless the user asks to change it.",
+        );
+
+        widget.onResult(refined);
+      } catch (e) {
+        if (mounted) {
+          setState(() => _loading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Instructions failed: $e'),
+              backgroundColor: const Color(0xFFEF4444),
+            ),
+          );
+        }
+      }
+    } else {
+      // START recording inline
+      try {
+        if (!await _instructionRecorder.hasPermission()) return;
+        final dir = await getTemporaryDirectory();
+        _instructionRecordingPath =
+            '${dir.path}/instruction_${DateTime.now().millisecondsSinceEpoch}.m4a';
+        await _instructionRecorder.start(
+          const RecordConfig(
+            encoder: AudioEncoder.aacLc,
+            bitRate: 128000,
+            sampleRate: 44100,
+          ),
+          path: _instructionRecordingPath!,
+        );
+        HapticFeedback.mediumImpact();
+        setState(() {
+          _isRecordingInstruction = true;
+          _recordingSeconds = 0;
+        });
+        _recordingTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+          if (!mounted) return;
+          setState(() => _recordingSeconds++);
+        });
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Mic permission needed: $e'),
+              backgroundColor: const Color(0xFFEF4444),
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  String _formatRecordingTime() {
+    final m = (_recordingSeconds ~/ 60).toString().padLeft(2, '0');
+    final s = (_recordingSeconds % 60).toString().padLeft(2, '0');
+    return '$m:$s';
+  }
+
+  Future<void> _handlePresetTap(Preset preset) async {
+    if (_loading) return;
+
+    // Use same gate as recording — 5 min free, then upgrade
+    final canUse = await FeatureGate.canUseSTT(context);
+    if (!canUse) return;
+
+    setState(() {
+      _loading = true;
+      _activePresetId = preset.id;
+    });
 
     try {
-      String result;
-      switch (id) {
-        case 'magic': result = await _service.refineText(widget.selectedText, RefinementType.professional); break;
-        case 'shorten': result = await _service.shorten(widget.selectedText); break;
-        case 'expand': result = await _service.expand(widget.selectedText); break;
-        case 'pro': result = await _service.makeProfessional(widget.selectedText); break;
-        case 'casual': result = await _service.makeCasual(widget.selectedText); break;
-        case 'grammar': result = await _service.fixGrammar(widget.selectedText); break;
-        default: result = widget.selectedText;
-      }
+      final aiService = AIService();
+      // Read language FRESH at AI-call time — exact pattern from the old
+      // ResultScreen._generateRewrite() that worked reliably.
+      final language = widget.appState.selectedLanguage;
+      debugPrint('🎨 Rewriting with preset=${preset.id} language=${language.code} (${language.name})');
+      final result = await aiService.rewriteText(
+        widget.textToRewrite,
+        preset,
+        language.code,
+      );
       widget.onResult(result);
     } catch (e) {
-      if (mounted) Navigator.pop(context);
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Rewrite failed: $e'),
+            backgroundColor: const Color(0xFFEF4444),
+          ),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFF8B5CF6).withOpacity(0.5), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Compact button grid - 5 presets
-          _buildCompactButton('✨ Magic', 'magic'),
-          const SizedBox(height: 4),
-          _buildCompactButton('📏 Shorten', 'shorten'),
-          const SizedBox(height: 4),
-          _buildCompactButton('📝 Expand', 'expand'),
-          const SizedBox(height: 4),
-          _buildCompactButton('💼 Professional', 'pro'),
-          const SizedBox(height: 4),
-          _buildCompactButton('😊 Casual', 'casual'),
-        ],
-      ),
+    final categories = AppPresets.categories;
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.6,
+      minChildSize: 0.3,
+      maxChildSize: 0.85,
+      expand: false,
+      builder: (context, scrollController) {
+        return Column(
+          children: [
+            // Handle bar
+            Padding(
+              padding: const EdgeInsets.only(top: 12, bottom: 8),
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+
+            // Title
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              child: Row(
+                children: [
+                  const Icon(Icons.auto_awesome, color: Color(0xFF8B5CF6), size: 20),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Rewrite with AI',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Spacer(),
+                  if (_loading)
+                    const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Color(0xFF8B5CF6),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+
+            const Divider(color: Color(0xFF1A1A1A), height: 1),
+
+            // Custom instruction input — type or tap mic, stays in place
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: _buildInstructionInput(),
+            ),
+
+            // "Or choose an AI preset" divider label
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      height: 1,
+                      color: Colors.white.withOpacity(0.08),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    child: Text(
+                      'Or choose an AI preset',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.45),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Container(
+                      height: 1,
+                      color: Colors.white.withOpacity(0.08),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Preset list
+            Expanded(
+              child: SingleChildScrollView(
+                controller: scrollController,
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 80),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Favorites section at top (if any)
+                    if (_favoriteIds.isNotEmpty) ...[
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.star_rounded, color: Color(0xFFFFD700), size: 14),
+                            const SizedBox(width: 4),
+                            Text(
+                              'FAVORITES',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.5),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 1.2,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      ...AppPresets.allPresets
+                          .where((p) => _favoriteIds.contains(p.id))
+                          .map((preset) => _buildPresetRow(preset)),
+                      const SizedBox(height: 12),
+                    ],
+
+                    // All categories (non-favorites hidden from their group since they're at top)
+                    ...categories.map((category) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (category.name.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(8, 16, 8, 8),
+                              child: Text(
+                                category.name.toUpperCase(),
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.4),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 1.2,
+                                ),
+                              ),
+                            ),
+                          ...category.presets.map((preset) => _buildPresetRow(preset)),
+                        ],
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
-  Widget _buildCompactButton(String label, String id) {
-    final isActive = _active == id;
-    return InkWell(
-      onTap: _loading ? null : () => _run(id),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+  /// Slim voice-only instruction button — sits at the top of the sheet.
+  /// Same visual weight as the preset rows below (no big purple card).
+  /// Idle: small purple mic + "Give AI Instructions" / "Say it out loud"
+  /// Recording: red stop + "Listening..." + live timer
+  /// Loading: spinner + "Rewriting..."
+  Widget _buildInstructionInput() {
+    final isRecording = _isRecordingInstruction;
+    final isRunning = _loading && _activePresetId == '_custom';
+
+    const purple = Color(0xFF7C6AE8);
+    final Color accent = isRecording ? const Color(0xFFEF4444) : purple;
+    final String label = isRunning
+        ? 'Rewriting...'
+        : isRecording
+            ? 'Listening... tap to stop'
+            : 'Give AI Custom Instruction';
+
+    return GestureDetector(
+      onTap: isRunning ? null : _handleInstructionsTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: isActive ? const Color(0xFF8B5CF6).withOpacity(0.2) : Colors.transparent,
-          borderRadius: BorderRadius.circular(6),
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: accent, width: 1.2),
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            if (_loading && isActive)
-              const SizedBox(
-                width: 12,
-                height: 12,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Color(0xFF8B5CF6),
-                ),
-              )
-            else
-              Text(
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: accent,
+                shape: BoxShape.circle,
+              ),
+              child: isRunning
+                  ? const Padding(
+                      padding: EdgeInsets.all(8),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Icon(
+                      isRecording ? Icons.stop_rounded : Icons.mic_rounded,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
                 label,
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            if (isRecording)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  _formatRecordingTime(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    fontFeatures: [FontFeature.tabularFigures()],
+                  ),
                 ),
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildPresetRow(Preset preset) {
+    final isActive = _activePresetId == preset.id;
+    final isFav = _favoriteIds.contains(preset.id);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 4),
+      decoration: BoxDecoration(
+        color: isActive
+            ? (preset.color ?? const Color(0xFF8B5CF6)).withOpacity(0.15)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: GestureDetector(
+              onTap: _loading ? null : () => _handlePresetTap(preset),
+              behavior: HitTestBehavior.opaque,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 4, 12),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: (preset.color ?? const Color(0xFF8B5CF6)).withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: isActive && _loading
+                          ? Center(
+                              child: SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: preset.color ?? const Color(0xFF8B5CF6),
+                                ),
+                              ),
+                            )
+                          : Icon(
+                              preset.icon,
+                              color: preset.color ?? const Color(0xFF8B5CF6),
+                              size: 18,
+                            ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            preset.name,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Text(
+                            preset.description,
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.4),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // Star button
+          GestureDetector(
+            onTap: () => _toggleFavorite(preset.id),
+            behavior: HitTestBehavior.opaque,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Icon(
+                isFav ? Icons.star_rounded : Icons.star_outline_rounded,
+                color: isFav ? const Color(0xFFFFD700) : Colors.white.withOpacity(0.3),
+                size: 22,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

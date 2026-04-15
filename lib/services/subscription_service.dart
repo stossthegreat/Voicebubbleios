@@ -5,6 +5,7 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:in_app_purchase_android/in_app_purchase_android.dart';
 import 'package:in_app_purchase_storekit/in_app_purchase_storekit.dart';
+import 'notification_service.dart';
 // Firestore removed - subscription is now pure local
 // import 'package:cloud_firestore/cloud_firestore.dart';
 // import 'package:firebase_auth/firebase_auth.dart';
@@ -34,6 +35,43 @@ class SubscriptionService {
   List<ProductDetails> get products => _products;
   ProductDetails? get monthlyProduct => _products.where((p) => p.id == monthlyProductId).firstOrNull;
   ProductDetails? get yearlyProduct => _products.where((p) => p.id == yearlyProductId).firstOrNull;
+
+  /// Returns the *recurring* price, skipping any free-trial phases.
+  /// Google Play: walks pricing phases, picks first non-zero.
+  /// iOS: falls through to StoreKit's regular [price].
+  ({String formatted, double raw, String currencySymbol}) regularPriceOf(ProductDetails product) {
+    if (product is GooglePlayProductDetails) {
+      final offers = product.productDetails.subscriptionOfferDetails ?? const [];
+      final ordered = [
+        ...offers.where((o) => o.offerId == null || o.offerId!.isEmpty),
+        ...offers.where((o) => o.offerId != null && o.offerId!.isNotEmpty),
+      ];
+      for (final offer in ordered) {
+        for (final phase in offer.pricingPhases) {
+          if (phase.priceAmountMicros > 0) {
+            return (
+              formatted: phase.formattedPrice,
+              raw: phase.priceAmountMicros / 1000000.0,
+              currencySymbol: _symbolFromFormatted(phase.formattedPrice),
+            );
+          }
+        }
+      }
+    }
+    return (
+      formatted: product.price,
+      raw: product.rawPrice,
+      currencySymbol: _symbolFromFormatted(product.price),
+    );
+  }
+
+  String _symbolFromFormatted(String formatted) {
+    final prefix = RegExp(r'^[^\d\s\-]+').firstMatch(formatted);
+    if (prefix != null) return prefix.group(0)!.trim();
+    final suffix = RegExp(r'[^\d\s\-,.]+$').firstMatch(formatted);
+    if (suffix != null) return suffix.group(0)!.trim();
+    return '\$';
+  }
 
   /// Initialize the IAP system
   Future<void> initialize() async {
@@ -224,6 +262,14 @@ class SubscriptionService {
       await prefs.setString(_keyLocalProductId, purchaseDetails.productID);
 
       debugPrint('✅ Subscription saved locally: $subscriptionType, expires: $expiryDate');
+
+      // Cancel retention notifications — paying customer
+      try {
+        final ns = NotificationService();
+        for (final id in [900001, 900002, 900003, 900004, 900005, 900006, 900007]) {
+          await ns.cancelReminder(id);
+        }
+      } catch (_) {}
     } catch (e) {
       debugPrint('❌ Error saving subscription locally: $e');
     }

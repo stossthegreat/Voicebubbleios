@@ -149,6 +149,8 @@ class RecordingItem {
     String? background,
     bool? isPinned,
     bool clearReminder = false, // Flag to explicitly clear reminder
+    bool clearBackground = false, // Flag to explicitly clear background
+    bool clearFormattedContent = false, // Flag to force editor reload from plain text
   }) {
     return RecordingItem(
       id: id ?? this.id,
@@ -168,10 +170,10 @@ class RecordingItem {
       tags: tags ?? List.from(this.tags),
       reminderDateTime: clearReminder ? null : (reminderDateTime ?? this.reminderDateTime),
       reminderNotificationId: clearReminder ? null : (reminderNotificationId ?? this.reminderNotificationId),
-      formattedContent: formattedContent ?? this.formattedContent,
+      formattedContent: clearFormattedContent ? null : (formattedContent ?? this.formattedContent),
       customTitle: customTitle ?? this.customTitle,
       contentType: contentType ?? this.contentType,
-      background: background ?? this.background,
+      background: clearBackground ? null : (background ?? this.background),
       isPinned: isPinned ?? this.isPinned,
     );
   }

@@ -6,6 +6,8 @@ import '../../providers/app_state_provider.dart';
 import '../../models/outcome_type.dart';
 import '../../models/recording_item.dart';
 import '../../widgets/multi_option_fab.dart';
+import '../../services/analytics_service.dart';
+import '../../services/review_service.dart';
 import 'recording_screen.dart';
 import 'recording_detail_screen.dart';
 import 'outcome_creation_screen.dart';
@@ -29,7 +31,16 @@ class _OutcomesScreenEliteState extends State<OutcomesScreenElite> with SingleTi
   @override
   void initState() {
     super.initState();
+    AnalyticsService().logScreenView(screenName: 'Outcomes');
     _tabController = TabController(length: 4, vsync: this);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        final tabNames = ['All', 'Tasks', 'Content', 'Ideas'];
+        if (_tabController.index < tabNames.length) {
+          AnalyticsService().logTabSelected(tabName: 'Outcomes_${tabNames[_tabController.index]}');
+        }
+      }
+    });
   }
 
   @override
@@ -859,9 +870,20 @@ class _OutcomesScreenEliteState extends State<OutcomesScreenElite> with SingleTi
 
   void _toggleCompletion(RecordingItem item) async {
     final appState = Provider.of<AppStateProvider>(context, listen: false);
-    final updated = item.copyWith(isCompleted: !(item.isCompleted ?? false));
+    final newStatus = !(item.isCompleted ?? false);
+    final updated = item.copyWith(isCompleted: newStatus);
     await appState.updateRecording(updated);
     HapticFeedback.mediumImpact();
+
+    if (newStatus) {
+      AnalyticsService().logOutcomeCompleted(
+        outcomeType: item.outcomes.isNotEmpty
+          ? item.outcomes.first.toString()
+          : 'generic',
+      );
+      await ReviewService().trackOutcomeCompletion();
+    }
+
     setState(() {});
   }
 

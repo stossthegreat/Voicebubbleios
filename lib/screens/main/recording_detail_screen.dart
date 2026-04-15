@@ -27,6 +27,8 @@ import '../../widgets/export_dialogs.dart';
 import '../../widgets/background_picker.dart';
 import '../../services/version_history_service.dart';
 import '../../constants/visual_constants.dart';
+import '../../services/analytics_service.dart';
+import '../../services/review_service.dart';
 // ✨ END NEW IMPORTS ✨
 
 class RecordingDetailScreen extends StatefulWidget {
@@ -49,6 +51,7 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
   @override
   void initState() {
     super.initState();
+    AnalyticsService().logScreenView(screenName: 'RecordingDetail');
     _titleController = TextEditingController();
   }
   
@@ -60,11 +63,11 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final backgroundColor = const Color(0xFF000000);
-    final surfaceColor = const Color(0xFF1A1A1A);
+    final backgroundColor = const Color(0xFF0D0D1A);
+    final surfaceColor = const Color(0xFF1A1A2E);
     final textColor = Colors.white;
-    final secondaryTextColor = const Color(0xFF94A3B8);
-    final primaryColor = const Color(0xFF3B82F6);
+    final secondaryTextColor = const Color(0xFF8B8FA3);
+    final primaryColor = const Color(0xFF7C6AE8);
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -113,238 +116,143 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
                 if (backgroundWidget != null)
                   Positioned.fill(child: backgroundWidget),
                 
-                // Content layer
+                // Content layer — single scrollable unit
                 Column(
               children: [
-                // Compact Header
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: surfaceColor,
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        child: IconButton(
-                          padding: EdgeInsets.zero,
-                          onPressed: () => Navigator.pop(context),
-                          icon: Icon(Icons.arrow_back, color: textColor, size: 18),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _isEditingTitle
-                            ? Row(
-                                children: [
-                                  Expanded(
-                                    child: TextField(
-                                      controller: _titleController,
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                        color: textColor,
-                                      ),
-                                      decoration: InputDecoration(
-                                        border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                          borderSide: BorderSide(color: primaryColor),
-                                        ),
-                                        enabledBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                          borderSide: BorderSide(color: primaryColor.withOpacity(0.5)),
-                                        ),
-                                        focusedBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                          borderSide: BorderSide(color: primaryColor),
-                                        ),
-                                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                                        isDense: true,
-                                      ),
-                                      autofocus: true,
-                                      maxLines: 1,
-                                    ),
+                Expanded(
+                  child: NestedScrollView(
+                    headerSliverBuilder: (context, innerBoxIsScrolled) {
+                      return [
+                        SliverAppBar(
+                          backgroundColor: backgroundColor,
+                          automaticallyImplyLeading: false,
+                          floating: true,
+                          snap: true,
+                          toolbarHeight: 44,
+                          title: Row(
+                            children: [
+                              IconButton(
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                onPressed: () => Navigator.pop(context),
+                                icon: Icon(Icons.arrow_back_ios_new, color: primaryColor, size: 22),
+                              ),
+                              const Spacer(),
+                              Text(
+                                _formatDate(item.createdAt),
+                                style: TextStyle(fontSize: 13, color: secondaryTextColor),
+                              ),
+                              const Spacer(),
+                              // Share button — direct action, no menu
+                              GestureDetector(
+                                onTap: () => _handleMenuAction(context, appState, item, 'share'),
+                                child: Container(
+                                  width: 36,
+                                  height: 36,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.06),
+                                    shape: BoxShape.circle,
                                   ),
-                                  const SizedBox(width: 8),
-                                  GestureDetector(
-                                    onTap: () => _saveTitle(appState, item),
-                                    child: Container(
-                                      padding: const EdgeInsets.all(6),
-                                      decoration: BoxDecoration(
-                                        color: primaryColor,
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Icon(Icons.check, color: Colors.white, size: 16),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  GestureDetector(
-                                    onTap: _cancelEditingTitle,
-                                    child: Container(
-                                      padding: const EdgeInsets.all(6),
-                                      decoration: BoxDecoration(
-                                        color: surfaceColor,
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Icon(Icons.close, color: textColor, size: 16),
-                                    ),
-                                  ),
-                                ],
-                              )
-                            : GestureDetector(
-                                onTap: () => _startEditingTitle(item),
-                                child: Text(
-                                  _getDisplayTitle(item),
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: textColor,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                                  child: Icon(Icons.shortcut, color: textColor, size: 20),
                                 ),
                               ),
-                      ),
-                      
-                      // ✨ VERSION HISTORY BUTTON ✨
-                      const SizedBox(width: 8),
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: surfaceColor,
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        child: IconButton(
-                          padding: EdgeInsets.zero,
-                          onPressed: () async {
-                            final restored = await Navigator.push<bool>(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => VersionHistoryScreen(note: item),
+                              const SizedBox(width: 8),
+                              PopupMenuButton<String>(
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                icon: Icon(Icons.more_vert, color: textColor, size: 22),
+                                color: surfaceColor,
+                                onSelected: (value) => _handleMenuAction(context, appState, item, value),
+                                itemBuilder: (context) {
+                                  final isOutcome = item.outcomes.isNotEmpty && item.hiddenInLibrary;
+                                  return [
+                                    PopupMenuItem(value: 'continue', child: Row(children: [Icon(Icons.mic, color: primaryColor, size: 18), const SizedBox(width: 12), Text('Continue', style: TextStyle(color: textColor))])),
+                                    PopupMenuItem(value: 'version_history', child: Row(children: [Icon(Icons.history, color: primaryColor, size: 18), const SizedBox(width: 12), Text('Version History', style: TextStyle(color: textColor))])),
+                                    PopupMenuItem(value: 'share', child: Row(children: [Icon(Icons.share, color: textColor, size: 18), const SizedBox(width: 12), Text('Share', style: TextStyle(color: textColor))])),
+                                    PopupMenuItem(value: 'add_to_project', child: Row(children: [Icon(Icons.folder_outlined, color: textColor, size: 18), const SizedBox(width: 12), Text('Add to Project', style: TextStyle(color: textColor))])),
+                                    if (!isOutcome) PopupMenuItem(value: 'manage_tags', child: Row(children: [Icon(Icons.local_offer, color: textColor, size: 18), const SizedBox(width: 12), Text('Manage Tags', style: TextStyle(color: textColor))])),
+                                    PopupMenuItem(value: 'import', child: Row(children: [Icon(Icons.file_download, color: const Color(0xFF8B5CF6), size: 18), const SizedBox(width: 12), Text('Import', style: TextStyle(color: textColor))])),
+                                    PopupMenuItem(value: 'export', child: Row(children: [Icon(Icons.upload, color: textColor, size: 18), const SizedBox(width: 12), Text('Export', style: TextStyle(color: textColor))])),
+                                    const PopupMenuDivider(),
+                                    PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete_forever, color: Color(0xFFEF4444), size: 18), const SizedBox(width: 12), Text('Delete', style: TextStyle(color: Color(0xFFEF4444)))])),
+                                  ];
+                                },
                               ),
-                            );
-
-                            // If version was restored, force editor rebuild
-                            if (restored == true && mounted) {
-                              setState(() {
-                                _editorRebuildKey++;
-                              });
-                            }
-                          },
-                          icon: Icon(Icons.history, color: primaryColor, size: 18),
-                          tooltip: 'Version History',
+                            ],
+                          ),
                         ),
-                      ),
-                      // ✨ END VERSION HISTORY BUTTON ✨
-                      
-                      const SizedBox(width: 8),
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: surfaceColor,
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        child: PopupMenuButton<String>(
-                          padding: EdgeInsets.zero,
-                          icon: Icon(Icons.more_vert, color: textColor, size: 18),
-                          color: surfaceColor,
-                          onSelected: (value) => _handleMenuAction(context, appState, item, value),
-                          itemBuilder: (context) {
-                            // Check if this is an outcome item
-                            final isOutcome = item.outcomes.isNotEmpty && item.hiddenInLibrary;
-                            
-                            return [
-                          PopupMenuItem(
-                            value: 'continue',
-                            child: Row(
-                              children: [
-                                Icon(Icons.add_circle_outline, color: primaryColor, size: 18),
-                                const SizedBox(width: 12),
-                                Text('Continue', style: TextStyle(color: textColor)),
-                              ],
-                            ),
-                          ),
-                          PopupMenuItem(
-                            value: 'share',
-                            child: Row(
-                              children: [
-                                Icon(Icons.share, color: textColor, size: 18),
-                                const SizedBox(width: 12),
-                                Text('Share', style: TextStyle(color: textColor)),
-                              ],
-                            ),
-                          ),
-                          PopupMenuItem(
-                            value: 'add_to_project',
-                            child: Row(
-                              children: [
-                                Icon(Icons.folder_outlined, color: textColor, size: 18),
-                                const SizedBox(width: 12),
-                                Text('Add to Project', style: TextStyle(color: textColor)),
-                              ],
-                            ),
-                          ),
-                          // ONLY SHOW "Manage Tags" IF NOT AN OUTCOME
-                          if (!isOutcome)
-                            PopupMenuItem(
-                              value: 'manage_tags',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.local_offer, color: textColor, size: 18),
-                                  const SizedBox(width: 12),
-                                  Text('Manage Tags', style: TextStyle(color: textColor)),
-                                ],
+                        // Title + Tags as a pinned sliver that scrolls away
+                        SliverToBoxAdapter(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Big headline
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+                                child: _isEditingTitle
+                                    ? Row(
+                                        children: [
+                                          Expanded(
+                                            child: TextField(
+                                              controller: _titleController,
+                                              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: textColor),
+                                              decoration: const InputDecoration(border: InputBorder.none, contentPadding: EdgeInsets.zero, isDense: true),
+                                              autofocus: true,
+                                              maxLines: null,
+                                              onSubmitted: (_) => _saveTitle(appState, item),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          GestureDetector(onTap: () => _saveTitle(appState, item), child: Icon(Icons.check, color: primaryColor, size: 22)),
+                                        ],
+                                      )
+                                    : GestureDetector(
+                                        onTap: () => _startEditingTitle(item),
+                                        child: SizedBox(
+                                          width: double.infinity,
+                                          child: Text(_getDisplayTitle(item), style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: textColor)),
+                                        ),
+                                      ),
                               ),
-                            ),
-                          // ✨ IMPORT MENU ITEM ✨
-                          PopupMenuItem(
-                            value: 'import',
-                            child: Row(
-                              children: [
-                                Icon(Icons.file_download, color: const Color(0xFF8B5CF6), size: 18),
-                                const SizedBox(width: 12),
-                                Text('Import', style: TextStyle(color: textColor)),
-                              ],
-                            ),
+                              // Tags
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+                                child: Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      showModalBottomSheet(
+                                        context: context,
+                                        isScrollControlled: true,
+                                        backgroundColor: Colors.transparent,
+                                        builder: (context) => AddTagBottomSheet(recordingId: item.id, currentTags: item.tags),
+                                      );
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(6),
+                                        border: Border.all(color: Colors.white.withOpacity(0.15)),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.add, color: secondaryTextColor, size: 14),
+                                          const SizedBox(width: 4),
+                                          Text('Tags', style: TextStyle(color: secondaryTextColor, fontSize: 13)),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                          // ✨ EXPORT MENU ITEM ✨
-                          PopupMenuItem(
-                            value: 'export',
-                            child: Row(
-                              children: [
-                                Icon(Icons.upload, color: textColor, size: 18),
-                                const SizedBox(width: 12),
-                                Text('Export', style: TextStyle(color: textColor)),
-                              ],
-                            ),
-                          ),
-                          // ✨ END NEW MENU ITEMS ✨
-                          const PopupMenuDivider(),
-                          PopupMenuItem(
-                            value: 'delete',
-                            child: Row(
-                              children: [
-                                Icon(Icons.delete_forever, color: Color(0xFFEF4444), size: 18),
-                                const SizedBox(width: 12),
-                                Text('Delete', style: TextStyle(color: Color(0xFFEF4444))),
-                              ],
-                            ),
-                          ),
-                        ];
-                          },
                         ),
-                      ),
-                    ],
+                      ];
+                    },
+                    body: _buildContentEditor(item, appState),
                   ),
-                ),
-
-                // Content based on type
-                Expanded(
-                  child: _buildContentEditor(item, appState),
                 ),
               ],
             ), // ← End of Column
@@ -353,30 +261,12 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
           },
         ),
       ),
-      // Floating Continue Button (bottom right)
-      floatingActionButton: Consumer<AppStateProvider>(
-        builder: (context, appState, _) {
-          final item = appState.allRecordingItems.firstWhere(
-            (r) => r.id == widget.recordingId,
-            orElse: () => appState.allRecordingItems.isNotEmpty
-                ? appState.allRecordingItems.first
-                : throw Exception('Recording not found'),
-          );
-          
-          return FloatingActionButton.small(
-            onPressed: () => _handleContinue(context, appState, item),
-            backgroundColor: primaryColor,
-            tooltip: 'Continue with AI',
-            child: const Icon(
-              Icons.mic,
-              color: Colors.white,
-              size: 20,
-            ),
-          );
-        },
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
+  }
+
+  String _formatDate(DateTime date) {
+    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${months[date.month - 1]} ${date.day}, ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
   }
 
   String _getDisplayTitle(RecordingItem item) {
@@ -454,6 +344,8 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
       // Background support
       backgroundId: item.background,
       onBackgroundChanged: (backgroundId) => _updateItemBackground(appState, item, backgroundId),
+      // Continue recording — same logic as dropdown menu
+      onContinuePressed: () => _handleContinue(context, appState, item),
     );
   }
 
@@ -513,10 +405,18 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
       // Schedule or cancel reminder
       if (dateTime != null) {
         await ReminderManager().scheduleReminder(updatedItem);
+
+        final hoursFromNow = dateTime.difference(DateTime.now()).inHours;
+        AnalyticsService().logReminderSet(
+          outcomeType: item.outcomes.isNotEmpty
+            ? item.outcomes.first.toString()
+            : 'generic',
+          hoursFromNow: hoursFromNow,
+        );
       } else {
         await ReminderManager().cancelReminder(updatedItem);
       }
-      
+
       debugPrint('✅ Updated reminder for item: ${item.id}');
     } catch (e) {
       debugPrint('❌ Error updating reminder: $e');
@@ -529,6 +429,16 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
         isCompleted: completed,
       );
       await appState.updateRecording(updatedItem);
+
+      if (completed) {
+        AnalyticsService().logOutcomeCompleted(
+          outcomeType: item.outcomes.isNotEmpty
+            ? item.outcomes.first.toString()
+            : 'generic',
+        );
+        await ReviewService().trackOutcomeCompletion();
+      }
+
       debugPrint('✅ Updated completion for item: ${item.id}');
     } catch (e) {
       debugPrint('❌ Error updating completion: $e');
@@ -558,7 +468,24 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
       case 'continue':
         _handleContinue(context, appState, item);
         break;
+      case 'version_history':
+        final restored = await Navigator.push<bool>(
+          context,
+          MaterialPageRoute(
+            builder: (_) => VersionHistoryScreen(note: item),
+          ),
+        );
+        if (restored == true && mounted) {
+          setState(() {
+            _editorRebuildKey++;
+          });
+        }
+        break;
       case 'share':
+        AnalyticsService().logOutputShared(
+          presetId: item.presetId,
+          shareMethod: 'native_share',
+        );
         Share.share(item.finalText);
         break;
       case 'add_to_project':
@@ -588,6 +515,14 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
         break;
       // ✨ EXPORT HANDLER ✨
       case 'export':
+        AnalyticsService().logCustomEvent(
+          eventName: 'document_exported',
+          parameters: {
+            'format': 'dialog_opened',
+            'source': 'recording_detail',
+            'content_type': item.contentType,
+          },
+        );
         // Wait for any pending auto-saves and get fresh item
         await Future.delayed(const Duration(milliseconds: 100));
         final freshExportItem = appState.allRecordingItems.firstWhere(
@@ -610,6 +545,7 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
 
   void _handleContinue(BuildContext context, AppStateProvider appState, RecordingItem item) async {
     try {
+      AnalyticsService().logContinueFromItem();
       // Small delay to ensure any pending auto-saves complete
       await Future.delayed(const Duration(milliseconds: 100));
 
@@ -704,7 +640,9 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
 
   Future<void> _updateItemBackground(AppStateProvider appState, RecordingItem item, String? backgroundId) async {
     try {
-      final updatedItem = item.copyWith(background: backgroundId);
+      final updatedItem = backgroundId == null
+          ? item.copyWith(clearBackground: true)
+          : item.copyWith(background: backgroundId);
       await appState.updateRecording(updatedItem);
       debugPrint('✅ Updated background for item: ${item.id}');
     } catch (e) {
@@ -835,6 +773,10 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
                   subtitle: const Text('Extract text from image', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12)),
                   onTap: () {
                     Navigator.pop(dialogContext);
+                    AnalyticsService().logCustomEvent(
+                      eventName: 'ocr_feature_opened',
+                      parameters: {'from_screen': 'recording_detail'},
+                    );
                     _pickAndImportFile(
                       nav, appState, item,
                       extensions: ['jpg', 'jpeg', 'png', 'gif', 'webp'],

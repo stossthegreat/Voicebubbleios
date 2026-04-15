@@ -185,6 +185,25 @@ class AnalyticsService {
   }
 
   // ============================================================
+  // IMAGE TO TEXT / OCR EVENTS
+  // ============================================================
+
+  Future<void> logImageToTextUsed({
+    required int characterCount,
+    required bool success,
+    String? source,
+  }) async {
+    await _analytics.logEvent(
+      name: 'image_to_text_used',
+      parameters: {
+        'character_count': characterCount,
+        'success': success,
+        if (source != null) 'source': source,
+      },
+    );
+  }
+
+  // ============================================================
   // OUTCOME EVENTS
   // ============================================================
 

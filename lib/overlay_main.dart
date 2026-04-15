@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
 import 'package:flutter/services.dart';
@@ -6,11 +5,7 @@ import 'package:flutter/services.dart';
 @pragma("vm:entry-point")
 void overlayMain() {
   WidgetsFlutterBinding.ensureInitialized();
-  if (!Platform.isAndroid) {
-    debugPrint('Overlay entry point called on non-Android platform, ignoring.');
-    return;
-  }
-  debugPrint('Overlay entry point called!');
+  debugPrint('🎯 Overlay entry point called!');
   runApp(const OverlayApp());
 }
 

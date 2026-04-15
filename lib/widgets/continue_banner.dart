@@ -16,7 +16,7 @@ class ContinueBanner extends StatelessWidget {
     }
 
     final backgroundColor = const Color(0xFF1A1A1A);
-    final primaryColor = const Color(0xFF3B82F6);
+    final primaryColor = const Color(0xFF7C6AE8);
     final textColor = Colors.white;
     final secondaryTextColor = const Color(0xFF94A3B8);
 
@@ -118,6 +118,21 @@ class ContinueBanner extends StatelessWidget {
               ),
             ),
           ],
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Icon(Icons.info_outline, color: secondaryTextColor, size: 14),
+              const SizedBox(width: 6),
+              Text(
+                'Tap \u2715 to save & exit when done',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: secondaryTextColor,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -126,8 +141,8 @@ class ContinueBanner extends StatelessWidget {
   void _showContextDialog(BuildContext context, ContinueContext continueContext) {
     final textColor = Colors.white;
     final secondaryTextColor = const Color(0xFF94A3B8);
-    final backgroundColor = const Color(0xFF000000);
-    final surfaceColor = const Color(0xFF1A1A1A);
+    final backgroundColor = const Color(0xFF0D0D1A);
+    final surfaceColor = const Color(0xFF1A1A2E);
 
     showDialog(
       context: context,

@@ -16,23 +16,33 @@ import '../main/preset_selection_screen.dart';
 import '../settings/settings_screen.dart';
 import '../paywall/paywall_screen.dart';
 import '../../services/feature_gate.dart';
+import '../../services/subscription_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
-  
+
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _overlayEnabled = false;
-  
+  bool _isPro = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _checkOverlayStatus();
     _initializeOverlay();
+    _checkProStatus();
+  }
+
+  Future<void> _checkProStatus() async {
+    final isPro = await SubscriptionService().isPro();
+    if (mounted && isPro != _isPro) {
+      setState(() => _isPro = isPro);
+    }
   }
   
   @override
@@ -44,6 +54,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) async {
     super.didChangeAppLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      _checkProStatus();
+    }
     if (state == AppLifecycleState.resumed && Platform.isAndroid) {
       // App resumed (user came back from settings)
       debugPrint('📱 App resumed, checking overlay status...');
@@ -74,22 +87,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   
   Future<void> _checkOverlayStatus() async {
     if (Platform.isAndroid) {
-      // Check whether overlay permission itself is granted
-      final hasPermission = await NativeOverlayService.checkPermission();
-      debugPrint('📊 Overlay permission granted: $hasPermission');
+      // Check whether the overlay SERVICE is actually running, not just permission
+      final isRunning = await NativeOverlayService.isActive();
+      debugPrint('📊 Overlay service running: $isRunning');
       setState(() {
-        _overlayEnabled = hasPermission;
+        _overlayEnabled = isRunning;
       });
     }
   }
   
   Future<void> _initializeOverlay() async {
     if (Platform.isAndroid) {
-      // Initial check uses permission state, not service state
-      final hasPermission = await NativeOverlayService.checkPermission();
-      debugPrint('📊 Initial overlay check - permission granted: $hasPermission');
+      // Check if overlay service is actually running
+      final isRunning = await NativeOverlayService.isActive();
+      debugPrint('📊 Initial overlay check - service running: $isRunning');
       setState(() {
-        _overlayEnabled = hasPermission;
+        _overlayEnabled = isRunning;
       });
     }
   }
@@ -312,8 +325,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final backgroundColor = const Color(0xFF000000); // Always black
-    final surfaceColor = const Color(0xFF1A1A1A); // Dark gray for cards
+    final backgroundColor = const Color(0xFF0D0D1A); // Always black
+    final surfaceColor = const Color(0xFF1A1A2E); // Dark gray for cards
     final textColor = Colors.white; // Always white text
     final secondaryTextColor = const Color(0xFF94A3B8); // Light gray
     
@@ -363,31 +376,48 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   // Premium & Settings Icons
                   Row(
                     children: [
-                      // Premium/Paywall Icon
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: surfaceColor,
-                          borderRadius: BorderRadius.circular(40),
+                      if (_isPro)
+                        // Pro badge
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: surfaceColor,
+                            borderRadius: BorderRadius.circular(40),
+                          ),
+                          child: const Center(
+                            child: Text('⭐', style: TextStyle(fontSize: 18)),
+                          ),
+                        )
+                      else
+                        // Upgrade/Paywall Icon
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: surfaceColor,
+                            borderRadius: BorderRadius.circular(40),
+                          ),
+                          child: IconButton(
+                            padding: EdgeInsets.zero,
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (context) => PaywallScreen(
+                                  onSubscribe: () {
+                                    _checkProStatus();
+                                  },
+                                  onRestore: () {
+                                    _checkProStatus();
+                                  },
+                                  onClose: () => Navigator.pop(context),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.workspace_premium, color: Color(0xFFFFD700), size: 20),
+                          ),
                         ),
-                        child: IconButton(
-                          padding: EdgeInsets.zero,
-                          onPressed: () {
-                            // Show paywall
-                            showDialog(
-                              context: context,
-                              barrierDismissible: false,
-                              builder: (context) => PaywallScreen(
-                                onSubscribe: () {},
-                                onRestore: () {},
-                                onClose: () => Navigator.pop(context),
-                              ),
-                            );
-                          },
-                          icon: Icon(Icons.workspace_premium, color: const Color(0xFFFFD700), size: 20),
-                        ),
-                      ),
                       const SizedBox(width: 8),
                       // Settings Button
                       Container(
@@ -482,7 +512,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       child: Consumer<AppStateProvider>(
                         builder: (context, appState, _) {
                           final language = appState.selectedLanguage;
-                          final primaryColor = const Color(0xFF3B82F6);
+                          final primaryColor = const Color(0xFF7C6AE8);
                           return Row(
                             children: [
                               // Language Selector (left)
@@ -683,7 +713,48 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   _pickAudioFile();
                 },
               ),
-              // Bubble option removed - preparing for iOS
+              Divider(height: 1, color: Colors.white.withOpacity(0.1)),
+
+              // ════════════════════════════════════════════════════
+              // ACTIVATE BUBBLE - EXISTING (Android only)
+              // ════════════════════════════════════════════════════
+              if (Platform.isAndroid)
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: (_overlayEnabled ? const Color(0xFF10B981) : const Color(0xFF3B82F6)).withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      Icons.bubble_chart,
+                      color: _overlayEnabled ? const Color(0xFF10B981) : const Color(0xFF3B82F6),
+                    ),
+                  ),
+                  title: Text(
+                    _overlayEnabled ? 'Deactivate Voice Bubble' : 'Activate Voice Bubble',
+                    style: TextStyle(
+                      color: textColor,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                    ),
+                  ),
+                  subtitle: Text(
+                    _overlayEnabled
+                        ? 'Bubble is active - Tap to disable'
+                        : 'Floating record button',
+                    style: TextStyle(
+                      color: textColor.withOpacity(0.6),
+                      fontSize: 13,
+                    ),
+                  ),
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await _toggleOverlay();
+                    await Future.delayed(const Duration(milliseconds: 500));
+                    await _checkOverlayStatus();
+                  },
+                ),
 
               const SizedBox(height: 16),
             ],

@@ -55,9 +55,12 @@ class _ResultScreenState extends State<ResultScreen> {
 
   // Active refinement tracking
   RefinementType? _activeRefinement;
-  
+
   // Track saved item ID to prevent duplicates
   String? _savedItemId;
+
+  // First-time instructions nudge
+  bool _showInstructionsNudge = false;
 
   @override
   void initState() {
@@ -65,6 +68,24 @@ class _ResultScreenState extends State<ResultScreen> {
     // Don't initialize _savedItemId from continueFromItemId anymore
     // Continue should always create NEW items, not update existing ones
     _generateRewrite();
+    _checkInstructionsNudge();
+  }
+
+  Future<void> _checkInstructionsNudge() async {
+    final box = await Hive.openBox('usage_data');
+    final shown = box.get('instructions_nudge_shown', defaultValue: false);
+    if (!shown && mounted) {
+      setState(() => _showInstructionsNudge = true);
+    }
+  }
+
+  Future<void> _dismissInstructionsNudge() async {
+    if (!_showInstructionsNudge) return;
+    final box = await Hive.openBox('usage_data');
+    await box.put('instructions_nudge_shown', true);
+    if (mounted) {
+      setState(() => _showInstructionsNudge = false);
+    }
   }
 
   Future<void> _generateRewrite() async {
@@ -156,6 +177,11 @@ class _ResultScreenState extends State<ResultScreen> {
         await _saveRecording();
       }
     } catch (e) {
+      AnalyticsService().logError(
+        errorType: 'ai_generation_failed',
+        errorMessage: e.toString(),
+        context: 'result_screen_generate',
+      );
       setState(() {
         _error = e.toString();
         _isLoading = false;
@@ -359,7 +385,19 @@ class _ResultScreenState extends State<ResultScreen> {
         debugPrint('💾 Item outcomes: ${item.outcomes}');
         
         await appState.saveRecording(item);
-        
+
+        // Track voice document creation
+        AnalyticsService().logCustomEvent(
+          eventName: 'document_created',
+          parameters: {
+            'document_type': 'voice',
+            'source': item.projectId != null ? 'project' : 'recording',
+            'creation_method': 'voice',
+            'preset_used': appState.selectedPreset?.id ?? 'unknown',
+            'has_outcomes': _selectedOutcomes.isNotEmpty,
+          },
+        );
+
         // Link the continuation chain for project continuations
         if (continueContext?.projectId != null && continueContext?.singleItemId != null) {
           final continueService = ContinueService();
@@ -672,11 +710,11 @@ class _ResultScreenState extends State<ResultScreen> {
     final canUndo = _historyIndex > 0;
     final canRedo = _historyIndex < _textHistory.length - 1;
     
-    final backgroundColor = const Color(0xFF000000);
-    final surfaceColor = const Color(0xFF1A1A1A);
+    final backgroundColor = const Color(0xFF0D0D1A);
+    final surfaceColor = const Color(0xFF1A1A2E);
     final textColor = Colors.white;
     final secondaryTextColor = const Color(0xFF94A3B8);
-    final primaryColor = const Color(0xFF3B82F6);
+    final primaryColor = const Color(0xFF7C6AE8);
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -691,39 +729,56 @@ class _ResultScreenState extends State<ResultScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: surfaceColor,
-                          borderRadius: BorderRadius.circular(40),
-                        ),
-                        child: IconButton(
-                          padding: EdgeInsets.zero,
-                          onPressed: () {
-                            final appState = context.read<AppStateProvider>();
-                            final continueContext = appState.continueContext;
-                            final originalItemId = continueContext?.singleItemId;
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: surfaceColor,
+                              borderRadius: BorderRadius.circular(40),
+                            ),
+                            child: IconButton(
+                              padding: EdgeInsets.zero,
+                              onPressed: () {
+                                final appState = context.read<AppStateProvider>();
+                                final continueContext = appState.continueContext;
+                                final originalItemId = continueContext?.singleItemId;
 
-                            // Clear context
-                            appState.clearContinueContext();
+                                // Clear context
+                                appState.clearContinueContext();
 
-                            // If continued from a document, go back to that document
-                            if (originalItemId != null) {
-                              Navigator.of(context).popUntil((route) => route.isFirst);
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => RecordingDetailScreen(recordingId: originalItemId),
+                                // If continued from a document, go back to that document
+                                if (originalItemId != null) {
+                                  Navigator.of(context).popUntil((route) => route.isFirst);
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => RecordingDetailScreen(recordingId: originalItemId),
+                                    ),
+                                  );
+                                } else {
+                                  // Regular flow - go to main screen
+                                  Navigator.of(context).popUntil((route) => route.isFirst);
+                                }
+                              },
+                              icon: Icon(Icons.close, color: textColor, size: 20),
+                            ),
+                          ),
+                          if (appState.continueContext?.singleItemId != null)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 8),
+                              child: Text(
+                                'Tap \u2715 to save & return',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: primaryColor,
                                 ),
-                              );
-                            } else {
-                              // Regular flow - go to main screen
-                              Navigator.of(context).popUntil((route) => route.isFirst);
-                            }
-                          },
-                          icon: Icon(Icons.close, color: textColor, size: 20),
-                        ),
+                              ),
+                            ),
+                        ],
                       ),
                       Row(
                         children: [
@@ -786,21 +841,56 @@ class _ResultScreenState extends State<ResultScreen> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: surfaceColor,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            '"${appState.transcription}"',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: secondaryTextColor,
-                              fontStyle: FontStyle.italic,
+                        Stack(
+                          children: [
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+                              decoration: BoxDecoration(
+                                color: surfaceColor,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                '"${appState.transcription}"',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: secondaryTextColor,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
                             ),
-                          ),
+                            // Copy icon — same style as the AI output box
+                            Positioned(
+                              right: 12,
+                              bottom: 12,
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () async {
+                                    await Clipboard.setData(ClipboardData(text: appState.transcription));
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Original text copied'),
+                                          backgroundColor: Color(0xFF10B981),
+                                          duration: Duration(seconds: 1),
+                                        ),
+                                      );
+                                    }
+                                  },
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(8),
+                                    child: const Icon(
+                                      Icons.content_copy,
+                                      size: 18,
+                                      color: Colors.white70,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 24),
 
@@ -873,33 +963,64 @@ class _ResultScreenState extends State<ResultScreen> {
                         // Add More and Rewrite buttons (right under output box)
                         Row(
                           children: [
-                            // Instructions Button (voice-based)
+                            // Instructions Button (voice-based) with optional first-time glow
                             Expanded(
-                              child: OutlinedButton(
-                                onPressed: () => _showInstructionsVoiceRecording(context),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: primaryColor,
-                                  side: BorderSide(color: primaryColor, width: 2),
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                                child: const Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.add, size: 18),
-                                    SizedBox(width: 8),
-                                    Text(
-                                      'Instructions',
-                                      style: TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w600,
+                              child: _showInstructionsNudge
+                                  ? _InstructionsNudgeGlow(
+                                      child: OutlinedButton(
+                                        onPressed: () {
+                                          _dismissInstructionsNudge();
+                                          _showInstructionsVoiceRecording(context);
+                                        },
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor: primaryColor,
+                                          side: BorderSide(color: primaryColor, width: 2),
+                                          padding: const EdgeInsets.symmetric(vertical: 14),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                        ),
+                                        child: const Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            Icon(Icons.add, size: 18),
+                                            SizedBox(width: 8),
+                                            Text(
+                                              'Instructions',
+                                              style: TextStyle(
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    )
+                                  : OutlinedButton(
+                                      onPressed: () => _showInstructionsVoiceRecording(context),
+                                      style: OutlinedButton.styleFrom(
+                                        foregroundColor: primaryColor,
+                                        side: BorderSide(color: primaryColor, width: 2),
+                                        padding: const EdgeInsets.symmetric(vertical: 14),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                      ),
+                                      child: const Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.add, size: 18),
+                                          SizedBox(width: 8),
+                                          Text(
+                                            'Instructions',
+                                            style: TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                  ],
-                                ),
-                              ),
                             ),
                             const SizedBox(width: 12),
                             // Rewrite Button
@@ -938,6 +1059,20 @@ class _ResultScreenState extends State<ResultScreen> {
                             ),
                           ],
                         ),
+                        // First-time instructions nudge hint
+                        if (_showInstructionsNudge)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 10),
+                            child: Text(
+                              'Make it funnier, longer, or anything you like',
+                              style: TextStyle(
+                                color: const Color(0xFF3B82F6).withOpacity(0.6),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
                         const SizedBox(height: 24),
 
                         // Refinement Buttons
@@ -1183,6 +1318,59 @@ class _ResultScreenState extends State<ResultScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Pulsing blue glow wrapper for the instructions button (first-time nudge).
+class _InstructionsNudgeGlow extends StatefulWidget {
+  final Widget child;
+  const _InstructionsNudgeGlow({required this.child});
+
+  @override
+  State<_InstructionsNudgeGlow> createState() => _InstructionsNudgeGlowState();
+}
+
+class _InstructionsNudgeGlowState extends State<_InstructionsNudgeGlow>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1800),
+      vsync: this,
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final glowOpacity = 0.15 + (_controller.value * 0.25);
+        return Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF3B82F6).withOpacity(glowOpacity),
+                blurRadius: 16,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: child,
+        );
+      },
+      child: widget.child,
     );
   }
 }

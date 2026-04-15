@@ -13,13 +13,11 @@ import 'services/reminder_manager.dart';
 import 'services/analytics_service.dart';
 import 'services/share_handler_service.dart';
 import 'screens/main/main_navigation.dart';
-import 'screens/onboarding/onboarding_one.dart';
-import 'screens/onboarding/onboarding_two.dart';
-import 'screens/onboarding/onboarding_three_new.dart';
 import 'screens/onboarding/permissions_screen.dart';
-import 'screens/auth/sign_in_screen.dart';
-import 'screens/paywall/paywall_screen.dart';
+import 'screens/onboarding/feature_showcase_screen.dart';
 import 'screens/import/import_content_screen.dart';
+import 'services/retention_notification_service.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -208,6 +206,17 @@ class _SplashScreenState extends State<SplashScreen> {
     
     if (mounted) {
       if (hasCompletedOnboarding) {
+        // Track open + cancel retention if subscribed (matches Android)
+        try {
+          await RetentionNotificationService().recordAppOpen();
+          if (await SubscriptionService().isPro()) {
+            final ns = NotificationService();
+            for (final id in [900001, 900002, 900003, 900004, 900005, 900006, 900007]) {
+              await ns.cancelReminder(id);
+            }
+          }
+        } catch (_) {}
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const MainNavigation()),
@@ -224,6 +233,13 @@ class _SplashScreenState extends State<SplashScreen> {
                 debugPrint('✅ ONBOARDING COMPLETE - Navigating to HomeScreen');
                 final prefs = await SharedPreferences.getInstance();
                 await prefs.setBool('hasCompletedOnboarding', true);
+
+                // Schedule retention notifications once, for non-subscribers
+                try {
+                  if (!(await SubscriptionService().isPro())) {
+                    await RetentionNotificationService().scheduleOnboardingRetention();
+                  }
+                } catch (_) {}
                 debugPrint('✅ Saved hasCompletedOnboarding = true');
                 
                 // Use pushAndRemoveUntil to clear the entire navigation stack
@@ -294,48 +310,25 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   int _currentStep = 0;
 
   void _nextStep() {
-    if (_currentStep < 5) {
+    if (_currentStep < 2) {
       setState(() {
         _currentStep++;
       });
-    } else {
+    }
+    if (_currentStep >= 2) {
       widget.onComplete(context);
     }
-  }
-
-  void _handleSignIn() {
-    _nextStep(); // Go to permissions after sign-in
-  }
-
-  void _closePaywall() {
-    debugPrint('🎯 PAYWALL CLOSED - Starting free trial, navigating to HomeScreen');
-    widget.onComplete(context);
   }
 
   @override
   Widget build(BuildContext context) {
     switch (_currentStep) {
       case 0:
-        return OnboardingOne(onNext: _nextStep);
+        return FeatureShowcaseScreen(onComplete: _nextStep);
       case 1:
-        return OnboardingTwo(onNext: _nextStep);
-      case 2:
-        return OnboardingThreeNew(onNext: _nextStep);
-      case 3:
-        return SignInScreen(onSignIn: _handleSignIn);
-      case 4:
         return PermissionsScreen(onComplete: _nextStep);
-      case 5:
-        return PaywallScreen(
-          onSubscribe: () {
-            // TODO: Implement subscription
-            widget.onComplete(context);
-          },
-          onRestore: () {
-            // TODO: Implement restore
-          },
-          onClose: _closePaywall,
-        );
+      case 2:
+        return const MainNavigation();
       default:
         return const MainNavigation();
     }

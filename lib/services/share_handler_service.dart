@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 
@@ -49,19 +48,15 @@ class ShareHandlerService {
   }
 
   Future<void> _checkInitialShares() async {
-    try {
-      // Check for shared media files (includes text in newer API)
-      final initialMedia = await ReceiveSharingIntent.instance.getInitialMedia();
-      if (initialMedia.isNotEmpty) {
-        debugPrint('App opened with ${initialMedia.length} shared file(s)');
-        _handleSharedMedia(initialMedia);
-      }
-    } catch (e) {
-      debugPrint('Error checking initial shares: $e');
+    // Check for shared media files (includes text in newer API)
+    final initialMedia = await ReceiveSharingIntent.instance.getInitialMedia();
+    if (initialMedia.isNotEmpty) {
+      debugPrint('App opened with ${initialMedia.length} shared file(s)');
+      _handleSharedMedia(initialMedia);
     }
   }
 
-  void _handleSharedMedia(List<SharedMediaFile> files) {
+  void _handleSharedMedia(List<SharedMediaFile> files) async {
     if (files.isEmpty) return;
 
     debugPrint('Received ${files.length} shared file(s):');
@@ -71,52 +66,66 @@ class ShareHandlerService {
       debugPrint('  MIME: ${file.mimeType}');
       debugPrint('  Type: ${file.type}');
 
-      // Handle text shared via SharedMediaType.text
-      if (file.type == SharedMediaType.text) {
-        // For text type, the path might contain the actual text or a file path
-        final content = SharedContent(
-          type: SharedContentType.text,
-          text: file.path, // In text type, path often contains the text content
-          mimeType: file.mimeType,
-        );
-        _bufferedContent = content; // Buffer in case no listener yet
-        _pendingShareController.add(content);
-      } else {
-        // Handle files (images, audio, video, documents)
-        final content = SharedContent(
-          type: _getContentType(file.mimeType, file.type),
-          filePath: file.path,
-          mimeType: file.mimeType,
-          fileName: _extractFileName(file.path),
-        );
-        _bufferedContent = content; // Buffer in case no listener yet
-        _pendingShareController.add(content);
-      }
+      final contentType = _getContentType(file.mimeType, file.type, file.path);
+      final content = SharedContent(
+        type: contentType,
+        filePath: file.path,
+        mimeType: file.mimeType,
+        fileName: _extractFileName(file.path),
+      );
+      _bufferedContent = content; // Buffer in case no listener yet
+      _pendingShareController.add(content);
     }
 
     // Reset so we don't process again
     ReceiveSharingIntent.instance.reset();
   }
 
-  SharedContentType _getContentType(String? mimeType, SharedMediaType? mediaType) {
-    // Check media type first
+  SharedContentType _getContentType(String? mimeType, SharedMediaType? mediaType, [String? filePath]) {
+    // Check media type first (but NOT text — it misclassifies files like PDFs)
     if (mediaType == SharedMediaType.image) return SharedContentType.image;
     if (mediaType == SharedMediaType.video) return SharedContentType.video;
-    if (mediaType == SharedMediaType.text) return SharedContentType.text;
 
-    // Fall back to MIME type
-    if (mimeType == null) return SharedContentType.unknown;
-
-    final mime = mimeType.toLowerCase();
-
-    if (mime.startsWith('text/')) return SharedContentType.text;
-    if (mime.startsWith('image/')) return SharedContentType.image;
-    if (mime.startsWith('audio/')) return SharedContentType.audio;
-    if (mime.startsWith('video/')) return SharedContentType.video;
-    if (mime.contains('pdf')) return SharedContentType.pdf;
-    if (mime.contains('word') || mime.contains('document') || mime.contains('msword')) {
-      return SharedContentType.document;
+    // Check MIME type — check PDF/document before generic text/image
+    if (mimeType != null) {
+      final mime = mimeType.toLowerCase();
+      if (mime.contains('pdf')) return SharedContentType.pdf;
+      if (mime.contains('word') || mime.contains('document') || mime.contains('msword')) {
+        return SharedContentType.document;
+      }
+      if (mime.startsWith('image/')) return SharedContentType.image;
+      if (mime.startsWith('audio/')) return SharedContentType.audio;
+      if (mime.startsWith('video/')) return SharedContentType.video;
+      if (mime.startsWith('text/')) return SharedContentType.text;
     }
+
+    // Fallback: check file extension (critical for external shares where MIME may be null/wrong)
+    if (filePath != null) {
+      final ext = filePath.toLowerCase().split('.').last;
+      switch (ext) {
+        case 'pdf': return SharedContentType.pdf;
+        case 'doc':
+        case 'docx': return SharedContentType.document;
+        case 'jpg':
+        case 'jpeg':
+        case 'png':
+        case 'gif':
+        case 'webp': return SharedContentType.image;
+        case 'mp3':
+        case 'wav':
+        case 'm4a':
+        case 'ogg':
+        case 'flac': return SharedContentType.audio;
+        case 'mp4':
+        case 'mov':
+        case 'avi': return SharedContentType.video;
+        case 'txt':
+        case 'md': return SharedContentType.text;
+      }
+    }
+
+    // If media type is text and nothing else matched, treat as text
+    if (mediaType == SharedMediaType.text) return SharedContentType.text;
 
     return SharedContentType.unknown;
   }

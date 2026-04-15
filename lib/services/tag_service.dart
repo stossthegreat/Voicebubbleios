@@ -1,6 +1,7 @@
 import 'package:hive/hive.dart';
 import 'package:uuid/uuid.dart';
 import '../models/tag.dart';
+import 'analytics_service.dart';
 
 class TagService {
   static const String _boxName = 'tags';
@@ -22,6 +23,10 @@ class TagService {
       createdAt: DateTime.now(),
     );
     await box.put(tag.id, tag);
+    AnalyticsService().logCustomEvent(
+      eventName: 'tag_created',
+      parameters: {'tag_name_length': name.length},
+    );
     return tag;
   }
 

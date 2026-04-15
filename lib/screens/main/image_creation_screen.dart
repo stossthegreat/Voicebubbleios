@@ -9,6 +9,7 @@ import '../../providers/app_state_provider.dart';
 import '../../models/recording_item.dart';
 import '../../widgets/tag_chip.dart';
 import '../../widgets/tag_selection_dialog.dart';
+import '../../services/analytics_service.dart';
 
 class ImageCreationScreen extends StatefulWidget {
   final String? projectId;
@@ -279,6 +280,17 @@ class _ImageCreationScreenState extends State<ImageCreationScreen> {
         );
 
         await appState.saveRecording(newItem);
+
+        // Track image document creation
+        AnalyticsService().logCustomEvent(
+          eventName: 'document_created',
+          parameters: {
+            'document_type': 'image',
+            'source': widget.projectId != null ? 'project' : 'library',
+            'creation_method': 'image',
+            'has_caption': _captionController.text.isNotEmpty,
+          },
+        );
       }
 
       setState(() {

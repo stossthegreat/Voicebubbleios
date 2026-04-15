@@ -24,7 +24,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
   bool _isLoading = true;
   bool _isPurchasing = false;
   String? _errorMessage;
-  bool _isYearlySelected = false; // Track selected plan
+  bool _isYearlySelected = true; // Pre-select yearly
 
   @override
   void initState() {
@@ -49,11 +49,10 @@ class _PaywallScreenState extends State<PaywallScreen> {
     });
 
     try {
-      // Use selected product ID (monthly or yearly)
       final productId = _isYearlySelected
           ? SubscriptionService.yearlyProductId
           : SubscriptionService.monthlyProductId;
-      
+
       final success = await _subscriptionService.purchaseSubscription(productId);
 
       if (!success) {
@@ -65,11 +64,9 @@ class _PaywallScreenState extends State<PaywallScreen> {
         return;
       }
 
-      // Wait for confirmation
       for (int i = 0; i < 6; i++) {
         final active = await _subscriptionService.hasActiveSubscription();
         if (active) {
-          // Track subscription purchased
           AnalyticsService().logSubscriptionPurchased(
             productId: productId,
             priceString: _isYearlySelected ? 'yearly' : 'monthly',
@@ -83,8 +80,7 @@ class _PaywallScreenState extends State<PaywallScreen> {
 
       setState(() {
         _isPurchasing = false;
-        _errorMessage =
-            'Processing… If it succeeded, tap “Restore Purchase”.';
+        _errorMessage = 'Processing... If it succeeded, tap "Restore Purchase".';
       });
     } catch (_) {
       if (!mounted) return;
@@ -123,295 +119,314 @@ class _PaywallScreenState extends State<PaywallScreen> {
   Widget build(BuildContext context) {
     final monthly = _subscriptionService.monthlyProduct;
     final yearly = _subscriptionService.yearlyProduct;
-    final monthlyPrice = monthly?.price ?? "\$4.99";
-    final yearlyPrice = yearly?.price ?? "\$49.99";
-    
-    // Calculate savings percentage if both prices available
-    String savingsText = "Save 17%";
-    if (monthly != null && yearly != null) {
-      final monthlyRaw = monthly.rawPrice;
-      final yearlyRaw = yearly.rawPrice;
-      if (monthlyRaw > 0) {
-        final yearlyEquivalent = monthlyRaw * 12;
-        final savings = ((yearlyEquivalent - yearlyRaw) / yearlyEquivalent * 100).round();
-        savingsText = "Save $savings%";
-      }
+    // Use the *regular* recurring price, not the introductory/free-trial
+    // phase. Otherwise a yearly plan with a 7-day free trial shows as $0.00.
+    final monthlyInfo = monthly != null ? _subscriptionService.regularPriceOf(monthly) : null;
+    final yearlyInfo = yearly != null ? _subscriptionService.regularPriceOf(yearly) : null;
+
+    // Big price on each card = the actual formatted price from Play Store.
+    final monthlyPrice = monthlyInfo?.formatted ?? "\$4.99";
+    final yearlyPrice = yearlyInfo?.formatted ?? "\$49.99";
+
+    // Subtitle under each card: price-per-month. For monthly, this is just
+    // the monthly price again (matches the reference design where both cards
+    // share the same visual structure). For yearly, it's yearly / 12 rendered
+    // in the product's own currency.
+    final monthlySubtitle = monthlyInfo != null
+        ? '${monthlyInfo.formatted}/month'
+        : '$monthlyPrice/month';
+    String yearlySubtitle = '$yearlyPrice/year';
+    if (yearlyInfo != null && yearlyInfo.raw > 0) {
+      final perMonth = yearlyInfo.raw / 12;
+      yearlySubtitle =
+          '${yearlyInfo.currencySymbol}${perMonth.toStringAsFixed(2)}/month';
     }
 
     return Scaffold(
-      backgroundColor: Colors.black.withOpacity(0.70),
+      backgroundColor: const Color(0xFF0D0D1A),
       body: SafeArea(
-        child: Center(
-          child: Container(
-            width: double.infinity,
-            margin: const EdgeInsets.symmetric(horizontal: 20),
-            padding: const EdgeInsets.fromLTRB(22, 24, 22, 18),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(22),
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF0D47A1),
-                  Color(0xFF1565C0),
-                  Color(0xFF1E88E5),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 28),
+          child: Column(
+            children: [
+              // Close button
+              Align(
+                alignment: Alignment.topRight,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: GestureDetector(
+                    onTap: widget.onClose,
+                    child: Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.06),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.close, color: Colors.white38, size: 18),
+                    ),
+                  ),
+                ),
+              ),
+
+              const Spacer(flex: 1),
+
+              // Logo
+              Image.asset('assets/logo.png', width: 68, height: 68),
+              const SizedBox(height: 16),
+
+              // Title
+              const Text(
+                'Go Pro',
+                style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -0.5),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Unlock the full power of VoiceBubble',
+                style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.45)),
+              ),
+
+              const SizedBox(height: 12),
+
+              // Social proof — centered stars
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ...List.generate(5, (i) => const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 1),
+                    child: Icon(Icons.star_rounded, size: 20, color: Color(0xFFFFD700)),
+                  )),
+                  const SizedBox(width: 8),
+                  Text('4.8', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white.withOpacity(0.9))),
                 ],
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.4),
-                  blurRadius: 24,
-                  offset: const Offset(0, 10),
+
+              const SizedBox(height: 28),
+
+              // 3 feature bullets — bigger text
+              _feature(Icons.mic_none_rounded, 'Unlimited voice-to-text transcriptions'),
+              _feature(Icons.auto_awesome_rounded, 'Unlimited AI rewrites'),
+              _feature(Icons.upload_file_rounded, 'Upload audio files for transcription'),
+
+              const SizedBox(height: 28),
+
+              // Two price cards — IDENTICAL size (height 100). No outer
+              // padding: the floating "7-DAY TRIAL" badge is a Positioned
+              // overlay at top: -10 inside a Stack(clipBehavior: Clip.none),
+              // so it overhangs into the SizedBox(height: 28) above without
+              // displacing anything else on the page.
+              Row(
+                children: [
+                  Expanded(
+                    child: _priceCard(
+                      selected: !_isYearlySelected,
+                      onTap: () => setState(() => _isYearlySelected = false),
+                      label: 'Monthly',
+                      price: monthlyPrice,
+                      subtitle: monthlySubtitle,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _priceCard(
+                      selected: _isYearlySelected,
+                      onTap: () => setState(() => _isYearlySelected = true),
+                      label: 'Yearly',
+                      price: yearlyPrice,
+                      subtitle: yearlySubtitle,
+                      badge: '7-DAY TRIAL',
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 20),
+
+              // Error
+              if (_errorMessage != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Text(_errorMessage!, style: const TextStyle(color: Colors.redAccent, fontSize: 12), textAlign: TextAlign.center),
                 ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Close
-                Align(
-                  alignment: Alignment.topRight,
-                  child: IconButton(
-                    onPressed: widget.onClose,
-                    icon: const Icon(Icons.close_rounded, color: Colors.white),
+
+              // CTA Button — green
+              GestureDetector(
+                onTap: _isLoading || _isPurchasing ? null : _handlePurchase,
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF34C759),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(color: const Color(0xFF34C759).withOpacity(0.3), blurRadius: 16, offset: const Offset(0, 6)),
+                    ],
+                  ),
+                  child: Center(
+                    child: Text(
+                      _isPurchasing
+                          ? 'Processing...'
+                          : _isYearlySelected
+                              ? 'Start 7-Day Free Trial'
+                              : 'Subscribe',
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 4),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                _isYearlySelected ? 'Cancel anytime \u2022 You won\'t be charged today' : 'Cancel anytime \u2022 No commitment',
+                style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.3)),
+              ),
 
-                // TITLE
-                const Text(
-                  'Unlock Premium',
-                  style: TextStyle(
-                    fontSize: 30,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
+              const SizedBox(height: 16),
+
+              // Restore + legal
+              GestureDetector(
+                onTap: _isLoading || _isPurchasing ? null : _handleRestore,
+                child: Text('Restore Purchase', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.white.withOpacity(0.35))),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Subscription auto-renews. Cancel anytime in settings.',
+                style: TextStyle(fontSize: 10, color: Colors.white.withOpacity(0.2)),
+                textAlign: TextAlign.center,
+              ),
+              const Spacer(flex: 1),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Price card — EXACT old size (height 100, vertical padding 14). Both
+  /// monthly and yearly use the same structure so users can compare at a
+  /// glance. Passing a non-null [badge] renders a pill floating over the
+  /// top edge of the card; the card itself is not resized or padded.
+  Widget _priceCard({
+    required bool selected,
+    required VoidCallback onTap,
+    required String label,
+    required String price,
+    required String subtitle,
+    String? badge,
+  }) {
+    // Always return a SizedBox(height: 100) with a Stack inside. This makes
+    // monthly and yearly cards IDENTICAL in layout structure so they can
+    // never differ in size. The badge (if any) is a Positioned overlay that
+    // overhangs the top edge without changing the card's footprint.
+    return SizedBox(
+      height: 100,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.topCenter,
+        children: [
+          // The card fills the SizedBox entirely
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: onTap,
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                decoration: BoxDecoration(
+                  color: selected
+                      ? const Color(0xFF7C6AE8).withOpacity(0.12)
+                      : Colors.white.withOpacity(0.03),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: selected
+                        ? const Color(0xFF7C6AE8)
+                        : Colors.white.withOpacity(0.08),
+                    width: selected ? 2 : 1,
                   ),
-                  textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 8),
-
-                Text(
-                  'Full access to everything VoiceBubble offers',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.white.withOpacity(0.85),
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-
-                // FEATURES (MOVED ABOVE PRICING)
-                _feature(Icons.timer_rounded, '90 mins speech-to-text'),
-                _feature(Icons.auto_awesome_rounded, 'Premium rewrite quality'),
-                _feature(Icons.palette_rounded, 'Unlimited custom presets'),
-                _feature(Icons.highlight_rounded, 'Highlight text and choose AI preset'),
-                _feature(Icons.upload_file_rounded, 'Upload audio files'),
-                _feature(Icons.workspace_premium_rounded, 'Priority support'),
-                const SizedBox(height: 24),
-
-                // TWO PRICE BOXES SIDE BY SIDE
-                Row(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // MONTHLY BOX
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => setState(() => _isYearlySelected = false),
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: !_isYearlySelected 
-                                ? Colors.white.withOpacity(0.3)
-                                : Colors.white.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: !_isYearlySelected 
-                                  ? Colors.white 
-                                  : Colors.white.withOpacity(0.3),
-                              width: !_isYearlySelected ? 2.5 : 1,
-                            ),
-                          ),
-                          child: Column(
-                            children: [
-                              const Text(
-                                'Monthly',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                monthlyPrice,
-                                style: const TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'per month',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.white.withOpacity(0.7),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.white.withOpacity(0.5),
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    // YEARLY BOX
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => setState(() => _isYearlySelected = true),
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: _isYearlySelected 
-                                ? Colors.white.withOpacity(0.3)
-                                : Colors.white.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: _isYearlySelected 
-                                  ? Colors.white 
-                                  : Colors.white.withOpacity(0.3),
-                              width: _isYearlySelected ? 2.5 : 1,
-                            ),
-                          ),
-                          child: Column(
-                            children: [
-                              const Text(
-                                'Yearly',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                yearlyPrice,
-                                style: const TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                savingsText,
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.greenAccent,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                    const SizedBox(height: 6),
+                    Text(
+                      price,
+                      style: const TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.white.withOpacity(0.35),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 18),
-
-                // ERROR
-                if (_errorMessage != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: Text(
-                      _errorMessage!,
-                      style: const TextStyle(
-                        color: Colors.redAccent,
-                        fontSize: 12,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-
-                // SUBSCRIBE
-                _button(
-                  label: _isPurchasing ? 'Processing…' : 'Subscribe',
-                  filled: true,
-                  onTap: _isLoading || _isPurchasing ? null : _handlePurchase,
-                ),
-                const SizedBox(height: 10),
-
-                // RESTORE
-                TextButton(
-                  onPressed: _isLoading || _isPurchasing ? null : _handleRestore,
-                  child: Text(
-                    'Restore Purchase',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white.withOpacity(0.9),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
-        ),
+          // Floating "7-DAY TRIAL" badge — pure overlay, doesn't affect size
+          if (badge != null)
+            Positioned(
+              top: -10,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF34C759),
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF34C759).withOpacity(0.35),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  badge,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
 
   Widget _feature(IconData icon, String text) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.only(bottom: 14),
       child: Row(
         children: [
           Container(
-            width: 26,
-            height: 26,
+            width: 34,
+            height: 34,
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
+              color: const Color(0xFF7C6AE8).withOpacity(0.12),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, size: 18, color: const Color(0xFF1E88E5)),
+            child: Icon(icon, color: const Color(0xFF7C6AE8), size: 18),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 14),
           Expanded(
-            child: Text(
-              text,
-              style: const TextStyle(fontSize: 13, color: Colors.white),
-            ),
+            child: Text(text, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white, height: 1.2)),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _button({
-    required String label,
-    required bool filled,
-    required VoidCallback? onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: filled ? Colors.white : Colors.transparent,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white, width: filled ? 0 : 2),
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: filled ? const Color(0xFF0D47A1) : Colors.white,
-            ),
-          ),
-        ),
       ),
     );
   }

@@ -8,6 +8,7 @@ import '../services/export_service.dart';
 import '../services/project_service.dart';
 import '../widgets/create_project_dialog.dart';
 import '../widgets/create_tag_dialog.dart';
+import '../services/analytics_service.dart';
 
 class BatchOperationsScreen extends StatefulWidget {
   final List<RecordingItem> allNotes;
@@ -38,11 +39,11 @@ class _BatchOperationsScreenState extends State<BatchOperationsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final backgroundColor = const Color(0xFF000000);
-    final surfaceColor = const Color(0xFF1A1A1A);
+    final backgroundColor = const Color(0xFF0D0D1A);
+    final surfaceColor = const Color(0xFF1A1A2E);
     final textColor = Colors.white;
     final secondaryTextColor = const Color(0xFF94A3B8);
-    final primaryColor = const Color(0xFF3B82F6);
+    final primaryColor = const Color(0xFF7C6AE8);
 
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -670,6 +671,14 @@ class _BatchOperationsScreenState extends State<BatchOperationsScreen> {
   }
 
   Future<void> _exportMultipleNotes(String format) async {
+    AnalyticsService().logCustomEvent(
+      eventName: 'batch_export_started',
+      parameters: {
+        'format': format,
+        'item_count': _selectedNotes.length,
+      },
+    );
+
     // Show loading
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

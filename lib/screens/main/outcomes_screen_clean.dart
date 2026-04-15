@@ -3,10 +3,13 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import '../../providers/app_state_provider.dart';
-import '../../models/outcome_type.dart';
+import '../../constants/presets.dart';
 import '../../models/recording_item.dart';
 import '../../widgets/multi_option_fab.dart';
 import '../../services/reminder_manager.dart';
+import '../settings/settings_screen.dart';
+import '../paywall/paywall_screen.dart';
+import '../../services/subscription_service.dart';
 import 'recording_screen.dart';
 import 'recording_detail_screen.dart';
 import 'outcome_creation_screen.dart';
@@ -24,6 +27,20 @@ class OutcomesScreenClean extends StatefulWidget {
 
 class _OutcomesScreenCleanState extends State<OutcomesScreenClean> {
   bool _showCompleted = false;
+  bool _isPro = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkProStatus();
+  }
+
+  Future<void> _checkProStatus() async {
+    final isPro = await SubscriptionService().isPro();
+    if (mounted && isPro != _isPro) {
+      setState(() => _isPro = isPro);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -66,13 +83,164 @@ class _OutcomesScreenCleanState extends State<OutcomesScreenClean> {
                         ),
                       ),
                       const Spacer(),
+                      if (_isPro)
+                        Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1A1A1A),
+                            borderRadius: BorderRadius.circular(38),
+                          ),
+                          child: const Center(
+                            child: Text('\u2B50', style: TextStyle(fontSize: 16)),
+                          ),
+                        )
+                      else
+                        Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1A1A1A),
+                            borderRadius: BorderRadius.circular(38),
+                          ),
+                          child: IconButton(
+                            padding: EdgeInsets.zero,
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (context) => PaywallScreen(
+                                  onSubscribe: () {
+                                    _checkProStatus();
+                                  },
+                                  onRestore: () {
+                                    _checkProStatus();
+                                  },
+                                  onClose: () => Navigator.pop(context),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.workspace_premium, color: Color(0xFFFFD700), size: 20),
+                          ),
+                        ),
+                      const SizedBox(width: 6),
+                      // Settings icon
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1A1A1A),
+                          borderRadius: BorderRadius.circular(38),
+                        ),
+                        child: IconButton(
+                          padding: EdgeInsets.zero,
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                          ),
+                          icon: const Icon(Icons.settings, color: Colors.white, size: 20),
+                        ),
+                      ),
                     ],
                   ),
                 ),
 
                 // ══════════════════════════════════════════
-                // SECTIONS
+                // EMPTY STATE or SECTIONS
                 // ══════════════════════════════════════════
+                if (allOutcomes.isEmpty)
+                  Expanded(
+                    child: Center(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 32),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Icon
+                            Container(
+                              width: 72,
+                              height: 72,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                gradient: LinearGradient(
+                                  colors: [
+                                    const Color(0xFF3B82F6).withOpacity(0.15),
+                                    const Color(0xFF2563EB).withOpacity(0.05),
+                                  ],
+                                ),
+                                border: Border.all(
+                                  color: const Color(0xFF3B82F6).withOpacity(0.3),
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.splitscreen_rounded,
+                                color: Color(0xFF3B82F6),
+                                size: 32,
+                              ),
+                            ),
+                            const SizedBox(height: 28),
+                            const Text(
+                              'Speak your mind.',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 26,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.5,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 14),
+                            Text(
+                              'Record anything \u2014 a conversation, a thought, a meeting. Hit the Outcomes preset and watch it pull out your tasks, actions and key points automatically.',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.45),
+                                fontSize: 15,
+                                fontWeight: FontWeight.w400,
+                                height: 1.6,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 28),
+                            SizedBox(
+                              width: double.infinity,
+                              height: 52,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  // Pre-select Outcomes preset and go to recording
+                                  final outcomesPreset = AppPresets.findById('outcomes');
+                                  if (outcomesPreset != null) {
+                                    context.read<AppStateProvider>().setSelectedPreset(outcomesPreset);
+                                  }
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => const RecordingScreen(),
+                                    ),
+                                  );
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF3B82F6),
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  elevation: 0,
+                                ),
+                                child: const Text(
+                                  'Try it now',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  )
+                else
                 Expanded(
                   child: ListView(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
