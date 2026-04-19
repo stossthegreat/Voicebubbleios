@@ -7,6 +7,8 @@
 //
 // ============================================================
 
+import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 
 class AnalyticsService {
@@ -14,19 +16,38 @@ class AnalyticsService {
   factory AnalyticsService() => _instance;
   AnalyticsService._internal();
 
-  final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
-  FirebaseAnalyticsObserver get observer => FirebaseAnalyticsObserver(analytics: _analytics);
+  // Lazy + fail-safe: if Firebase didn't initialize (e.g. missing
+  // GoogleService-Info.plist in the bundle) we return null and every
+  // call becomes a no-op instead of crashing the UI tree.
+  FirebaseAnalytics? _cached;
+  bool _resolved = false;
+  FirebaseAnalytics? get _analytics {
+    if (_resolved) return _cached;
+    _resolved = true;
+    try {
+      _cached = FirebaseAnalytics.instance;
+    } catch (e) {
+      debugPrint('AnalyticsService: Firebase not ready, disabling analytics: $e');
+      _cached = null;
+    }
+    return _cached;
+  }
+
+  NavigatorObserver get observer {
+    final a = _analytics;
+    return a != null ? FirebaseAnalyticsObserver(analytics: a) : _NoopNavigatorObserver();
+  }
 
   // ============================================================
   // USER PROPERTIES
   // ============================================================
 
   Future<void> setUserId(String? userId) async {
-    await _analytics.setUserId(id: userId);
+    await _analytics?.setUserId(id: userId);
   }
 
   Future<void> setUserProperty({required String name, required String value}) async {
-    await _analytics.setUserProperty(name: name, value: value);
+    await _analytics?.setUserProperty(name: name, value: value);
   }
 
   // ============================================================
@@ -34,7 +55,7 @@ class AnalyticsService {
   // ============================================================
 
   Future<void> logRecordingStarted() async {
-    await _analytics.logEvent(
+    await _analytics?.logEvent(
       name: 'recording_started',
       parameters: {
         'timestamp': DateTime.now().toIso8601String(),
@@ -47,7 +68,7 @@ class AnalyticsService {
     required String presetId,
     required String language,
   }) async {
-    await _analytics.logEvent(
+    await _analytics?.logEvent(
       name: 'recording_completed',
       parameters: {
         'duration_seconds': durationSeconds,
@@ -61,7 +82,7 @@ class AnalyticsService {
     required int durationSeconds,
     required String fileType,
   }) async {
-    await _analytics.logEvent(
+    await _analytics?.logEvent(
       name: 'audio_file_uploaded',
       parameters: {
         'duration_seconds': durationSeconds,
@@ -78,7 +99,7 @@ class AnalyticsService {
     required String presetId,
     required String presetName,
   }) async {
-    await _analytics.logEvent(
+    await _analytics?.logEvent(
       name: 'preset_selected',
       parameters: {
         'preset_id': presetId,
@@ -91,7 +112,7 @@ class AnalyticsService {
     required String presetId,
     required bool isFavorited,
   }) async {
-    await _analytics.logEvent(
+    await _analytics?.logEvent(
       name: 'preset_favorited',
       parameters: {
         'preset_id': presetId,
@@ -111,7 +132,7 @@ class AnalyticsService {
     required bool wasEnhanced,
     required int qualityScore,
   }) async {
-    await _analytics.logEvent(
+    await _analytics?.logEvent(
       name: 'output_generated',
       parameters: {
         'preset_id': presetId,
@@ -126,7 +147,7 @@ class AnalyticsService {
   Future<void> logOutputEdited({
     required String presetId,
   }) async {
-    await _analytics.logEvent(
+    await _analytics?.logEvent(
       name: 'output_edited',
       parameters: {
         'preset_id': presetId,
@@ -138,7 +159,7 @@ class AnalyticsService {
     required String presetId,
     required String shareMethod,
   }) async {
-    await _analytics.logEvent(
+    await _analytics?.logEvent(
       name: 'output_shared',
       parameters: {
         'preset_id': presetId,
@@ -151,7 +172,7 @@ class AnalyticsService {
     required String refinementType,
     required String presetId,
   }) async {
-    await _analytics.logEvent(
+    await _analytics?.logEvent(
       name: 'refinement_used',
       parameters: {
         'refinement_type': refinementType,
@@ -164,7 +185,7 @@ class AnalyticsService {
     required String presetId,
     required int instructionLength,
   }) async {
-    await _analytics.logEvent(
+    await _analytics?.logEvent(
       name: 'instructions_added',
       parameters: {
         'preset_id': presetId,
@@ -176,7 +197,7 @@ class AnalyticsService {
   Future<void> logOutputRegenerated({
     required String presetId,
   }) async {
-    await _analytics.logEvent(
+    await _analytics?.logEvent(
       name: 'output_regenerated',
       parameters: {
         'preset_id': presetId,
@@ -193,7 +214,7 @@ class AnalyticsService {
     required bool success,
     String? source,
   }) async {
-    await _analytics.logEvent(
+    await _analytics?.logEvent(
       name: 'image_to_text_used',
       parameters: {
         'character_count': characterCount,
@@ -211,7 +232,7 @@ class AnalyticsService {
     required String outcomeType,
     required String presetId,
   }) async {
-    await _analytics.logEvent(
+    await _analytics?.logEvent(
       name: 'outcome_assigned',
       parameters: {
         'outcome_type': outcomeType,
@@ -223,7 +244,7 @@ class AnalyticsService {
   Future<void> logOutcomeCompleted({
     required String outcomeType,
   }) async {
-    await _analytics.logEvent(
+    await _analytics?.logEvent(
       name: 'outcome_completed',
       parameters: {
         'outcome_type': outcomeType,
@@ -235,7 +256,7 @@ class AnalyticsService {
     required String outcomeType,
     required int hoursFromNow,
   }) async {
-    await _analytics.logEvent(
+    await _analytics?.logEvent(
       name: 'reminder_set',
       parameters: {
         'outcome_type': outcomeType,
@@ -249,13 +270,13 @@ class AnalyticsService {
   // ============================================================
 
   Future<void> logProjectCreated() async {
-    await _analytics.logEvent(name: 'project_created');
+    await _analytics?.logEvent(name: 'project_created');
   }
 
   Future<void> logProjectOpened({
     required int itemCount,
   }) async {
-    await _analytics.logEvent(
+    await _analytics?.logEvent(
       name: 'project_opened',
       parameters: {
         'item_count': itemCount,
@@ -264,15 +285,15 @@ class AnalyticsService {
   }
 
   Future<void> logItemAddedToProject() async {
-    await _analytics.logEvent(name: 'item_added_to_project');
+    await _analytics?.logEvent(name: 'item_added_to_project');
   }
 
   Future<void> logContinueFromProject() async {
-    await _analytics.logEvent(name: 'continue_from_project');
+    await _analytics?.logEvent(name: 'continue_from_project');
   }
 
   Future<void> logContinueFromItem() async {
-    await _analytics.logEvent(name: 'continue_from_item');
+    await _analytics?.logEvent(name: 'continue_from_item');
   }
 
   // ============================================================
@@ -283,14 +304,14 @@ class AnalyticsService {
   // ============================================================
 
   Future<void> logPaywallViewed() async {
-    await _analytics.logEvent(name: 'paywall_viewed');
+    await _analytics?.logEvent(name: 'paywall_viewed');
   }
 
   Future<void> logSubscriptionPurchased({
     required String productId,
     required String priceString,
   }) async {
-    await _analytics.logEvent(
+    await _analytics?.logEvent(
       name: 'subscription_purchased',
       parameters: {
         'product_id': productId,
@@ -300,14 +321,14 @@ class AnalyticsService {
   }
 
   Future<void> logSubscriptionCancelled() async {
-    await _analytics.logEvent(name: 'subscription_cancelled');
+    await _analytics?.logEvent(name: 'subscription_cancelled');
   }
 
   Future<void> logUsageLimitHit({
     required int secondsUsed,
     required int monthlyLimit,
   }) async {
-    await _analytics.logEvent(
+    await _analytics?.logEvent(
       name: 'usage_limit_hit',
       parameters: {
         'seconds_used': secondsUsed,
@@ -324,7 +345,7 @@ class AnalyticsService {
     required String screenName,
     String? screenClass,
   }) async {
-    await _analytics.logScreenView(
+    await _analytics?.logScreenView(
       screenName: screenName,
       screenClass: screenClass ?? screenName,
     );
@@ -333,7 +354,7 @@ class AnalyticsService {
   Future<void> logTabSelected({
     required String tabName,
   }) async {
-    await _analytics.logEvent(
+    await _analytics?.logEvent(
       name: 'tab_selected',
       parameters: {
         'tab_name': tabName,
@@ -349,7 +370,7 @@ class AnalyticsService {
     required String languageCode,
     required String languageName,
   }) async {
-    await _analytics.logEvent(
+    await _analytics?.logEvent(
       name: 'language_changed',
       parameters: {
         'language_code': languageCode,
@@ -362,7 +383,7 @@ class AnalyticsService {
     required String languageCode,
     required bool isFavorited,
   }) async {
-    await _analytics.logEvent(
+    await _analytics?.logEvent(
       name: 'language_favorited',
       parameters: {
         'language_code': languageCode,
@@ -374,7 +395,7 @@ class AnalyticsService {
   Future<void> logOverlayActivated({
     required bool isEnabled,
   }) async {
-    await _analytics.logEvent(
+    await _analytics?.logEvent(
       name: 'overlay_activated',
       parameters: {
         'is_enabled': isEnabled,
@@ -391,7 +412,7 @@ class AnalyticsService {
     required String errorMessage,
     String? context,
   }) async {
-    await _analytics.logEvent(
+    await _analytics?.logEvent(
       name: 'error_occurred',
       parameters: {
         'error_type': errorType,
@@ -409,9 +430,11 @@ class AnalyticsService {
     required String eventName,
     Map<String, dynamic>? parameters,
   }) async {
-    await _analytics.logEvent(
+    await _analytics?.logEvent(
       name: eventName,
       parameters: parameters?.cast<String, Object>(),
     );
   }
 }
+
+class _NoopNavigatorObserver extends NavigatorObserver {}
