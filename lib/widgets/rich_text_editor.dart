@@ -394,6 +394,11 @@ class RichTextEditor extends StatefulWidget {
   // Continue recording callback
   final VoidCallback? onContinuePressed;
 
+  // Original speech-to-text transcript. When provided (and non-empty), an
+  // "Undo to original" pill is rendered above the continue-recording icon
+  // so users can roll the document back to their raw STT.
+  final String? originalSttText;
+
   // Content type for auto-initialization (e.g., 'todo' to auto-add checkboxes)
   final String? contentType;
 
@@ -418,6 +423,7 @@ class RichTextEditor extends StatefulWidget {
     this.backgroundId,
     this.onBackgroundChanged,
     this.onContinuePressed,
+    this.originalSttText,
     this.showTopToolbar = true,
     this.isPinned = false,
     this.onPinChanged,
@@ -1799,10 +1805,102 @@ class RichTextEditorState extends State<RichTextEditor> with TickerProviderState
                   ),
                 ),
               ),
+
+            // Undo to original STT — stacked directly ABOVE the continue
+            // recording icon (continue is 40x40 at bottom: 70, so 70 + 40
+            // height + 10 gap = 120). Same right inset so they align.
+            if (!widget.readOnly &&
+                (widget.originalSttText?.trim().isNotEmpty ?? false))
+              Positioned(
+                right: 12,
+                bottom: 120,
+                child: GestureDetector(
+                  onTap: _restoreOriginalStt,
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1A1A2E),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.12),
+                        width: 1,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.undo,
+                      size: 20,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _restoreOriginalStt() async {
+    final original = widget.originalSttText?.trim();
+    if (original == null || original.isEmpty) return;
+
+    HapticFeedback.lightImpact();
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A2E),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Text(
+          'Restore original transcript?',
+          style: TextStyle(color: Colors.white, fontSize: 17),
+        ),
+        content: const Text(
+          'This replaces the current text with your original speech-to-text. Your edits will be lost.',
+          style: TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel',
+                style: TextStyle(color: Color(0xFF94A3B8))),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Restore',
+                style: TextStyle(color: Color(0xFF7C6AE8))),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final length = _controller.document.length;
+    _controller.replaceText(0, length - 1, original, null);
+    setState(() {
+      _hasSelection = false;
+      _selectedText = '';
+    });
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Restored original transcript'),
+          backgroundColor: Color(0xFF10B981),
+          duration: Duration(seconds: 1),
+        ),
+      );
+    }
   }
 
   /// Copy the current plain-text of the editor to the clipboard.
@@ -2208,7 +2306,7 @@ class _RewritePresetSheetState extends State<_RewritePresetSheet> {
   Future<void> _handlePresetTap(Preset preset) async {
     if (_loading) return;
 
-    // Use same gate as recording — 5 min free, then upgrade
+    // Use same gate as recording — 10 min free, then upgrade
     final canUse = await FeatureGate.canUseSTT(context);
     if (!canUse) return;
 

@@ -17,7 +17,7 @@ class _UsageDisplayWidgetState extends State<UsageDisplayWidget> {
 
   bool _isPro = false;
   int _secondsUsed = 0;
-  int _totalLimit = 300;
+  int _totalLimit = 600;
   bool _hasReviewBonus = false;
   bool _isLoading = true;
 
