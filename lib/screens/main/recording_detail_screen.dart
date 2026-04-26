@@ -407,6 +407,9 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
       onBackgroundChanged: (backgroundId) => _updateItemBackground(appState, item, backgroundId),
       // Continue recording — same logic as dropdown menu
       onContinuePressed: () => _handleContinue(context, appState, item),
+      // Original raw STT — powers the "Undo to original" button (image
+      // items store their image path in rawTranscript, so skip those).
+      originalSttText: item.contentType == 'image' ? null : item.rawTranscript,
     );
   }
 
