@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'firebase_options.dart';
 import 'providers/app_state_provider.dart';
 import 'providers/theme_provider.dart';
 import 'services/subscription_service.dart';
@@ -31,10 +32,13 @@ void main() async {
   // Run app inside a guarded zone to catch async errors
   runZonedGuarded(() async {
     try {
-      await Firebase.initializeApp();
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
       debugPrint('Firebase initialized successfully');
-    } catch (e) {
+    } catch (e, st) {
       debugPrint('Firebase initialization failed: $e');
+      debugPrint('$st');
     }
 
     try {
