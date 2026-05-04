@@ -6,6 +6,11 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'firebase_options.dart';
+// Imported solely so the AOT compiler keeps `overlayMain` (and its widget
+// tree) reachable — flutter_overlay_window registers it via the manifest's
+// io.flutter.overlay.window.overlayEntryPoint meta-data.
+// ignore: unused_import
+import 'overlay_main.dart';
 import 'providers/app_state_provider.dart';
 import 'providers/theme_provider.dart';
 import 'services/subscription_service.dart';
@@ -21,16 +26,19 @@ import 'services/retention_notification_service.dart';
 import 'services/notification_service.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
   // Catch Flutter framework errors
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
     debugPrint('Flutter error: ${details.exception}');
   };
 
-  // Run app inside a guarded zone to catch async errors
+  // Run app inside a guarded zone to catch async errors. The Flutter
+  // binding MUST be initialized inside the same zone that calls runApp,
+  // otherwise plugin platform-channel callbacks land in a different zone
+  // and crash on Android.
   runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
+
     try {
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
