@@ -30,8 +30,8 @@ android {
         applicationId = "com.example.voicebubble"
         minSdk = 24
         targetSdk = 36
-        versionCode = 13
-        versionName = "1.0.3"
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
     }
 
     // Signing configuration
