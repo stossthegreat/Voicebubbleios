@@ -34,14 +34,32 @@ target 'Runner' do
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
 end
 
+target 'RunnerTests' do
+  inherit! :search_paths
+end
+
+$iOSVersion = '15.5'
+
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
-    target.build_configurations.each do |config|
-      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '15.5'
 
-      # Permission handler preprocessor definitions
-      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] ||= [
+    target.build_configurations.each do |config|
+      # Force every pod to the same deployment target so Xcode doesn't error
+      # out on subspecs declaring older iOS minimums (esp. Firebase).
+      if Gem::Version.new($iOSVersion) > Gem::Version.new(config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_s)
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = $iOSVersion
+      end
+
+      config.build_settings['ENABLE_BITCODE'] = 'NO'
+      # Required so Firebase / use_modular_headers + use_frameworks! don't
+      # fail with "Include of non-modular header" errors.
+      config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
+
+      # Permission handler preprocessor definitions. Use '=' (overwrite) not
+      # '||=' — otherwise the default '$(inherited)' wins and our flags are
+      # silently dropped, breaking permission_handler at runtime.
+      config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] = [
         '$(inherited)',
         'PERMISSION_MICROPHONE=1',
         'PERMISSION_CAMERA=1',
