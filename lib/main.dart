@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'firebase_options.dart';
 // Imported solely so the AOT compiler keeps `overlayMain` (and its widget
 // tree) reachable — flutter_overlay_window registers it via the manifest's
 // io.flutter.overlay.window.overlayEntryPoint meta-data.
@@ -38,10 +37,13 @@ void main() async {
   // platform channel), we still call runApp with a visible error screen
   // instead of letting iOS show a black screen and silently terminate.
   try {
+    // Init Firebase WITHOUT explicit options — matches the working app
+    // pattern. On iOS the SDK auto-discovers GoogleService-Info.plist from
+    // the bundle; on Android google-services.json is processed at build
+    // time. Passing options: here on top of native auto-init throws
+    // "FirebaseApp [DEFAULT] already exists" on iOS.
     try {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
+      await Firebase.initializeApp();
       debugPrint('✅ Firebase initialized');
     } catch (e, st) {
       debugPrint('⚠️ Firebase init failed (non-fatal): $e');
