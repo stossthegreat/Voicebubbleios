@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -26,41 +24,42 @@ import 'services/retention_notification_service.dart';
 import 'services/notification_service.dart';
 
 void main() async {
-  // Catch Flutter framework errors
+  // Catch Flutter framework errors first thing so any later crash is logged.
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
-    debugPrint('Flutter error: ${details.exception}');
+    debugPrint('❌ Flutter error: ${details.exception}');
+    debugPrint('❌ Stack: ${details.stack}');
   };
 
-  // Run app inside a guarded zone to catch async errors. The Flutter
-  // binding MUST be initialized inside the same zone that calls runApp,
-  // otherwise plugin platform-channel callbacks land in a different zone
-  // and crash on Android.
-  runZonedGuarded(() async {
-    WidgetsFlutterBinding.ensureInitialized();
+  WidgetsFlutterBinding.ensureInitialized();
 
+  // Top-level try/catch with on-screen fallback. Mirrors the working app
+  // pattern: if anything in startup throws (e.g. Firebase, Hive, a plugin
+  // platform channel), we still call runApp with a visible error screen
+  // instead of letting iOS show a black screen and silently terminate.
+  try {
     try {
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
       );
-      debugPrint('Firebase initialized successfully');
+      debugPrint('✅ Firebase initialized');
     } catch (e, st) {
-      debugPrint('Firebase initialization failed: $e');
+      debugPrint('⚠️ Firebase init failed (non-fatal): $e');
       debugPrint('$st');
     }
 
     try {
-      final analytics = AnalyticsService();
-      debugPrint('Firebase Analytics initialized successfully');
+      AnalyticsService();
+      debugPrint('✅ Analytics initialized');
     } catch (e) {
-      debugPrint('Analytics initialization failed: $e');
+      debugPrint('⚠️ Analytics init failed (non-fatal): $e');
     }
 
     try {
       await StorageService.initialize();
-      debugPrint('Hive storage initialized successfully');
+      debugPrint('✅ Hive storage initialized');
     } catch (e) {
-      debugPrint('Hive storage initialization failed: $e');
+      debugPrint('⚠️ Hive init failed (non-fatal): $e');
     }
 
     try {
@@ -84,11 +83,61 @@ void main() async {
       debugPrint('⚠️ Share handler init failed (non-fatal): $e');
     }
 
+    // Hide widget build errors from end users; log to console instead.
+    ErrorWidget.builder = (FlutterErrorDetails details) {
+      debugPrint('❌ Widget build error: ${details.exception}');
+      return const SizedBox.shrink();
+    };
+
     runApp(const MyApp());
-  }, (error, stackTrace) {
-    debugPrint('Uncaught error: $error');
-    debugPrint('Stack trace: $stackTrace');
-  });
+  } catch (e, stack) {
+    // Last-resort: at least show SOMETHING so the user (and we) can see
+    // what blew up instead of an instant crash on launch.
+    debugPrint('❌ APP INIT CRASHED: $e');
+    debugPrint('$stack');
+    runApp(MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        backgroundColor: const Color(0xFF0D0D1A),
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '⚠️ App init crashed',
+                  style: TextStyle(
+                    color: Color(0xFF7C6AE8),
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  e.toString(),
+                  style: const TextStyle(
+                    color: Color(0xFFFF4444),
+                    fontSize: 14,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  stack.toString().split('\n').take(20).join('\n'),
+                  style: const TextStyle(
+                    color: Colors.white54,
+                    fontSize: 11,
+                    fontFamily: 'monospace',
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ));
+  }
 }
 
 class MyApp extends StatefulWidget {
