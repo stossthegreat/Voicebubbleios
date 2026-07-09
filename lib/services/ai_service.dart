@@ -48,10 +48,18 @@ class AIService {
   /// Convert audio file to text using backend Whisper API
   Future<String> transcribeAudio(File audioFile) async {
     try {
+      // Whisper detects the audio format from the file extension, so the
+      // upload filename MUST match the actual recorded bytes. The recorder
+      // produces AAC/M4A (recording_*.m4a); labeling it audio.wav makes
+      // Whisper reject it with a 400, which surfaced as a bogus
+      // "cannot connect" error on stop.
+      final ext = audioFile.path.split('.').last.toLowerCase();
+      final uploadName = ext.isNotEmpty ? 'audio.$ext' : 'audio.m4a';
+
       final formData = FormData.fromMap({
         'audio': await MultipartFile.fromFile(
           audioFile.path,
-          filename: 'audio.wav',
+          filename: uploadName,
         ),
       });
       
