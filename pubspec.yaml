@@ -2,13 +2,16 @@ name: voicebubble
 description: "Voice-to-text AI rewriting assistant with floating overlay"
 publish_to: 'none'
 
-version: 4.0.4+21
+version: 4.1.0+22
 
 environment:
   sdk: ^3.9.2
 
 dependencies:
   flutter:
+    sdk: flutter
+  # Required by flutter_quill 11.x for its localized editor/toolbar strings
+  flutter_localizations:
     sdk: flutter
 
   # UI & Icons
@@ -72,8 +75,7 @@ dependencies:
   flutter_timezone: ^3.0.1
   
   # Rich Text Editor
-  flutter_quill: ^9.0.0
-  flutter_quill_extensions: ^9.0.0
+  flutter_quill: ^11.5.1
   gal: 2.2.0  # Exact version to avoid compatibility issues
   
   # PDF Export

@@ -57,13 +57,9 @@ class CustomImageEmbedBuilder extends quill.EmbedBuilder {
   @override
   Widget build(
     BuildContext context,
-    quill.QuillController controller,
-    quill.Embed node,
-    bool readOnly,
-    bool inline,
-    TextStyle textStyle,
+    quill.EmbedContext embedContext,
   ) {
-    final imageUrl = node.value.data as String;
+    final imageUrl = embedContext.node.value.data as String;
     return _ResizableImage(imageUrl: imageUrl);
   }
 }
@@ -170,13 +166,9 @@ class CustomAudioEmbedBuilder extends quill.EmbedBuilder {
   @override
   Widget build(
     BuildContext context,
-    quill.QuillController controller,
-    quill.Embed node,
-    bool readOnly,
-    bool inline,
-    TextStyle textStyle,
+    quill.EmbedContext embedContext,
   ) {
-    final audioPath = node.value.data as String;
+    final audioPath = embedContext.node.value.data as String;
     return _PlayableAudioWidget(audioPath: audioPath);
   }
 }
@@ -558,6 +550,9 @@ class RichTextEditorState extends State<RichTextEditor> with TickerProviderState
     _controller = quill.QuillController(
       document: doc,
       selection: const TextSelection.collapsed(offset: 0),
+      // In flutter_quill 11.x read-only lives on the controller, not the
+      // editor config.
+      readOnly: widget.readOnly,
     );
   }
 
@@ -1597,14 +1592,13 @@ class RichTextEditorState extends State<RichTextEditor> with TickerProviderState
                                   cardColor: Colors.transparent,
                                 ),
                                 child: quill.QuillEditor.basic(
+                                  controller: _controller,
                                   focusNode: _focusNode,
-                                  configurations: quill.QuillEditorConfigurations(
-                                    controller: _controller,
+                                  config: quill.QuillEditorConfig(
                                     padding: const EdgeInsets.fromLTRB(4, 8, 4, 400),
                                     autoFocus: !widget.readOnly,
                                     expands: false,
                                     placeholder: 'Start writing...',
-                                    readOnly: widget.readOnly,
                                     scrollPhysics: const ClampingScrollPhysics(),
                                     embedBuilders: [
                                       CustomImageEmbedBuilder(),
@@ -1620,6 +1614,7 @@ class RichTextEditorState extends State<RichTextEditor> with TickerProviderState
                                           fontWeight: FontWeight.bold,
                                           height: 1.3,
                                         ),
+                                        const quill.HorizontalSpacing(0, 0),
                                         const quill.VerticalSpacing(16, 8),
                                         const quill.VerticalSpacing(0, 0),
                                         null,
@@ -1632,6 +1627,7 @@ class RichTextEditorState extends State<RichTextEditor> with TickerProviderState
                                           fontSize: 17,
                                           height: 1.7,
                                         ),
+                                        const quill.HorizontalSpacing(0, 0),
                                         const quill.VerticalSpacing(0, 0),
                                         const quill.VerticalSpacing(0, 0),
                                         null,
@@ -1643,6 +1639,7 @@ class RichTextEditorState extends State<RichTextEditor> with TickerProviderState
                                               : Colors.white.withOpacity(0.25),
                                           fontSize: 17,
                                         ),
+                                        const quill.HorizontalSpacing(0, 0),
                                         const quill.VerticalSpacing(0, 0),
                                         const quill.VerticalSpacing(0, 0),
                                         null,

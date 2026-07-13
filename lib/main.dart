@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_quill/flutter_quill.dart' show FlutterQuillLocalizations;
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -238,6 +240,14 @@ class _MyAppState extends State<MyApp> {
             ),
             navigatorObservers: [
               AnalyticsService().observer, // Track screen views
+            ],
+            // flutter_quill 11.x pulls its editor/toolbar strings from these
+            // delegates; without them the rich-text editor throws on open.
+            localizationsDelegates: const [
+              FlutterQuillLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
             ],
             home: const SplashScreen(),
           );
