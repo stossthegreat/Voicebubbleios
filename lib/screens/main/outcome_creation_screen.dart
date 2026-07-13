@@ -604,9 +604,9 @@ class _OutcomeCreationScreenState extends State<OutcomeCreationScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: quill.QuillToolbar.simple(
-                      configurations: quill.QuillSimpleToolbarConfigurations(
-                        controller: _quillController,
+                    child: quill.QuillSimpleToolbar(
+                      controller: _quillController,
+                      config: quill.QuillSimpleToolbarConfig(
                         showBoldButton: true,
                         showItalicButton: true,
                         showUnderLineButton: true,
@@ -642,10 +642,10 @@ class _OutcomeCreationScreenState extends State<OutcomeCreationScreen> {
                         canvasColor: Colors.transparent,
                       ),
                       child: quill.QuillEditor.basic(
-                        configurations: quill.QuillEditorConfigurations(
-                          controller: _quillController,
+                        controller: _quillController,
+                        config: quill.QuillEditorConfig(
                           padding: const EdgeInsets.all(16),
-                          placeholder: _selectedOutcomeType != null 
+                          placeholder: _selectedOutcomeType != null
                               ? 'Write your ${_selectedOutcomeType!.displayName.toLowerCase()}...'
                               : 'Start writing...',
                           scrollPhysics: const ClampingScrollPhysics(),
