@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../providers/app_state_provider.dart';
 import '../../services/ai_service.dart';
+import '../../services/share_service.dart';
 import '../../services/analytics_service.dart';
 import '../../services/refinement_service.dart';
 import '../../services/continue_service.dart';
@@ -1197,7 +1197,7 @@ class _ResultScreenState extends State<ResultScreen> {
                               Expanded(
                                 child: ElevatedButton(
                                   onPressed: () {
-                                    Share.share(_rewrittenText);
+                                    ShareService.shareText(context, _rewrittenText);
                                   },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: primaryColor,
