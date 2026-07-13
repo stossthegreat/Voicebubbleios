@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:share_plus/share_plus.dart';
+import '../services/share_service.dart';
 import '../models/extracted_outcome.dart';
 import '../models/recording_item.dart';
 import '../widgets/outcome_chip.dart';
@@ -112,7 +112,7 @@ class _ExtractedOutcomeCardState extends State<ExtractedOutcomeCard> {
                   height: 42, // Reduced from 56
                   child: OutlinedButton.icon(
                     onPressed: () {
-                      Share.share(_controller.text);
+                      ShareService.shareText(context, _controller.text);
                     },
                     icon: const Icon(Icons.share, size: 16, color: Color(0xFF22D3EE)),
                     label: const Text(

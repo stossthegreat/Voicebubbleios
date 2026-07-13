@@ -2,9 +2,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:file_picker/file_picker.dart';
 import '../../providers/app_state_provider.dart';
+import '../../services/share_service.dart';
 import '../../services/share_handler_service.dart';
 import '../import/import_content_screen.dart';
 import '../../models/recording_item.dart';
@@ -550,7 +550,7 @@ class _RecordingDetailScreenState extends State<RecordingDetailScreen> {
           presetId: item.presetId,
           shareMethod: 'native_share',
         );
-        Share.share(item.finalText);
+        ShareService.shareText(context, item.finalText);
         break;
       case 'add_to_project':
         showModalBottomSheet(

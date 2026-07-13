@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:provider/provider.dart';
 import '../../models/outcome_type.dart';
 import '../../models/recording_item.dart';
 import '../../providers/app_state_provider.dart';
+import '../../services/share_service.dart';
 import '../../widgets/reminder_button.dart';
 import '../../services/reminder_manager.dart';
 import 'recording_detail_screen.dart';
@@ -409,7 +409,7 @@ class _OutcomeDetailScreenState extends State<OutcomeDetailScreen> {
                       // Share button
                       InkWell(
                         onTap: () {
-                          Share.share(item.finalText);
+                          ShareService.shareText(context, item.finalText);
                         },
                         borderRadius: BorderRadius.circular(8),
                         child: Padding(

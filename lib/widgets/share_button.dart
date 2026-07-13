@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:share_plus/share_plus.dart';
+import '../services/share_service.dart';
 
 class ShareButton extends StatelessWidget {
   final String textToShare;
@@ -16,8 +16,9 @@ class ShareButton extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: () async {
-          await Share.share(
+        onPressed: () {
+          ShareService.shareText(
+            context,
             textToShare,
             subject: 'VoiceBubble - AI Rewritten Text',
           );

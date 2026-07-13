@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:share_plus/share_plus.dart';
+import '../services/share_service.dart';
 
 class UnstuckActionWidget extends StatefulWidget {
   final String initialAction;
@@ -101,7 +101,7 @@ class _UnstuckActionWidgetState extends State<UnstuckActionWidget> {
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    Share.share(_controller.text);
+                    ShareService.shareText(context, _controller.text);
                   },
                   icon: const Icon(Icons.share, size: 18),
                   label: const Text('Share'),
