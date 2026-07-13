@@ -62,6 +62,12 @@
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>VoiceBubble needs permission to save images to your photo library.</string>
 
+	<!-- Required by Apple (ITMS-90683): an included system framework references
+	     the location API. VoiceBubble itself does not use location, so this
+	     prompt is never shown to users. -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>VoiceBubble does not use your location. This permission is only referenced by an included framework and is never requested.</string>
+
 	<!-- ========== BACKGROUND MODES ========== -->
 	<key>UIBackgroundModes</key>
 	<array>
