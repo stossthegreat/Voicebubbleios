@@ -18,9 +18,13 @@ class SubscriptionService {
   final InAppPurchase _iap = InAppPurchase.instance;
   late StreamSubscription<List<PurchaseDetails>> _subscription;
   
-  // Product IDs - CHANGE THESE to match your App Store Connect & Google Play Console
-  static const String monthlyProductId = 'voicebubble_pro_monthly';
-  static const String yearlyProductId = 'voicebubble_pro_yearly';
+  // Product IDs — MUST match App Store Connect & Google Play Console exactly.
+  // App Store Connect (group "Voice Bubble Premium"): voice_monthly (1 month),
+  // voice_annual (1 year). The old voicebubble_pro_* IDs did not exist in the
+  // stores, so queryProductDetails returned notFoundIDs and the paywall never
+  // loaded real prices or completed a purchase.
+  static const String monthlyProductId = 'voice_monthly';
+  static const String yearlyProductId = 'voice_annual';
   
   final Set<String> _productIds = {monthlyProductId, yearlyProductId};
   
