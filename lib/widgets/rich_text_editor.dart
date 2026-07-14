@@ -1304,7 +1304,13 @@ class RichTextEditorState extends State<RichTextEditor> with TickerProviderState
   Widget build(BuildContext context) {
     const surfaceColor = Color(0xFF1A1A1A);
 
-    return Shortcuts(
+    return GestureDetector(
+      // Tap anywhere outside the text/controls to dismiss the keyboard.
+      // Translucent so the QuillEditor and toolbar buttons still receive
+      // their own taps (child gesture recognizers win the arena).
+      behavior: HitTestBehavior.translucent,
+      onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+      child: Shortcuts(
       shortcuts: <LogicalKeySet, Intent>{
         LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyS): SaveIntent(),
         LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyB): BoldIntent(),
@@ -1841,6 +1847,7 @@ class RichTextEditorState extends State<RichTextEditor> with TickerProviderState
               ),
           ],
         ),
+      ),
       ),
     );
   }
