@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../providers/app_state_provider.dart';
 import '../../services/ai_service.dart';
 import '../../services/analytics_service.dart';
@@ -94,6 +95,8 @@ class _RecordingScreenState extends State<RecordingScreen>
   
   @override
   void dispose() {
+    // Allow the screen to sleep again once we leave the recorder.
+    WakelockPlus.disable();
     _pulseController.dispose();
     _timer?.cancel();
     _waveTimer?.cancel();
@@ -222,6 +225,10 @@ class _RecordingScreenState extends State<RecordingScreen>
           _targetSoundLevel = normalized;
         }
       });
+
+      // Keep the screen awake for the whole recording session so the device
+      // doesn't auto-lock mid-recording (released in dispose()).
+      WakelockPlus.enable();
 
       setState(() => _isRecording = true);
       _startTimer();

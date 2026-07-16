@@ -10,47 +10,19 @@ class PermissionsScreen extends StatelessWidget {
   Future<void> _requestPermissions(BuildContext context) async {
     debugPrint('🔐 Starting permission request flow...');
 
-    // Request microphone permission FIRST
+    // Tapping "Continue" must always take the user straight into the system
+    // permission prompts — no skip, no gating dialog (Apple Guideline
+    // 5.1.1(iv)). Request microphone first, then Speech Recognition on iOS,
+    // then always proceed into the app regardless of the user's choice.
     final micStatus = await Permission.microphone.request();
     debugPrint('🎤 Microphone permission: ${micStatus.isGranted}');
 
-    if (!micStatus.isGranted) {
-      // Show error dialog for microphone permission
-      if (context.mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Microphone Permission Required'),
-            content: const Text(
-              'VoiceBubble needs microphone access to record your voice. Please enable it in settings.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  openAppSettings();
-                },
-                child: const Text('Open Settings'),
-              ),
-            ],
-          ),
-        );
-      }
-      return;
-    }
-
-    // Request speech recognition on iOS
     if (Platform.isIOS) {
       final speechStatus = await Permission.speech.request();
       debugPrint('🗣️ Speech recognition permission: ${speechStatus.isGranted}');
     }
 
-    // Complete onboarding - mic permission granted, move on
-    debugPrint('✅ Permissions flow complete, moving to home screen');
+    debugPrint('✅ Permission prompts shown, moving on');
     onComplete();
   }
   
@@ -168,24 +140,12 @@ class PermissionsScreen extends StatelessWidget {
                         shadowColor: const Color(0xFF3B82F6).withOpacity(0.5),
                       ),
                       child: const Text(
-                        'Grant Permissions',
+                        'Continue',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 0.5,
                         ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextButton(
-                    onPressed: onComplete,
-                    child: Text(
-                      'Skip for now',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.white.withOpacity(0.8),
-                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
